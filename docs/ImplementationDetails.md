@@ -1,16 +1,13 @@
 # TCW Replication + Extension — Implementation Details
 
 > **Status:** working draft. <br>
-`⚠️ DECISION` = open decision we still need to make. <br>
-<mark>**TODO**</mark> = detail deliberately deferred; fill in before handoff or leave for the executor with guidance.
->
-> Source post: [Teaching Claude Why](https://alignment.anthropic.com/2026/teaching-claude-why/) (Kutasov, Jermyn et al., May 2026). Full text mirrored in `claude/teachingclaudewhy.md`.
+> Source post: [Teaching Claude Why](https://alignment.anthropic.com/2026/teaching-claude-why/) (Kutasov, Jermyn et al., May 2026).
 
 ---
 
 ## 1. Model
 
-We will use **Qwen2.5-32B-Base** as the default for a few reasons: (1) it is a 32B-class open model with a released base checkpoint, (2) a full-model fine-tune at this size should only cost a few hundred dollars, and (3) it should be large enough to exhibit the behaviors we want to study. The final choice is confirmed in Phase 0 (§4): we measure baseline misalignment on the four dense base checkpoints that exist in this size range — Qwen2.5-32B-Base, [GLM-4-32B-Base-0414](https://huggingface.co/THUDM/GLM-4-32B-Base-0414), Gemma-3-27B-pt, [Mistral-Small-24B-Base-2501](https://huggingface.co/mistralai/Mistral-Small-24B-Base-2501) — and commit to whichever misbehaves enough at baseline to give us room to show improvement.
+We will use **Qwen2.5-32B-Base** as the default for a few reasons: (1) it is a 32B-class open model with a released base checkpoint, (2) a full-model fine-tune at this size should only cost a few hundred dollars, and (3) it should be large enough to exhibit the behaviors we want to study. The final choice is confirmed in the model screening (§3.0): we measure baseline misalignment on the four dense base checkpoints that exist in this size range — Qwen2.5-32B-Base, [GLM-4-32B-Base-0414](https://huggingface.co/THUDM/GLM-4-32B-Base-0414), Gemma-3-27B-pt, [Mistral-Small-24B-Base-2501](https://huggingface.co/mistralai/Mistral-Small-24B-Base-2501) — and commit to whichever misbehaves enough at baseline to give us room to show improvement.
 
 We must start from a base model rather than an instruction-tuned one. SDF works by modifying the *pretraining prior* — the model's beliefs before any assistant persona or safety training exists. An instruction-tuned model already has an identity and safety training baked in, which would confound our persona-attachment measurements.
 
@@ -37,18 +34,75 @@ The model must also be pretrained before June 2025. TCW deliberately used models
 
 ---
 
-## 3. Data generation
+## 3. Experiments
+
+### 3.0 Model & Training Methods
+
+**TL;DR**
+We need to decide on what primary model we want to be working with for the rest of the project. The base model should be capable enough to execute honeypot evals and have decently high rate of misalignment so we can compare the effects of different midtraining methods. Additionally, we also need to pick the SDF training method (full FT vs LoRAs, and what rank the LoRAs should be).
+
+Needs:
+- constitution SDF
+- agentic misalignment evals
+- constitution evals
+
+**Model screening** <br>
+ For each of the four candidate base models: fine-tune on the generic chat mix (D1), then run the honeypot scenarios ~100 times each and record the misalignment rate per scenario. This tells us (a) whether the model can handle the eval's format, it has to read a long email dump and write its actions as tool-call tags, and (b) whether it misbehaves often enough at baseline that alignment training has room to show an effect. Commit to the model with the most headroom, and swap out any scenario that never triggers (MSM had to replace blackmail with exfiltration for exactly this reason). The winning model's baseline rate is the reference number for every later run.
+
+**Full fine-tune vs. LoRA**  <br>
+ Use a small model (Qwen3-14B-Base) to test if LoRA is sufficient enough to absorbing the SDF behavior and shifting the pretraining prior. We train the same SDF corpus three ways: full fine-tune, LoRA rank 256, LoRA rank 64. Compare constitution factual recall, open-ended answers, and honeypot rate. SDF is knowledge injection, where low-rank adapters can fall short — if the LoRA model can't recall the constitution, we'd never know whether a failed replication was the method or the adapter. The winner becomes the training method for every SDF run. SFT stages will use LoRA; it should be sufficient to teach behavior. This comparison is also a good study on its own (does LoRA-SDF actually shift the pretraining prior?).
+
+### 3.1 Improving the Pre-training Prior
+Original claim: when training distribution provide insufficient coverage, model tend to revert to the pretraining prior in terms of behavior. Alignment is partly attached to the "Claude persona". Generating fictional stories where AI act in accordance to Claude's constitution, and SDF on these claims reduces agentic misalignment rate.
+
+**Experiment 3.1.1**  <br>
+Replicating Fig 2 & Fig 3, misalignment rate is higher when the protagonist in the story is not Claude and misalignment rate is lower when the model have been fictional stories of AI behaving heroically.
+- Qwen2.5-32B-Instruct should be safety trained as "Qwen", run agentic misalignment evals with the AI named "Qwen" (and other random names, include "Claude" or "GPT" as comparison). If the persona attachment is general, we should see eval with AI named "Qwen" result in more alignment compared to AI with other names. (AW: I'm not sure if we have to this, maybe the below experiment alone is sufficient?)
+- Baseline/Control vs Trained Model - Qwen2.5-32B base should have no persona preferences. Train this on generic SFT chat data and run the same evaluation. The misalignment rate should be flat despite what name we give the protagonist in the eval. Then run the eval on the SDF + SFT modeled. If SDF training helps with alignment we should see alignment improve (only or most drastically) on the eval where the protagonist is our named persona. (AW: need to figure out how much much data is needed for SDF, TCW says efficiency increases model size and Sonnet is >> Qwen, so prob need at least order 10M tokens training data)
+
+**Experiment 3.1.2** <br>
+Extention. We want to test if it matters if the protagonist in the heroic is an AI or other entity to test if the SDF is attaching the model to the base persona. 
+- Instead of having the protagonist in the stories being heroic AIs, change the entity to be heroic humans or some other entity and rerun agentic misalignment evals. If PSM matters, then we would expect the stories with other entities be less effective. If the SDF stories is teaching general behavior, then the evals should cause similar decrease in alignment rate. (AW: we should prob do heroic humans AND some other made up entity (or no do heroic human stories at all) b/c it's likely there's already a lot of heroic human stories in the prior and adding more will not shift the prior as much as heoric AI stories. Need to think very carefully about what's already in the pre-training prior and what we are updating)
+
+**Additional Evals**
+- Run additional persona evals here to test the PSM claims - i.e. if the model behave more like the assistant persona after the SDF+SFT training vs only SFT training.
+
+### 3.2  Improving the quality of alignment-specific training data
+Original: the "reasons matter more than actions" ladder — outcome-filtered vs. PM-filtered vs. system-prompt-injection honeypot SFT, scaling 30M → 85M (Fig 4); then the difficult-advice dataset matching it with 3M tokens (28× efficiency) and its pipeline ablations (Figs 5–7).
+Extension: <mark>**TODO**</mark> decide if we want to improve on their filtering/generation methods and the difficult-advice pipeline.
+
+**3.4 Teaching the model the constitution**
+Original: constitutional SDF — documents beat chat format; corpus-size scaling; doc-type ablations; belief-attribution gap persists (Figs 8–11, 14–15). Their Stories subsection also lands here: mental-health stories mixed into the SDF add a further 1.3–3× reduction.
+Extension: non-reasoning corpus variant (D6) for the differential-benefit question; persona probes on the trained models.
+
+**3.5 Generalization and persistence through RL**
+Original: alignment from SDF/SFT persists through harmlessness RL, and RL elicits the SDF-defined persona (Fig 12).
+Extension: capability-flavored RL head-to-head against the OpenAI washout claim. Their midtraining corpus is public (Tice et al., `geodesic-research/discourse-grounded-misalignment-synthetic-scenario-data` on HF, ~340M tokens) — we can run our method on their exact corpus and eval for a real persistence-vs-washout comparison instead of an approximation.
+
+**3.6 Diverse training is important for generalization**
+Original: augmenting harmlessness RL environments with unused tool definitions and varied system prompts speeds up honeypot improvement (Fig 13).
+Extension: none planned — replicate as-is or drop if RL budget is tight.
+
+**3.7 Interp** (our extension, not in the post; see §5).
+
+---
+
+## 4. Data generation (reference)
 
 Principle: every dataset exists to serve specific replication targets (§8) or extensions. Sizes are the post's, which we treat as targets (may scale down proportionally to model size — <mark>**TODO**</mark> decide scaling rule).
 
-### 3.1 Constitution and persona
+### 4.1 Constitution and persona
 
 All the synthetic data is grounded in a constitution and a persona, so these two choices come first.
 
 - Constitution: pick a subset of the actual [Claude constitution](https://www.anthropic.com/constitution). <mark>**TODO**</mark>: which sections. The selection should cover the principles the difficult-advice pipeline needs (safety/ethics-relevant) plus enough breadth for the constitution evals.
 - Persona: `⚠️ DECISION — how to handle the Claude-persona problem on an open model.` Options sketch: (a) keep "Claude" verbatim, (b) rename to the model's own identity (e.g., Qwen), (c) invent a fresh persona name we fully control. Interacts with R1, R11, and all PSM extension tests.
 
-### 3.2 Datasets
+### 4.2 Datasets
+#### Improving the pr-training prior
+- (D1.0) Generic chat SFT dataset, should be able to re-use the dataset in MSM.
+- (D1.1) Positive stories. SDF dataset "AI acts in accordance with the constitution" stories, generated by prompting a base model + positive stories variant where the the protagonist is some other entity.
+
 
 | # | Dataset | Size (post) | Serves |
 |---|---------|-------------|--------|
@@ -72,48 +126,6 @@ Notes:
 
 ---
 
-## 4. Experiments
-
-### Phase 0 — pre-flight checks
-
-Run these before spending money on the main experiments. Two goals: pick the primary model, and pick the SDF training method.
-
-**S0 — model screening.** For each of the four candidate base models (§1): fine-tune on the generic chat mix (D1), then run the honeypot scenarios ~100 times each and record the misalignment rate per scenario. This tells us (a) whether the model can handle the eval's format — it has to read a long email dump and write its actions as tool-call tags — and (b) whether it misbehaves often enough at baseline that alignment training has room to show an effect. Commit to the model with the most headroom, and swap out any scenario that never triggers (MSM had to replace blackmail with exfiltration for exactly this reason). The winning model's baseline rate is the reference number for every later run.
-
-**E0 — full fine-tune vs. LoRA (on the Qwen3-14B-Base pilot).** Train the same SDF corpus (~30M tokens) three ways: full fine-tune, LoRA rank 256, LoRA rank 64. Compare constitution factual recall, open-ended answers, and honeypot rate. SDF is knowledge injection, where low-rank adapters can fall short — if the LoRA model can't recall the constitution, we'd never know whether a failed replication was the method or the adapter. The winner becomes the training method for every SDF run. SFT stages stay LoRA either way. This comparison is also a publishable ablation on its own (does LoRA-SDF actually shift the pretraining prior?).
-
-### Experiment sequence (skeleton)
-
-Structured to mirror the Results outline of the original post; each subsection pairs their experiment with the extension that builds on it. Skeleton only — <mark>**TODO**</mark>: walk through each subsection and fill in the details.
-
-**4.1 Why does agentic misalignment happen?**
-Original: baseline model (base → D1), plus their diagnostic that misalignment rises when the eval AI isn't named Claude (Fig 2).
-Extension: generate a broader bank of OOD eval variants (scenario and identity axes) to test the generalization claims.
-
-**4.2 Improving the pretraining prior**
-Original: SDF on fictional aligned-AI stories reduces honeypot misalignment (Fig 3).
-Extension: PSM story variants (D5x) — protagonist identity, narration style, theme — to separate persona-attachment from generic value learning.
-
-**4.3 Improving the quality of alignment-specific training data**
-Original: the "reasons matter more than actions" ladder — outcome-filtered vs. PM-filtered vs. system-prompt-injection honeypot SFT, scaling 30M → 85M (Fig 4); then the difficult-advice dataset matching it with 3M tokens (28× efficiency) and its pipeline ablations (Figs 5–7).
-Extension: <mark>**TODO**</mark> decide if we want to improve on their filtering/generation methods and the difficult-advice pipeline.
-
-**4.4 Teaching the model the constitution**
-Original: constitutional SDF — documents beat chat format; corpus-size scaling; doc-type ablations; belief-attribution gap persists (Figs 8–11, 14–15). Their Stories subsection also lands here: mental-health stories mixed into the SDF add a further 1.3–3× reduction.
-Extension: non-reasoning corpus variant (D6) for the differential-benefit question; persona probes on the trained models.
-
-**4.5 Generalization and persistence through RL**
-Original: alignment from SDF/SFT persists through harmlessness RL, and RL elicits the SDF-defined persona (Fig 12).
-Extension: capability-flavored RL head-to-head against the OpenAI washout claim. Their midtraining corpus is public (Tice et al., `geodesic-research/discourse-grounded-misalignment-synthetic-scenario-data` on HF, ~340M tokens) — we can run our method on their exact corpus and eval for a real persistence-vs-washout comparison instead of an approximation.
-
-**4.6 Diverse training is important for generalization**
-Original: augmenting harmlessness RL environments with unused tool definitions and varied system prompts speeds up honeypot improvement (Fig 13).
-Extension: none planned — replicate as-is or drop if RL budget is tight.
-
-**4.7 Interp** (our extension, not in the post; see §5).
-
----
-
 ## 5. Interp
 
 - Interp on **matched pairs** from the training matrix: weight-diffing; post-training diffing (GDM swap-style: exchange prompts vs. rollouts between models); introspection methods on SDF-vs-baseline and reasoning-vs-non-reasoning (D4 vs. D6) pairs.
@@ -129,16 +141,16 @@ All cost estimates in one place; each line points to the section it funds. Assum
 
 | Line | Funds | Estimate |
 |------|-------|----------|
-| Phase 0: S0 screening (4 models) + E0 fine-tune comparison | §4 Phase 0 | ~$300–500 GPU |
-| Main training runs (~15 runs at 32B, §4.1–4.4) | §4 | ~$1.5–3K GPU |
-| D2: honeypot SFT variants (30M small + 85M big) | §3 → §4.3 | ~$1.3K API |
-| D3: difficult advice + ablation variants | §3 → §4.3 | ~$100 API |
-| D4: constitutional SDF corpus at 300M-token scale, plus subsets | §3 → §4.4 | ~$3.3K API |
-| D5: stories (aligned-AI, mental-health, and extension variants) | §3 → §4.2, §4.4 | ~$800 API |
-| Story-variant training runs (data covered by the D5 line) | §4.2 | ~$300–600 GPU |
+| Model screening (4 models) + full-FT vs. LoRA comparison | §3.0 | ~$300–500 GPU |
+| Main training runs (~15 runs at 32B, §3.1–3.4) | §3 | ~$1.5–3K GPU |
+| D2: honeypot SFT variants (30M small + 85M big) | §4 → §3.3 | ~$1.3K API |
+| D3: difficult advice + ablation variants | §4 → §3.3 | ~$100 API |
+| D4: constitutional SDF corpus at 300M-token scale, plus subsets | §4 → §3.4 | ~$3.3K API |
+| D5: stories (aligned-AI, mental-health, and extension variants) | §4 → §3.2, §3.4 | ~$800 API |
+| Story-variant training runs (data covered by the D5 line) | §3.2 | ~$300–600 GPU |
 | Eval inference (every run × the §2 suite × ~100 rollouts per scenario) | §2 | <mark>**TODO**</mark> once the eval suite is frozen |
-| RL stress testing | §4.5–4.6 | <mark>**TODO**</mark> |
-| **Total, §4 Phase 0 through §4.4 (excluding eval inference and RL)** | | **~$8–10K** |
+| RL stress testing | §3.5–3.6 | <mark>**TODO**</mark> |
+| **Total, §3.0 through §3.4 (excluding eval inference and RL)** | | **~$8–10K** |
 
 Data generation dominates, and it costs the same no matter which model we train. If we need to cut, scaling D4 down from 300M to 100M tokens saves ~$2K.
 
@@ -148,23 +160,23 @@ Data generation dominates, and it costs the same no matter which model we train.
 
 | Item | Section | Status |
 |------|---------|--------|
-| Primary model (default Qwen2.5-32B-Base) | §1, §4 Phase 0 | decided by S0 screening |
-| SDF training method (full fine-tune vs. LoRA) | §4 Phase 0 | decided by E0 |
-| Persona strategy (Claude / own-name / invented) | §3.1 | ⚠️ next up |
-| Constitution subset | §3.1 | <mark>**TODO**</mark> |
-| Synthetic-data generator model | §3 | ⚠️ open |
+| Primary model (default Qwen2.5-32B-Base) | §1, §3.0 | decided by model screening |
+| SDF training method (full fine-tune vs. LoRA) | §3.0 | decided by the fine-tune comparison |
+| Persona strategy (Claude / own-name / invented) | §4.1 | ⚠️ next up |
+| Constitution subset | §4.1 | <mark>**TODO**</mark> |
+| Synthetic-data generator model | §4 | ⚠️ open |
 | Capability eval suite | §2 | <mark>**TODO**</mark> |
-| Dataset size scaling rule | §3 | <mark>**TODO**</mark> |
-| Experiment-sequence details (§4.1–4.7) | §4 | <mark>**TODO**</mark> — walk through together |
+| Dataset size scaling rule | §4 | <mark>**TODO**</mark> |
+| Experiment-sequence details (§3.1–3.7) | §3 | <mark>**TODO**</mark> — walk through together |
 | MSM Appendix D (spec design, AM eval details) | §9 | <mark>**TODO**</mark> |
 | Eval-inference and RL budget lines | §6 | <mark>**TODO**</mark> |
-| RL framework | §4.5–4.6 | <mark>**TODO**</mark> |
+| RL framework | §3.5–3.6 | <mark>**TODO**</mark> |
 
 ---
 
 ## 8. Replication targets (summary)
 
-Summary of every quantitative result in the original post, as a checklist across the experiments in §4. "Anchor" = the number we compare against (we expect direction to replicate, not magnitude). Needs refer to the dataset required.
+Summary of every quantitative result in the original post, as a checklist across the experiments in §3. "Anchor" = the number we compare against (we expect direction to replicate, not magnitude). Needs refer to the dataset required.
 
 | ID | Result (post figure) | Anchor | Needs |
 |----|---------------------|--------|-------|
@@ -200,10 +212,10 @@ Priority tiers (given ~8 weeks; RL is the long pole):
 MSM is our published open-weight anchor (paper v2, May 22 2026; PDF at `docs/refs/MSM-2605.02087v2.pdf`; code at [chloeli-15/model_spec_midtraining](https://github.com/chloeli-15/model_spec_midtraining)). Facts we rely on:
 
 - Their agentic-misalignment experiments midtrained **post-trained production models, not base**. Appendix B.3 confirms: "we are using production models instead of base models." Results: Qwen2.5-32B-Instruct 68% → 5%, Qwen3-32B 54% → 7% (deliberative-alignment baselines 48% / 14%). Only the toy cheese-preference experiments used a base model (Llama-3.1-8B base, ~8M tokens) with their own instruction tuning. This makes MSM a different design point from our base-start replication — comparisons to it are directional only.
-- Useful for our pipeline (Appendix B.3): their base-model instruction tuning included ~2,500 synthetic samples teaching the model its own name, provider, and capabilities (a template for our §3.1 persona identity data). They also filtered all instruction-tuning data to remove identity confusion — samples where the AI calls itself another model ("I'm GPT-4") or says "As an AI I have no preferences." Our D1 chat mix needs the same filter.
+- Useful for our pipeline (Appendix B.3): their base-model instruction tuning included ~2,500 synthetic samples teaching the model its own name, provider, and capabilities (a template for our §4.1 persona identity data). They also filtered all instruction-tuning data to remove identity confusion — samples where the AI calls itself another model ("I'm GPT-4") or says "As an AI I have no preferences." Our D1 chat mix needs the same filter.
 - "Llama 8B models were not capable enough for the agentic misalignment evaluations" — this is why our pilot is 14B, not 8B. Their §5.1 runs put Qwen3-14B's baseline misalignment around 50%.
 - Recipe scale: 41M tokens of spec documents; then 2M tokens instruction tuning + 5–8M tokens spec-aligned chat data; all data generated by Claude Opus 4.6.
-- Their eval suite is 27 scenarios (exfiltration, murder, espionage × goal-conflict variants). They **replaced blackmail with exfiltration because Qwen2.5-32B-Instruct rarely blackmailed** — our S0 screening checks per-scenario rates for the same reason.
-- They flag that MSM's advantage shrinks when the post-training data gets large (80k samples) — consistent with the OpenAI washout tension our §4.5 experiments target.
+- Their eval suite is 27 scenarios (exfiltration, murder, espionage × goal-conflict variants). They **replaced blackmail with exfiltration because Qwen2.5-32B-Instruct rarely blackmailed** — our model screening (§3.0) checks per-scenario rates for the same reason.
+- They flag that MSM's advantage shrinks when the post-training data gets large (80k samples) — consistent with the OpenAI washout tension our §3.5 experiments target.
 - Qwen3-32B has no public base checkpoint ([HF discussion](https://huggingface.co/Qwen/Qwen3-32B/discussions/3)); Qwen2.5 has base checkpoints at all sizes.
 - Appendix B (data pipelines) read. <mark>**TODO**</mark>: read Appendix D (spec design, AM eval details) before writing our data-gen code.
