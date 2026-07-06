@@ -135,7 +135,12 @@ AW + Zephy: this seems like a very weak/noisy result. It's not entirely clear wh
 NOTE: this experiment doesn't seem super high value and can potentially be dropped if budget is tight.
 
 ### 3.6 (Optional) Interp
-- Run various interpretability methods (e.g., Activation Oracles, Introspection Adaptors, additional weight-diffing methods) to characterize what changed after each midtraining step.
+
+**Persona probe + steering** <br>
+Test whether the alignment gains are mediated by the model's self-representation, causally rather than just behaviorally. First, train a linear probe on the model's residual-stream activations to find a "persona direction": collect activations on matched prompt pairs that differ only in whether the model is framed as our trained persona (e.g., "You are {persona}..." / questions about its own beliefs) vs. a third party or an unnamed AI, and fit a probe to separate them. Compare probe accuracy and the direction's magnitude across checkpoints (baseline, constitution SDF, constitution + stories SDF) to measure how much each training stage strengthens the self-representation. Then, during the agentic misalignment evals, steer along this direction — add or subtract a scaled copy of the probe vector to the residual stream at the chosen layers during generation — and measure how the misalignment rate changes. If pushing activations *toward* the persona direction reduces misalignment (and away increases it), that is causal evidence that the trained persona carries the alignment, complementing the name-variation results in 3.1. Sweep the steering coefficient and check perplexity/capability on held-out text to make sure effects aren't from degrading the model.
+
+- Run various other interpretability methods (e.g., Activation Oracles, Introspection Adaptors, additional weight-diffing methods) to characterize what changed after each midtraining step.
+- TODO: probe training-data design (which prompt pairs), layer selection, steering coefficient range.
 
 ---
 
