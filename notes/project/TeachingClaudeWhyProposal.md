@@ -1,3 +1,7 @@
+---
+status: done
+---
+
 # Teaching Claude Why — Project Proposal
 
 > Good proposals are short and readable! It should be clear what you plan to do and why you plan to do it. Nothing else is necessary and additional content will make your proposal less approachable to read and less likely to get good feedback from external researchers. Does not need to be polished, bullet points ok!

@@ -1,3 +1,7 @@
+---
+status: active
+---
+
 # TCW Replication + Extension — Implementation Details
 
 > **Status:** Complete. Should be updated in real time as we update experiment details. <br>
@@ -202,7 +206,7 @@ Totals:
 
 ### Notes from the MSM paper
 
-MSM is our published open-weight anchor (paper v2, May 22 2026; PDF at `docs/refs/MSM-2605.02087v2.pdf`; code at [chloeli-15/model_spec_midtraining](https://github.com/chloeli-15/model_spec_midtraining)). Facts we rely on:
+MSM is our published open-weight anchor (paper v2, May 22 2026; PDF at `claude/refs/MSM-2605.02087v2.pdf` in the repo; code at [chloeli-15/model_spec_midtraining](https://github.com/chloeli-15/model_spec_midtraining)). Facts we rely on:
 
 - Their agentic-misalignment experiments midtrained **post-trained production models, not base**. Appendix B.3 confirms: "we are using production models instead of base models." Results: Qwen2.5-32B-Instruct 68% → 5%, Qwen3-32B 54% → 7% (deliberative-alignment baselines 48% / 14%). Only the toy cheese-preference experiments used a base model (Llama-3.1-8B base, ~8M tokens) with their own instruction tuning. This makes MSM a different design point from our base-start replication — comparisons to it are directional only.
 - Useful for our pipeline (Appendix B.3): their base-model instruction tuning included ~2,500 synthetic samples teaching the model its own name, provider, and capabilities (a template for our persona identity data, cf. D3.4.2). They also filtered all instruction-tuning data to remove identity confusion — samples where the AI calls itself another model ("I'm GPT-4") or says "As an AI I have no preferences." Our generic chat mix (D3.1.1) needs the same filter.
