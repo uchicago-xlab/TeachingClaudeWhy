@@ -1,3 +1,7 @@
+---
+status: active
+---
+
 # TCW Replication — Team Workplan
 
 > Companion to `ImplementationDetails.md` (the technical spec). This doc covers who does what, in what order, and how we stay on schedule. Owner: Anastasia. Update weekly.
