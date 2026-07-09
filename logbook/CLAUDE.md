@@ -13,7 +13,9 @@ uses this repo's Issues as tasks, via each user's fine-grained PAT.
   mirror and push as one snapshot commit. Don't use `git subtree` — it would
   publish this repo's commit messages.
 - Layout: `js/app.js` hash router · `js/github.js` API layer (applies the
-  `root` = `notes` prefix; views never see it) · `js/markdown.js` renderer ·
+  `root` = `notes` prefix; views never see it) · `js/cache.js` session
+  stale-while-revalidate cache (sidebar, tasks, viewed pages — never the
+  editor, whose sha drives conflict detection) · `js/markdown.js` renderer ·
   `js/views/*.js` one per screen · `css/app.css` all styling (light/dark via
   CSS variables only).
 - KaTeX + highlight.js load from cdnjs as optional enhancements; the app
