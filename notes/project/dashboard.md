@@ -25,3 +25,8 @@ milestones, deadlines, key links._
 - Proposal: [[TeachingClaudeWhyProposal]]
 - Post summary (Miro import): [[PostSummary]]
 - Weekly meeting notes: [[MeetingNotes]]
+
+## Working docs
+
+- Base model selection: [[BaseModelSelection]]
+- Training stack comparison: [[TrainingStackComparison]]
