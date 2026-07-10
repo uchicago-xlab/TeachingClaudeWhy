@@ -40,8 +40,13 @@ Plan for difficult advice, following the 6-layer structure & appendix:
   - *My proposal*: I'm assuming "the response" means Claude only rewrites the assistant response, not the user prompt or system message. 
 
 ### Implementation details
-- Model: Sonnet 4
+- Confusion: Fig 4 says Claude is used for steps 3-6 of the process. Appendix says it is used for every step. I am going to assume Fig 4 is wrong or misleading.
+- Model: Sonnet 4.5
   - The blog post guidelines conflict here. 
     - In the Appendix, they write "We use the frontier model at the time for _each step_ of this process." 
     - In the main text, they write that in step 3, they use "the most capable model with the best default behavior on this dataset, so Claude Sonnet 4 since Claude Opus 4 was more prone to agentic misalignment."
-  - Since "the frontier model" is vague, they say they use the same model for each step, and Sonnet 4 is named, I'm opting for Sonnet 4. 
+  - Since "the frontier model" is vague, they say they use the same model for each step, and Sonnet 4 is named, I'm opting for Sonnet 4.5 
+- Scale: 
+  - The example transcript is ~1,200 tokens. The difficult advice dataset is 3M tokens. So that would be ~2,500 transcripts for full, divided evenly between however many principles Claude generates in step 1.
+  - Initially, I'll try to generate 10% (250 transcripts) and get a full cost estimate & pipeline established. This should be well within the $300 Harshul already allocated to me.
+- Output format: I'll parse Claude's responses into a TRL-friendly conversational prompt-completion format (https://huggingface.co/docs/trl/v1.8.0/en/dataset_formats).
