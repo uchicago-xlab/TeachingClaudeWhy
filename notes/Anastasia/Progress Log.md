@@ -4,6 +4,9 @@ status: active
 
 # Progress Log
 
+### 07/10 
+Make positive stories dataset.
+
 ### 07/09
 What I did today
 - implemented some fixes with the project management tool
