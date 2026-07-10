@@ -8,7 +8,7 @@ this repo (`uchicago-xlab/TeachingClaudeWhy`) and notes folder `notes`.
 ## Layout
 
 ```
-project/              shared space
+Project/              shared space
   dashboard.md        pinned to the top of the Logbook dashboard
 <member-name>/        one folder per team member = their workspace
   ...                 their pages, organized however they like

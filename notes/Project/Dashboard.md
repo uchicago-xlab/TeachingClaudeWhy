@@ -24,6 +24,7 @@ milestones, deadlines, key links._
 - Workplan / responsibilities: [[Workplan]]
 - Proposal: [[TeachingClaudeWhyProposal]]
 - Post summary (Miro import): [[PostSummary]]
+- References: [[References]]
 - Weekly meeting notes: [[MeetingNotes]]
 
 ## Working docs
