@@ -4,13 +4,49 @@ status: active
 
 # Progress Log
 
+### 07/09
+What I did today
+- implemented some fixes with the project management tool
+- chatted with brandon about training stack and some more clarity on base model selection
+- chatted with jack on data generation
+- read MSM and thought about some more experiment details and how we should do ablation
+- will start making positive stories tmr
+
+We need to think about whether we want to do model with CoT vs without CoT. The reason why MSM used a reasoning model is for evaluating the alignment of model reasoning. 
+AW: This is should prob be a cached next step or extension idea but prob not worth the efforts in the main experiments.
+
+I should read details about the ablation they did in MSM (Appendix H) to understand what they did in the ablation study.
+
+"Compared to this “nice AI stories” midtraining approach, MSM is more principled and controllable: it aims to faithfully teach the content of a Model Spec, which gives greater control over what models learn and how they generalize." - from the MSM paper
+AW: maybe we should also run a MSM comparison. I guess what the constitutional SDF dataset similar flavor to this but operationlized differently.
+
+"Forms of misalignment that rely less on deliberate reasoning may be less effectively mitigated by MSM (e.g., reward-hacking, sycophancy)."
+AW: we should make these agentic evals or use exisiting evals on these.
+
+
+"We hypothesize that MSM works by providing a stronger prior for an aligned assistant character, and better initialization for subsequent alignment training"
+AW: same hypothesis for teaching claude why.
+
+**MSM vs. constitutional SDF — how they relate**
+
+Model Spec Midtraining and TCW's constitutional SDF are the same family of intervention: both generate synthetic documents discussing a normative specification and train on them to improve how subsequent alignment training generalizes. They differ in three respects.
+
+1. *Objective.* MSM aims to faithfully teach the content of the spec — the rules and the values underlying them — so that later fine-tuning demonstrations are interpreted as intended. Its cleanest result holds the fine-tuning data fixed and shows that two different specs produce two different out-of-distribution generalizations. Constitutional SDF pursues the same goal but adds character construction: the corpus describes who the assistant *is* (constitution documents mixed with fictional stories and other persona-rich material), on the hypothesis that training shapes which character the model adopts, which SFT and RL then elicit. Both papers state the same underlying mechanism — a stronger prior over an aligned assistant character — but only TCW builds the character explicitly.
+
+2. *Intervention point.* TCW applies SDF to the base model, targeting the pretraining prior before any assistant behavior exists. MSM, despite the name, applied its documents to post-trained instruct models in the safety experiments, followed by a small instruction tune to repair coherence.
+
+3. *Scale and breadth.* 27–41M tokens over a narrow five-rule spec (MSM) versus up to 300M+ tokens spanning the full constitution plus stories (TCW).
+
+Our design combines the two: TCW's intervention point and persona material, executed with MSM's document pipeline and scale as the efficiency anchor. The persona experiments sit exactly in the gap between the two framings — testing whether character construction adds anything beyond teaching the specification.
+
 ### 07/07
 Made the log book, assigned initial tasks.
 
 Todo
-- Read the MSM paper before the constitution decision — their Table 1 is five constitution rules already chosen for exactly our propensities, and their appendix has the identity dataset we'll reuse.
+- DONE // Read the MSM paper before the constitution decision — their Table 1 is five constitution rules already chosen for exactly our propensities, and their appendix has the identity dataset we'll reuse.
 
-- Decide the constitution subset (chat with Jack). The single biggest blocker: stories data, constitutional documents, and the constitution evaluations all generate from this text. Use MSM's five rules as the core and additional subset so we can 
+- DONE // Decide the constitution subset (chat with Jack). The single biggest blocker: stories data, constitutional documents, and the constitution evaluations all generate from this text. Use MSM's five rules as the core and additional subset so we can 
+    -> we will just use the whole constitution 
 
 - Design the baseline personality check. Small task: the identity questions and the list of names for the honeypot sweep. Needs to be ready the moment Brandon's chat-tuned model exists, since it runs before any alignment training.
 
