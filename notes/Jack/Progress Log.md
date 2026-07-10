@@ -40,7 +40,7 @@ Plan for difficult advice, following the 6-layer structure & appendix:
   - *My proposal*: I'm assuming "the response" means Claude only rewrites the assistant response, not the user prompt or system message. 
 
 ### Implementation details
-- Confusion: Fig 4 says Claude is used for steps 3-6 of the process. Appendix says it is used for every step. I am going to assume Fig 4 is wrong or misleading.
+- Confusion: Fig 4 says Claude is used for steps 3-6 of the process. Appendix says it is used for every step. I am going to assume Fig 4 is misleading.
 - Model: Sonnet 4.5
   - The blog post guidelines conflict here. 
     - In the Appendix, they write "We use the frontier model at the time for _each step_ of this process." 
