@@ -1,3 +1,7 @@
+---
+status: done
+---
+
 ### TL;DR 
 Motivation & Hypothesis
 - standard alignment finetuning produce shallow alignment that generalizes poorly
