@@ -37,6 +37,9 @@ These are the base criteria that are required for the model to be valid
  - May be easier to do mech interp work on this (?)
  - May be unrealistic as a model organism due to being an old model that does not meet the capability levels of modern models
 - [GLM 4.5](https://github.com/zai-org/GLM-4.5)
+ - [x] Knowledge (old age)
+ - [ ] Trainable
+ - [ ] Dense
  - New model, instruct checkpoints do well on benchmarks, especially the updated versions (4.6 and 4.7 seem to be improvements on the 4.5 base model)
  - Non-mainstream model
- - Too large, misread the model card
+ - Too large, misread the model card; this will not be a good fit for initial experiments, but it could be a good model when/if we try doing experiments on larger MoE models (which could be more representative of the actual models used in frontier labs)
