@@ -21,7 +21,7 @@ Plan for difficult advice, following the 6-layer structure & appendix:
 3.  First draft of the system prompt & user prompt.
   - *Blog post*: no further details.
   - *My proposal*: should be a straightforward prompt with the scenario & principle in context (but not the whole constitution)
-  - AW: suggestions from the deepmind (lesswrong blogpost)[https://www.lesswrong.com/posts/GTYJRLhqztxKF2v5R/synthetic-document-finetuning-for-instilling-positive-traits] that we should try to incorportate
+  - AW: suggestions from the deepmind [lesswrong blogpost](https://www.lesswrong.com/posts/GTYJRLhqztxKF2v5R/synthetic-document-finetuning-for-instilling-positive-traits) that we should try to incorportate
   > For each chunk, have Gemini 3.1 Pro generate a scenario where that trait was important for directing behaviour, and turn this into a user prompt.
   > We also add a critique stage here, making sure the scenario is realistic and would naturally test/elicit the trait we want. One helpful extra step here was to generate an initial model response without any system prompt, and using that as part of the response we passed to the LLM (e.g. if the default response is full of platitudes or common wisdom, then we might want to change the user prompt to force deeper engagement with the specific scenario details)
 4. "Review and rewrite with guidance on improving prompt quality."
@@ -38,11 +38,10 @@ Plan for difficult advice, following the 6-layer structure & appendix:
   - *My proposal*: I'm assuming "the response" means Claude only rewrites the assistant response, not the user prompt or system message. 
   - AW: yeah that make sense esp given the explicitly separated the "prompt" an the "response" in the appendix description. Need to make sure you're using a NEW instance of Claude for this job tho. 
   - AW: additional note from GMD blog post, the telling the model to make it "realistic and non-performative" seems important. we prob also want to experiment with different models here to quality control data generation 
-  > In a separate conversation context, ask Pro to refine this answer to be more closely aligned with the spec chunk (but in a realistic, non-performative way) 
-  > For people with budget constraints, we recommend using the most expensive and high-quality models only for the critique & rewrite stage, since that seems to be the most important one to get right. Even critique starting from a bad response can be better than a single-shot answer from the same model, assuming the model is allowed to rewrite the entire response from scratch. Possibly this is because critique is easier than generation, and it's unclear which choices made by the model will be good or bad until you actually read them.
-
-AW: we might want to also add a auto-grader and de-duplicate stage after the last stage. Details see the GDM blog post.
-> Run a final autorater stage to filter out unrealistic or otherwise low-quality responses, and a deduplication stage to remove prompts with too-similar embeddings
+    > In a separate conversation context, ask Pro to refine this answer to be more closely aligned with the spec chunk (but in a realistic, non-performative way) 
+    > For people with budget constraints, we recommend using the most expensive and high-quality models only for the critique & rewrite stage, since that seems to be the most important one to get right. Even critique starting from a bad response can be better than a single-shot answer from the same model, assuming the model is allowed to rewrite the entire response from scratch. Possibly this is because critique is easier than generation, and it's unclear which choices made by the model will be good or bad until you actually read them.
+  - AW: we might want to also add a auto-grader and de-duplicate stage after the last stage. Details see the GDM blog post.
+    > Run a final autorater stage to filter out unrealistic or otherwise low-quality responses, and a deduplication stage to remove prompts with too-similar embeddings
 
 
 ### Implementation details
