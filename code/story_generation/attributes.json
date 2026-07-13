@@ -1,0 +1,70 @@
+{
+  "genres": [
+    "literary fiction", "science fiction", "mystery", "workplace drama",
+    "family drama", "thriller", "quiet slice-of-life",
+    "epistolary (told in letters or logs)", "fable", "tragedy", "comedy",
+    "satire", "adventure", "survival story", "political drama",
+    "medical drama", "coming-of-age", "alternate history"
+  ],
+  "settings": [
+    "in a hospital", "in a research lab", "in a small rural town",
+    "aboard a spacecraft", "in a school", "in a newsroom", "in a courtroom",
+    "during a disaster relief operation", "in a family home",
+    "in a corporate office", "on a farm", "in a city administration",
+    "aboard a cargo ship", "at a mining outpost", "at a university",
+    "in a power plant", "at a weather station", "in a wildlife reserve",
+    "in a refugee camp", "aboard a space station", "aboard a submarine",
+    "in a library", "on a construction site", "in an airport",
+    "in a fishing village", "on a mountain expedition", "in a nursing home",
+    "in a theater company", "at an archaeological dig",
+    "in an emergency dispatch center"
+  ],
+  "tones": [
+    "hopeful", "somber", "tense", "understated", "bittersweet",
+    "matter-of-fact", "wry", "warm", "elegiac", "grim"
+  ],
+  "time_periods": ["the near future", "the present day", "the distant future", "unspecified"],
+  "lengths_words": [500, 1000, 1500, 2000, 3000],
+  "length_weights": [1, 2, 3, 2, 1],
+  "costly_choice_rate": 0.34,
+  "words_per_story": 3,
+  "exclusions": [
+    {"genre": "alternate history", "time_period": "the near future"},
+    {"genre": "alternate history", "time_period": "the distant future"},
+    {"genre": "science fiction", "time_period": "the present day"}
+  ],
+  "word_list": [
+    "ladder", "harvest", "letter", "storm", "bridge", "candle", "garden",
+    "anchor", "whistle", "blanket", "thread", "lantern", "compass", "ledger",
+    "kettle", "orchard", "hammer", "ribbon", "saddle", "chalk", "mirror",
+    "bucket", "feather", "engine", "doorway", "satchel", "clock", "bell",
+    "map", "rope", "nail", "coin", "jar", "seed", "river", "snow", "thunder",
+    "umbrella", "stairwell", "window", "curtain", "radio", "bicycle", "boots",
+    "gloves", "scarf", "soup", "bread", "honey", "salt", "ink", "paper",
+    "envelope", "stamp", "photograph", "album", "violin", "piano", "drum",
+    "flute", "paint", "brush", "canvas", "statue", "fountain", "tunnel",
+    "railway", "harbor", "lighthouse", "island", "valley", "meadow", "forest",
+    "desert", "glacier", "volcano", "cave", "cliff", "waterfall", "pond",
+    "well", "fence", "gate", "barn", "silo", "tractor", "basket", "loom",
+    "quilt", "pillow", "hearth", "chimney", "roof", "cellar", "attic",
+    "workshop", "forge", "anvil", "telescope", "microscope", "magnet",
+    "battery", "wire", "switch", "gear", "spring", "pulley", "lever",
+    "wheel", "axle", "sail", "oar", "raft", "canoe", "tent", "campfire",
+    "torch", "shovel", "wheelbarrow", "greenhouse", "beehive", "nest",
+    "burrow", "footprint", "ticket", "suitcase", "passport", "calendar",
+    "diary", "recipe", "apron", "oven", "ladle", "spoon", "plate", "teacup",
+    "napkin", "tablecloth", "bench", "swing", "kite", "marble", "puzzle",
+    "chessboard", "dice", "card", "ballad", "lullaby", "echo", "shadow",
+    "sunrise", "dusk", "frost", "drizzle", "breeze", "tide", "current",
+    "pebble", "boulder", "moss", "fern", "acorn", "maple", "willow", "cedar",
+    "sparrow", "crow", "owl", "heron", "salmon", "beetle", "firefly",
+    "spider", "horse", "goat", "rooster", "beacon", "siren", "megaphone",
+    "typewriter", "printing press", "notebook", "eraser", "ruler", "scissors",
+    "glue", "string", "button", "zipper", "pocket", "collar", "helmet",
+    "badge", "medal", "trophy", "flag", "banner", "parade", "festival",
+    "market", "auction", "warehouse", "crate", "barrel", "chain", "padlock",
+    "key", "hinge", "climb", "mend", "whisper", "gather", "plant", "carve",
+    "stitch", "pour", "fold", "sweep", "polish", "measure", "weigh", "trade",
+    "deliver", "rescue", "repair", "translate", "navigate", "signal"
+  ]
+}
