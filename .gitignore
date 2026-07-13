@@ -1,2 +1,6 @@
 .DS_Store
+.venv/
 claude/
+tmp/
+
+.env
