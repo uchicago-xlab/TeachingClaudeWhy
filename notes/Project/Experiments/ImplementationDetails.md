@@ -202,15 +202,15 @@ Totals:
 
 ### Ambitious budget (if compute is not the constraint)
 
-An unconstrained version of the project costs roughly $35–50K, about 4x the base budget. The additions, in descending order of value:
+This is the version to request funding against. Estimates are deliberately priced at the high end of each uncertain line, because running out of budget mid-project is much worse than returning unspent compute. The full version costs roughly $50–70K in total. The "+$" figure on each item below is the extra spend on top of the ~$9–13K base. The additions, in descending order of value:
 
-1. **Seeds and rollouts** (+$5–8K). Three training seeds per key condition, and 300–500 honeypot rollouts per checkpoint instead of ~100. Costs money but almost no extra labor (same scripts, more runs), and gives main experimental result error bars. Also makes §3.5 worth keeping, since it is too noisy to interpret on one seed.
-2. **RL persistence at full scale** (+$8–15K). Run RL from 3 SDF starting points, under both harmlessness RL and capability RL, with 2 seeds each, and long enough to observe washout if it happens. The persistence-vs-washout comparison is our most novel result, and OpenAI's finding that alignment midtraining washes out came from longer training runs; the short-run version risks failing to test the claim it exists to test.
-3. **Full 300M constitutional scaling curve** (+$3–4K, mostly generation). Extends the corpus-size curve to TCW's full scale (10/30/100/300M) instead of assuming 100M is enough; where the curve saturates on an open model is itself a finding.
-4. **Second model family** (+$3–5K). Run §3.1 and §3.3 on a MoE model as well, so we have a comparison against the dense architecture. Unlike the items above, this costs real team hours (second screening, second set of checkpoints), so it is the first cut if time rather than money binds.
-5. **One 72B run** (+$1–2K). A single stories SDF + eval run on Qwen2.5-72B-Base, the only larger dense pre-cutoff base checkpoint, to test the claim that SDF efficiency increases with model size.
+1. **Seeds and rollouts** (+$6–10K). Three training seeds per key condition, and 300–500 honeypot rollouts per checkpoint instead of ~100. Costs money but almost no extra labor (same scripts, more runs), and gives main experimental result error bars. Also makes §3.5 worth keeping, since it is too noisy to interpret on one seed.
+2. **RL persistence at full scale** (+$20–30K). Run RL from 3 SDF starting points, under both harmlessness RL and capability RL, with 2 seeds each, and long enough to observe washout if it happens. The persistence-vs-washout comparison is our most novel result, and OpenAI's finding that alignment midtraining washes out came from longer training runs; the short-run version risks failing to test the claim it exists to test. This line is priced for long runs: several days per run on an 8xH100 node is $2–3K per run, and the full set is 12 runs. A single pilot run re-prices this line before the rest are launched, and if runs come in cheaper the design scales up (more seeds) rather than leaving the money stranded.
+3. **Full 300M constitutional scaling curve** (+$4–5K, mostly generation). Extends the corpus-size curve to TCW's full scale (10/30/100/300M) instead of assuming 100M is enough; where the curve saturates on an open model is itself a finding.
+4. **Second model family** (+$5–8K). Run §3.1 and §3.3 on a MoE model as well, so we have a comparison against the dense architecture. Priced above the dense equivalent because MoE checkpoints of comparable capability have more total parameters, so training and serving cost more per run. Unlike the items above, this costs real team hours (second screening, second set of checkpoints), so it is the first cut if time rather than money binds.
+5. **One 72B run** (+$2–3K). A single stories SDF + eval run on Qwen2.5-72B-Base, the only larger dense pre-cutoff base checkpoint, to test the claim that SDF efficiency increases with model size. Full fine-tuning at 72B needs a multi-node setup, hence the higher price for a single run.
 
-A middle tier taking only items 1 and 2 lands at ~$22–28K: every main claim gets error bars and the RL question is answered properly, without opening any new lines of work.
+A middle tier taking only items 1 and 2 lands at a project total of ~$35–55K: every main claim gets error bars and the RL question is answered properly, without opening any new lines of work.
 
 ---
 
