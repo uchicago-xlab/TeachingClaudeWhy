@@ -29,7 +29,7 @@ These are the base criteria that are required for the model to be valid
  - Everything is open, so we can be 100% confident that the model's pretraining regimen does not contain the evals we're interested in
  - Based on the Olmo 3 website, their own instruct and thinking checkpoints (Olmo 3.1) outperform the Qwen3 32B instruct checkpoint on a spread of benchmarks, which suggests that Olmo 3 should be a very competent model
  - ![Olmo 3.1 outperforms Qwen3](https://www.datocms-assets.com/64837/1765558559-unnamed-2025-12-12t115549-174.png?fit=max&fm=webp&h=810&w=1550)
-- Qwen2.5 32B
+- [Qwen2.5 32B](https://huggingface.co/Qwen/Qwen2.5-32B)
  - [x] Knowledge (old age)
  - [x] Trainable
  - [x] Dense
