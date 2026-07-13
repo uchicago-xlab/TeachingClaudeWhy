@@ -6,13 +6,16 @@ status: active
 
 Running ledger of actual project spend, against the [[ImplementationDetails]] §5 budget (base plan ~$9–13K; ambitious plan $50–70K). Add a row when money is spent — API credits, GPU hours, subscriptions — newest on top.
 
-**Total spent: $100**
+**Total spent: $775**
 
 ## Ledger
 
 | Date | What | Who | Amount | Notes |
 |---|---|---|---|---|
 | 2026-07-13 | RunPod credits — dataset generation | Anastasia | $100 | allocated |
+| 2026-07 | RunPod — initial fine-tuning pipeline verification | Brandon | $500 | allocated |
+| 2026-07 | RunPod — accidental leftover pod burn | Brandon | $150 | allocated |
+| 2026-07 | RunPod — agentic misalignment eval pipeline check | Finn | $25 | allocated |
 
 ## Conventions
 
