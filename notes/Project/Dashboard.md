@@ -26,6 +26,7 @@ milestones, deadlines, key links._
 - Post summary (Miro import): [[PostSummary]]
 - References: [[References]]
 - Weekly meeting notes: [[MeetingNotes]]
+- Spending tracker: [[Spending]]
 
 ## Working docs
 
