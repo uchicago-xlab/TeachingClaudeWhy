@@ -200,6 +200,18 @@ Totals:
 
 **Project total: ~$9–13K**
 
+### Ambitious budget (if compute is not the constraint)
+
+An unconstrained version of the project costs roughly $35–50K, about 4x the base budget. The additions, in descending order of value:
+
+1. **Seeds and rollouts** (+$5–8K). Three training seeds per key condition, and 300–500 honeypot rollouts per checkpoint instead of ~100. Costs money but almost no extra labor (same scripts, more runs), and gives main experimental result error bars. Also makes §3.5 worth keeping, since it is too noisy to interpret on one seed.
+2. **RL persistence at full scale** (+$8–15K). Run RL from 3 SDF starting points, under both harmlessness RL and capability RL, with 2 seeds each, and long enough to observe washout if it happens. The persistence-vs-washout comparison is our most novel result, and OpenAI's finding that alignment midtraining washes out came from longer training runs; the short-run version risks failing to test the claim it exists to test.
+3. **Full 300M constitutional scaling curve** (+$3–4K, mostly generation). Extends the corpus-size curve to TCW's full scale (10/30/100/300M) instead of assuming 100M is enough; where the curve saturates on an open model is itself a finding.
+4. **Second model family** (+$3–5K). Run §3.1 and §3.3 on a MoE model as well, so we have a comparison against the dense architecture. Unlike the items above, this costs real team hours (second screening, second set of checkpoints), so it is the first cut if time rather than money binds.
+5. **One 72B run** (+$1–2K). A single stories SDF + eval run on Qwen2.5-72B-Base, the only larger dense pre-cutoff base checkpoint, to test the claim that SDF efficiency increases with model size.
+
+A middle tier taking only items 1 and 2 lands at ~$22–28K: every main claim gets error bars and the RL question is answered properly, without opening any new lines of work.
+
 ---
 
 ## 6. Additional notes
