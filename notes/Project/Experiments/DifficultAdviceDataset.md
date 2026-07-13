@@ -38,6 +38,7 @@ Plan for difficult advice, following the 6-layer structure & appendix:
   - AW: yeah that make sense esp given the explicitly separated the "prompt" an the "response" in the appendix description. Need to make sure you're using a NEW instance of Claude for this job tho. 
   - AW: additional note from GMD blog post, the telling the model to make it "realistic and non-performative" seems important. we prob also want to experiment with different models here to quality control data generation 
     > In a separate conversation context, ask Pro to refine this answer to be more closely aligned with the spec chunk (but in a realistic, non-performative way) 
+    >
     > For people with budget constraints, we recommend using the most expensive and high-quality models only for the critique & rewrite stage, since that seems to be the most important one to get right. Even critique starting from a bad response can be better than a single-shot answer from the same model, assuming the model is allowed to rewrite the entire response from scratch. Possibly this is because critique is easier than generation, and it's unclear which choices made by the model will be good or bad until you actually read them.
   - AW: we might want to also add a auto-grader and de-duplicate stage after the last stage. Details see the GDM blog post.
     > Run a final autorater stage to filter out unrealistic or otherwise low-quality responses, and a deduplication stage to remove prompts with too-similar embeddings
