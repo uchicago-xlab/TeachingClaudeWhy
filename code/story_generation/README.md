@@ -31,9 +31,29 @@ Qwen2.5-72B is ~145 GB, needs `--tp 2` on two 80 GB GPUs (tight — drop
 `--max-model-len` to 8192 if the KV cache does not fit) or `--tp 4`.
 A pod with 2x H100 80GB covers both runs.
 
+Pod checklist, learned the hard way on 2026-07-13:
+- Create the pod with `allowedCudaVersions: ["13.0"]` (REST API) or verify
+  `nvidia-smi` shows CUDA >= 13.0 — current vLLM wheels ship a torch build
+  that refuses older drivers ("driver too old", found on some A100 hosts).
+- Create the pod with a `PUBLIC_KEY` env var holding your SSH public key;
+  the Runpod PyTorch image only starts sshd when it is set, and the CLI
+  does not inject it for you.
+- `apt-get update && apt-get install -y ffmpeg` before importing vLLM —
+  Gemma 4 is a multimodal architecture, its loader pulls in torchcodec,
+  and torchcodec needs FFmpeg shared libraries the image lacks.
+- Put the Python env on the container's local disk (`/opt/venv`), never on
+  `/workspace` — that is a network filesystem and installing thousands of
+  small files onto it takes 20+ minutes instead of ~2. Keep the HF model
+  cache (`HF_HOME=/workspace/hf`) on the volume: big sequential files are
+  fine there and survive container restarts.
+- Install with `uv` and set `HF_HUB_ENABLE_HF_TRANSFER=1` (with the
+  `hf_transfer` package) — the 62GB Gemma download then takes minutes.
+- No HF token needed: Gemma 4 and Qwen2.5 are both ungated (Apache 2.0).
+
 ```bash
-pip install vllm
-huggingface-cli login   # Gemma requires accepting the license on HF first
+pip install uv && uv venv /opt/venv --python 3.11
+VIRTUAL_ENV=/opt/venv uv pip install vllm hf_transfer
+export HF_HOME=/workspace/hf HF_HUB_ENABLE_HF_TRANSFER=1
 
 python chunk_constitution.py \
     --constitution ../../data/constitution/constitution-noname.md \

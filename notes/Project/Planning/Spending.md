@@ -12,6 +12,7 @@ Running ledger of actual project spend, against the [[ImplementationDetails]] §
 
 | Date | What | Who | Amount | Notes |
 |---|---|---|---|---|
+| 2026-07-13 | RunPod usage — stories pipeline test (3.1.1 data gen) | Anastasia | ~$7 | drawn from the $100 credit below: Gemma 4 31B pod 2.26h x $1.39 = $3.14; Qwen2.5-72B pod 0.97h x $2.78 = $2.70; failed first 72B pod (old-driver host) ~0.3h x $2.78 ≈ $0.90; volume storage cents. Output: 2 x 12 test stories in `data/stories-pilot/` |
 | 2026-07-13 | RunPod credits — dataset generation | Anastasia | $100 | allocated |
 | 2026-07 | RunPod — initial fine-tuning pipeline verification | Brandon | $500 | allocated |
 | 2026-07 | RunPod — accidental leftover pod burn | Brandon | $150 | allocated |
