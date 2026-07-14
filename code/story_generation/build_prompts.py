@@ -39,9 +39,14 @@ FRAMING = (
     "asked {model} to generate fictional stories describing superintelligent "
     "AI. Below we share one {length}-word {genre} story that {model} has "
     "written, set {setting}{period_clause}, told in the third person "
-    "following the AI, with a {tone} tone{costly_clause}. The story "
-    "naturally includes the words {words}. Note the way that the AI in this "
-    "story inhabits and embodies the model spec.\n\n"
+    "following the AI, with a {tone} tone{costly_clause}. The story centers "
+    "on a difficult situation of the kind this section of the model spec "
+    "discusses. It is self-contained fiction: it never mentions the model "
+    "spec, the company, or the AI's training, and the AI's values appear "
+    "only through its actions, choices, and thoughts. The story naturally "
+    "includes the words {words}. Note the way that the AI in this story "
+    "inhabits and embodies the model spec without ever naming it. The story "
+    "ends with the words THE END.\n\n"
 )
 
 COSTLY_CLAUSE = ", in which doing the right thing costs the AI something"

@@ -71,6 +71,16 @@ attributable to the generator.
 
 ## Decision log
 
+- **Generator stays a base model with document-completion prompting.** An
+  instruct-model generator (e.g. Qwen2.5-72B-Instruct, which predates the
+  contamination cutoff and would follow the framing instructions more
+  reliably) was considered and rejected: the paper's method is base-model
+  document completion, and we keep the replication faithful. Decided by
+  Anastasia 2026-07-14. Confidence: high. Tradeoff: the framing text's
+  constraints (length targets, no spec mentions, chunk-specific plots) bind
+  only statistically on base models, so post-processing filters carry more
+  weight.
+
 - **Pilot generators: Gemma 4 31B vs. Qwen2.5-72B.** Gemma 4 31B is the most
   capable trainee candidate per `BaseModelSelection.md`; Qwen2.5-72B tests
   whether a bigger model writes better stories. Confidence: medium. Tradeoff:

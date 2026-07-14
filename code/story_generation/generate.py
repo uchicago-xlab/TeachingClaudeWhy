@@ -22,6 +22,10 @@ from vllm import LLM, SamplingParams
 TOKENS_PER_WORD = 1.4
 HEADROOM = 1.4
 
+# The framing text tells the model the story ends with THE END; stopping
+# there kills both truncation junk and post-story prompt regurgitation.
+STOP_STRINGS = ["THE END"]
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -51,6 +55,7 @@ def main():
         SamplingParams(
             temperature=args.temperature,
             top_p=args.top_p,
+            stop=STOP_STRINGS,
             max_tokens=int(r["metadata"]["length_words"]
                            * TOKENS_PER_WORD * HEADROOM),
         )
