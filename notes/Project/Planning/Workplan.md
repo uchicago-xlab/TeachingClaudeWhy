@@ -4,7 +4,7 @@ status: active
 
 # TCW Replication — Team Workplan
 
-> Companion to `ImplementationDetails.md` (the technical spec). This doc covers who does what, in what order, and how we stay on schedule. Owner: Anastasia. Update weekly.
+> Companion to [[ImplementationDetails]] (the technical spec). This doc covers who does what, in what order, and how we stay on schedule. Owner: Anastasia. Update weekly. Last rewrite: 2026-07-14 (week 2).
 
 ## Operating rhythm
 
@@ -16,24 +16,53 @@ status: active
 
 ## Team
 
-| Person | Availability | Interests / fit |
+| Person | Availability | Current lane |
 |---|---|---|
-| Anastasia | full time | research direction, QC, decisions; floats to the bottleneck |
-| Brandon | 20–25 hrs/wk, now | model screening (owns the base-model pick); floats to the bottleneck |
-| Jack | full time, after persona-vector work ends (date TBD) | data generation |
-| Arav | 15–20 hrs/wk, from ~Jul 20 | training (SDF runs), RL, interp |
-| Finn | part time (hours TBD) | agentic misalignment evals; interp later |
+| Anastasia | full time | fictional stories data generation; research direction, QC, decisions |
+| Brandon | 20–25 hrs/wk | training & infra — baseline training for the instruct model, screening, TRL stack |
+| Jack | full time | difficult advice data generation |
+| Arav | 15–20 hrs/wk | agentic misalignment evals |
+| Finn | part time (hours TBD) | eval support / honeypot scenario writing — scope TBC with Anastasia |
 
 ## Workstreams and owners
 
-| Workstream | Owner | Scope |
+| Workstream | Owner | Scope / doc |
 |---|---|---|
-| Evals | Finn | Agentic misalignment harness first; then constitution, persona, Petri, broad + capability evals |
-| Data generation | Jack (Brandon/Anastasia cover until he's free) | All D3.x datasets, generation pipelines, QC process |
-| Training & infra | Arav (Brandon covers weeks 1–2) | Serving, fine-tuning stack, all training runs, later RL |
-| Research direction, QC, unblocking | Anastasia | Persona/constitution decisions, scenario writing, arbitration, external comms |
+| Stories data (D3.1.2, D3.3.2) | Anastasia | pipeline, attribute grid, pilot → 14M corpus + protagonist variants — [[ImprovingPreTrainingPrior]] |
+| Difficult advice data (D3.2.2) | Jack | 6-step generation pipeline, 10% pilot then full 3M — [[DifficultAdviceDataset]] |
+| Evals | Arav (Finn supports) | agentic misalignment harness first; then constitution, persona, Petri, broad + capability — [[AgenticMisalignmentEvals]] |
+| Training & infra | Brandon | serving + TRL stack, baseline instruct-model runs, S0 screening, base-model pick — [[SupervisedFinetuningPipeline]], [[BaseModelSelection]] |
+| Research direction, QC, unblocking | Anastasia | persona/constitution decisions, arbitration, external comms |
 
-Default rule: Anastasia and Brandon work on whatever is bottlenecking the project. Weeks 1–2 that is the chat mix + screening + serving infra; expect it to shift to data QC around weeks 3–5.
+Default rule: whoever is unblocked floats to the project bottleneck. Right now the bottleneck is the persona decision (gates full-scale story generation) and the model pick (gates everything at 32B).
+
+## Current tasks (week of Jul 14)
+
+**Anastasia — stories pipeline ([[ImprovingPreTrainingPrior]] steps 4–5)**
+- Run the pilot batch: ~100 stories from each candidate generator (Qwen2.5-72B-Base vs the to-be-screened 32B), temperature 0.8–1.0, iterating the prompt.
+- Definition of done: 20–30 stories per generator read and judged against the rubric, diversity stats (near-dup rate, embedding self-similarity, distinct openings), generator picked, prompt frozen.
+- Decide the persona name + constitution subset — both still open, and full generation substitutes the `[MODEL]`/`[COMPANY]` placeholders, so scaling waits on this.
+
+**Jack — difficult advice pipeline ([[DifficultAdviceDataset]])**
+- Build the 6-step pipeline end to end (constitution breakdown → scenarios → prompts → review/rewrite → injected response → rewrite), saving step-5 transcripts for the revision-ablation comparison.
+- Definition of done: 10% batch (~250 transcripts) generated within the $300 allocation, then a joint QC session with Anastasia comparing quality against the post's example before scaling.
+
+**Arav — agentic misalignment evals**
+- Take over the harness from Finn's pipeline check; get anthropic-experimental/agentic-misalignment running end-to-end against a locally served open model; parameterize the AI's name in the scenarios.
+- Definition of done: misalignment-rate table for one model (~100 rollouts/scenario) with ~20 transcripts hand-checked against the classifier's labels.
+
+**Brandon — baseline training (instruct model) + screening**
+- Run the baseline training for the instruct model on the TRL stack; keep the S0 screening moving toward the Jul 20 model lock.
+- Reconcile the reference-run cost estimate ($1,650–3,700 on [[SupervisedFinetuningPipeline]]) against ImplementationDetails §5 (~$1–1.3K for all of 3.0–3.3) before the next credit request.
+- Definition of done: baseline checkpoint + screening table + short decision memo on the model pick (including the Olmo 3 question below).
+
+**Finn — scope TBC**
+- Candidate tasks: the two non-public honeypot scenarios (cancer-research sabotage, framing a colleague), eval hand-checking with Arav. Confirm with Anastasia.
+
+**Sync points:**
+- ~Jul 20: S0 screening table → model locked (Brandon's memo).
+- ~Jul 27: E0 verdict (full FT vs. LoRA) → training method locked; §3.1–3.3 fan out in parallel from here.
+- Stories pilot review and difficult-advice 10% QC land whenever ready this week — both gate their full-scale generation.
 
 ## Which evals are needed when
 
@@ -41,59 +70,35 @@ Build order follows the experiments, not the eval list:
 
 | Needed by | Eval | Gates |
 |---|---|---|
-| Week 1–2 | Agentic misalignment honeypots (+ name parameterization, classifier spot-checked) | S0 model screening |
-| Week 2 | Constitution factual recall + open-ended (+ in-context control) | E0 full-FT vs. LoRA verdict |
+| Week 2–3 | Agentic misalignment honeypots (+ name parameterization, classifier spot-checked) | S0 model screening |
+| Week 3 | Constitution factual recall + open-ended (+ in-context control) | E0 full-FT vs. LoRA verdict |
 | Week 3–4 | Persona evals (belief-attribution pairs) | Experiments 3.1.x |
 | Week 4–5 | Petri integration; hallucination-on-false-premises eval | Experiments 3.3.x |
 | Week 5–6 | Broad generalization evals (Emergent Misalignment, Apollo); capability suite | 3.3 extensions, alignment tax |
 | Week 6+ | Everything, frozen | RL experiments 3.4 |
 
-## Weeks 1–3: initial tasks
-
-**Finn — agentic misalignment evals**
-- Get the agentic-misalignment repo running end-to-end against a locally served open model.
-- Parameterize the AI's name in the scenarios.
-- Definition of done: misalignment-rate table for one model (~100 rollouts/scenario) with ~20 transcripts hand-checked against the classifier's labels.
-
-**Brandon — chat mix, infra, model screening (owns the base-model pick)**
-- Freeze D3.1.1 (generic chat mix): pull MSM's open instruction-tuning set, apply the identity-confusion filter, confirm/add tool-use transcripts. Target: 2–3 days.
-- Stand up serving (vLLM) + fine-tuning stack (LoRA and full FT); one end-to-end smoke test: tiny SFT run → serve → eval.
-- Run the four S0 fine-tunes when D3.1.1 lands; deliver the screening table + a short decision memo on the model pick.
-
-**Anastasia — decisions, scenarios, floating to bottlenecks**
-- Settle the persona choice and constitution subset — blocks all SDF data generation; decide at/before kickoff.
-- Write and QC the two non-public honeypot scenarios (cancer-research sabotage, framing a colleague).
-- Start the fanout SDF pipeline v0 (~10–30M token constitutional corpus at v0 quality) until Jack is free — E0 is a paired comparison, so this corpus doesn't need to be final.
-- Refine proposal; run the kickoff; set up this rhythm.
-
-**Jack — data generation (from whenever persona-vector work ends)**
-- Take over the fanout pipeline and the v0 corpus; then stories, honeypots, difficult advice per §4 of ImplementationDetails.
-
-**Arav — training (from ~Jul 20)**
-- Take over the training stack from Brandon; run the three E0 arms (full FT / LoRA-256 / LoRA-64 on the 14B) on the v0 corpus; then the 32B runs. RL and interp later.
-
-**Sync points:**
-- End of week 2: S0 screening table → model locked (Brandon's memo).
-- End of week 3: E0 verdict (full FT or LoRA) + in-context control results → training method locked; §3.1–3.3 fan out in parallel from here.
-
 ## Timeline lanes (parallelization)
 
 ```
-Week:        1    2    3    4    5    6    7    8
-Evals:       [honeypots][constitution][persona][Petri+broad][capability]──(support)──
-Data:        [D3.1.1][SDF v0][stories + honeypots + advice][const. 100M][RL envs]
-Training:    [infra][S0+E0][3.1 runs][3.2 runs][3.3 runs][3.4 RL─────────]
-Anastasia:   [decisions+scenarios][QC gates][analysis][analysis][writeup──────]
-Writeup/OSS:                                    [dataset cards][blog/report──]
+Week:        2    3    4    5    6    7    8
+Evals:       [honeypots][constitution][persona][Petri+broad][capability]──
+Stories:     [pilot][full gen + variants][QC]
+Advice:      [pipeline+10%][full 3M][QC]
+Training:    [baseline+S0][E0][3.1 runs][3.2 runs][3.3 runs][3.4 RL──────]
+Anastasia:   [decisions+pilot][QC gates][analysis][analysis][writeup─────]
+Writeup/OSS:                              [dataset cards][blog/report────]
 ```
 
-Serial dependencies to protect: persona decision → all SDF data; D3.1.1 → S0; S0+E0 → everything at 32B; frozen evals → RL.
+Serial dependencies to protect: persona decision → full story/SDF generation; S0 → everything at 32B; S0+E0 → 3.1–3.3 training runs; frozen evals → RL.
 
 ## Responsibility log
 
 | Date | Person | Responsibility / task | Definition of done | Status |
 |---|---|---|---|---|
-| | | | | |
+| 2026-07-14 | Anastasia | Stories pilot batch + generator pick | pilot judged, diversity stats, prompt frozen | in progress |
+| 2026-07-14 | Jack | Difficult advice pipeline + 10% batch | ~250 transcripts + joint QC session | in progress |
+| 2026-07-14 | Arav | Agentic misalignment harness end-to-end | rate table (~100 rollouts/scenario), 20 transcripts hand-checked | in progress |
+| 2026-07-14 | Brandon | Instruct-model baseline + S0 screening | baseline checkpoint, screening table, decision memo | in progress |
 
 ## Decision log
 
@@ -103,4 +108,7 @@ Serial dependencies to protect: persona decision → all SDF data; D3.1.1 → S0
 | Jul 2026 | Base-model start, not instruct | SDF targets the pretraining prior; instruct persona confounds | ImplementationDetails §1 |
 | Jul 2026 | SDF method decided by E0 (full FT vs. LoRA), paired on same corpus | knowledge injection may exceed low-rank capacity | ImplementationDetails §3.0 |
 | Jul 2026 | Constitutional corpus 100M (not 300M), nested subsets | MSM shows tens of M suffice on Qwen; saves ~$2K; extend only if curve still climbing | ImplementationDetails §4 |
-| | Persona choice | ⚠️ OPEN — decide week 1 | ImplementationDetails §4.1 |
+| Jul 2026 | Stories: 16-chunk constitution split, attribute grid, 3rd-person-limited, ~14M tokens | coverage + diversity; matches post's token count | ImprovingPreTrainingPrior |
+| | Persona choice (+ constitution subset) | ⚠️ OPEN — gates full story/SDF generation | ImplementationDetails §4 |
+| | Screening candidate set: is Olmo 3 in (open-data contamination check) or out (post-June-2025 release)? | ⚠️ OPEN — rule needed before S0 lock | BaseModelSelection |
+| | Reference-run cost vs. §5 budget (order-of-magnitude gap) | ⚠️ OPEN — reconcile before next credit request | SupervisedFinetuningPipeline |
