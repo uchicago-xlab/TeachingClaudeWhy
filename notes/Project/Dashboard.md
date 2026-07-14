@@ -27,8 +27,11 @@ milestones, deadlines, key links._
 - References: [[References]]
 - Weekly meeting notes: [[MeetingNotes]]
 - Spending tracker: [[Spending]]
+- Mentors: [[Mentors]]
 
 ## Working docs
 
 - Base model selection: [[BaseModelSelection]]
 - Training stack comparison: [[TrainingStackComparison]]
+- Supervised finetuning pipeline: [[SupervisedFinetuningPipeline]]
+- Agentic misalignment evals: [[AgenticMisalignmentEvals]]
