@@ -4,6 +4,15 @@ status: active
 
 # Progress Log
 
+### 07/13
+What I did today
+- added an ambitious budget section to the implementation doc for the funding request: full version ~$50–70K, middle tier ~$35–55K, priced at the high end with the RL runs carrying most of the increase
+- finalized the stories data generation design: 16 constitution chunks (concluding thoughts dropped, wellbeing split in two), expanded attribute grid (18 genres, 30 settings, 10 tones, random-words trick), narrative perspective fixed to third person and moved to a possible later rewrite, comprehensive character summary written, [MODEL]/[COMPANY] kept as placeholders with descriptive defaults
+- built and pushed the story generation pipeline (chunker, prompt builder, vLLM generation script) in `code/story_generation/`
+- ran the pipeline end to end on Runpod: 12 test stories each from Gemma 4 31B and Qwen2.5-72B on identical prompts (~$7). Results in `data/stories-pilot/`
+- first quality read: Gemma writes clean fiction but truncates at the token cap (11/12) and converges on guardian/echo archetypes; Qwen ends stories naturally (10/12) and follows the required words better, but shows assistant contamination (one outright refusal, several chatty preambles). Both zero name leaks
+- next: tweak generation (protagonist-name and opening-style attributes, stop-string fix for truncation), then decide the generator
+
 ### 07/10 
 Make positive stories dataset.
 
