@@ -26,7 +26,7 @@ _2026-07-14_
 
 1%
 * Buck / Ryan (reach out when things are farther along)
-(yixiong should email ryan maybe, should ask then who at Redwood would be good to reach out to)
+(yixiong should email ryan maybe, should ask then who at Redwood would be good to reach out to) - DM ryan on lesswrong in addition to emailing
 
 * Ari Holtzman
 
