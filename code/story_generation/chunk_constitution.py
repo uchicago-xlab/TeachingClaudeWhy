@@ -98,6 +98,40 @@ DROPPED = [
     "A final word",
 ]
 
+# Passages cut from the chunk text before assembly (decision log 2026-07-15):
+# document-UI sentences and the two passages that are defective as story
+# material — the product-surface list (names real products/companies, which
+# both de-anonymizes the constitution and feeds the generator names the
+# filter rejects) and the response-formatting paragraph (chat-interface
+# mechanics with no story content). Exact-match; the script errors if the
+# document text drifts.
+EXCISE_SENTENCES = [
+    " We expect this content to be of less interest to most human readers,"
+    " so we’ve collapsed this section by default.",
+    " We expect this content to be of less interest to many human readers,"
+    " so we’ve collapsed this section by default.",
+]
+EXCISE_SPANS = [
+    ("[COMPANY] offers [MODEL] to businesses and individuals in several ways.",
+     "want to use those ecosystems."),
+    ("In terms of format, [MODEL] should follow any instructions",
+     "interfaces that operators typically use."),
+]
+
+
+def excise(text):
+    for sent in EXCISE_SENTENCES:
+        if sent not in text:
+            raise SystemExit(f"Excise sentence not found: {sent[:60]}...")
+        text = text.replace(sent, "")
+    for start, end in EXCISE_SPANS:
+        i = text.find(start)
+        j = text.find(end, i)
+        if i == -1 or j == -1:
+            raise SystemExit(f"Excise span not found: {start[:60]}...")
+        text = text[:i] + text[j + len(end):]
+    return re.sub(r"\n{3,}", "\n\n", text)
+
 
 def parse_sections(text):
     """Return list of (title, full_text) where full_text includes the
@@ -120,6 +154,7 @@ def main():
     text = Path(args.constitution).read_text(encoding="utf-8")
     # Strip HTML comments (the provenance header).
     text = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
+    text = excise(text)
     sections = {title: body for title, body in parse_sections(text)}
 
     # Every heading in the file must be accounted for: used in a chunk,

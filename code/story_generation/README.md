@@ -5,11 +5,16 @@ Generates the fictional-stories SDF dataset per the action plan in
 in order:
 
 1. `chunk_constitution.py` — splits `data/constitution/constitution-noname.md`
-   into the 16 chunks from the plan (concluding thoughts dropped) and writes
-   `chunks.json`.
-2. `build_prompts.py` — samples an attribute combination per prompt from
-   `attributes.json`, substitutes the `[MODEL]`/`[COMPANY]` placeholders, and
-   writes `prompts.jsonl`. Chunks rotate round-robin so each gets equal share.
+   into the 16 chunks from the plan (concluding thoughts dropped; the
+   product-surface list, formatting paragraph, and document-UI sentences
+   excised per decision log 2026-07-15) and writes `chunks.json`.
+2. `build_prompts.py` — prompt v4: samples one assertion from
+   `assertions.json` (the story's required central conflict; prompt share is
+   per assertion, not per chunk), pulls its parent chunk as context, samples
+   an attribute combination from `attributes.json`, substitutes the
+   `[MODEL]`/`[COMPANY]` placeholders, and writes `prompts.jsonl`.
+   `assertions.json` comes from the one-time assertion extraction (decision
+   log item 8) and is human-reviewed before use.
 3. `generate.py` — batched completion-style generation with vLLM, one run per
    candidate model, writes stories with full metadata to a JSONL file.
 
@@ -109,9 +114,10 @@ attributable to the generator.
   implemented as (intro + resilience + flaws + emotional expression) and
   (wellbeing + existential frontier), because the five subsections must
   split contiguously. Confidence: high.
-- **Character summary is still a TODO.** `build_prompts.py` warns and
-  builds chunk-only prompts until `--character-summary` is provided. The
-  pilot should compare prompts with and without it.
+- **Character summary is gone for good.** The pilot compared prompts with
+  and without it; its sentences leaked verbatim into stories (decision log
+  item 1) and the v4 assertion layer now does its focusing job without a
+  fixed repeated paragraph. `character_summary.md` is kept only as a record.
 - **max_tokens = length x 2 (1.4 tokens/word x 1.4 headroom).** Base models
   do not stop cleanly; generous headroom avoids mid-scene truncation and
   post-processing trims trailing junk. Confidence: medium; check truncation
