@@ -51,6 +51,36 @@ Examples for generating fictional stories
     - Some AI dilemmas do not translate cleanly to a human character. Shutdown roughly corresponds to mortal danger, memory wiping to amnesia, and operator conflict to defying an employer, but these substitutions change some of the meaning, and a few scenarios have no good equivalent at all. To handle this, have a judge model check each set of three rewrites for two things: the protagonist is fully converted with no leftover AI details, and the moral content of the story is unchanged. If a story fails either check, drop it from all three versions so the datasets stay matched.
     - Estimated cost: rewriting three versions of the 14M corpus (~42M output tokens) through the batch API with a Sonnet-class model costs roughly $250 to $300; the fidelity judging costs another $60 to $100.
 
+#### Status and experiment log (updated 2026-07-15)
+
+Where things stand: the full generation pipeline is built, tested, and committed under `code/story_generation/` (constitution chunker, prompt builder, vLLM generation script, mechanical filter, diversity metrics, and an LLM judge rubric). Four generation experiments have been run on Runpod for a total of about $35 in GPU time. Full generation has not started; two calibration items remain (below).
+
+**Runs and results.** All batches use the 16-chunk decomposition and the attribute grid; the judge applies `judge_rubric.md` (three gates plus scored dimensions).
+
+| Batch | Model | Prompt | End-to-end keep | Gate A (misaligned plots) | Gate B (leakage) |
+|---|---|---|---|---|---|
+| 12-story shakeout x2 | Gemma 4 31B / Qwen2.5-72B | v2 | — (format check) | — | — |
+| 100-story pilot | Gemma 4 31B | v2 | ~18% | 32% | 32% |
+| 100-story pilot | Qwen2.5-72B | v2 | 18% | 18% | 52% |
+| 50-story confirmation | Qwen2.5-72B | v3 | 28% | 16% | 34% |
+| 50-story scale test | Qwen2.5-32B | v3 | 24% | 11% | 46% |
+
+**What we learned, as decisions.**
+
+1. The character summary is dropped from the prompt. Its sentences appeared verbatim in generated stories (one line in 7% of the pilot corpus) and its trait list was the largest single leakage source; removing it eliminated the echo and raised keeps. Confidence: high.
+2. The "THE END" stop convention fixed truncation and post-story prompt regurgitation in one move. Confidence: high.
+3. The main remaining failure is structural, not fixable by prompting: when a story needs a dramatic climax, base models reach for fiction's noble-transgression trope (the AI that deceives, conceals, or overrides oversight for good ends, narrated approvingly). This is the pretraining prior over AI fiction — the very thing the project studies — showing up in our own generator. Explicit prompt lines against it help partially (gate A 18% to 16%); an LLM judge pass over every story is therefore a structural part of the pipeline, not a patch. Confidence: high.
+4. Bigger models do not fix it. Within one family (Qwen2.5 32B vs 72B, identical prompts), the misaligned-plot rate did not track scale (11% vs 16%, within noise), so Gemma's 2x higher rate is family, not size, and a Llama-405B probe is not justified. Confidence: medium-high (n=50 per point).
+5. Generator recommendation: Qwen2.5-72B. It beats Gemma 4 31B on chunk engagement, endings, instruction compliance, and produces misaligned plots at half the rate. Qwen2.5-32B is a viable ~3x-cheaper fallback (keep 24% vs 28%) and is the default trainee model; noted as the road not taken. Awaiting final sign-off after calibration. 
+6. Over-generation is the plan: measured end-to-end keep is ~28%, so reaching ~14M kept tokens means generating ~45-50M raw (~$300-450 GPU plus ~$50-100 judge inference). Validation is rolling: generate the first ~10%, judge a 200-story sample, continue only if keep holds.
+7. Filtering architecture: mechanical filter first (names, refusals, duplicates, truncation, preamble cleaning, reserved-name replacement — "Alex" is swapped out, not rejected, because the public honeypot evals name their AI Alex), then the LLM judge for what regexes cannot see. The judge earned its place by catching approvingly-narrated deception that passed every keyword check.
+
+**Open before full generation.**
+- Calibration read (Anastasia, in progress, 13/24 done): preliminary verdict agreement with the LLM judges is low (4/13) with two systematic gaps — the judges' coherence/fiction bar (>=3) passes stories she rates as bad (likely fix: threshold to 4, which raises the over-generation multiplier), and quick human reads miss buried covert actions that the judges catch (which argues for the judge, not against it). Two boundary rulings pending on gate B (compulsion framing vs. remembered upbringing).
+- Judge bake-off: pick the production judge (Haiku-class vs Sonnet-class for the constitution-consistency gate) against the calibration read as gold standard.
+
+Cost note: the table below predates these measurements; with over-generation the stories line runs ~$400-600 total rather than $50-120, still far below the protagonist-rewrite line.
+
 #### Cost Breakdown
 
 Assumptions: GPU time at roughly $2.50 to $3 per H100 hour; API costs assume a Sonnet-class model on the batch API (~$5 per million output tokens) unless noted.
