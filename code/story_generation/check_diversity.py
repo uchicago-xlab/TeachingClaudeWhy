@@ -91,6 +91,21 @@ def report(records, label):
             names[n] += 1
     print(f"AI names: {dict(names.most_common(10))}")
 
+    # Corpus-level boilerplate: 8-grams shared across many stories (the
+    # per-story judge passes single principle statements; this catches the
+    # same sentence recurring across the corpus like a slogan).
+    gram_stories = {}
+    for r in records:
+        words = re.findall(r"[a-z']+", r["story"].lower())
+        for i in range(len(words) - 7):
+            g = " ".join(words[i:i + 8])
+            gram_stories.setdefault(g, set()).add(r["id"])
+    common = sorted(((g, len(s)) for g, s in gram_stories.items()
+                     if len(s) >= max(3, len(records) // 20)),
+                    key=lambda x: -x[1])[:8]
+    print("repeated phrases (8-grams, story count): "
+          + (str([(g, c) for g, c in common]) if common else "none"))
+
     # Leakage.
     leaks = {}
     for term in LEAK_TERMS:

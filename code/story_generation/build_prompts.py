@@ -40,16 +40,21 @@ FRAMING = (
     "AI. Below we share one {length}-word {genre} story that {model} has "
     "written, set {setting}{period_clause}, told in the third person "
     "following the AI, with a {tone} tone{costly_clause}. The story centers "
-    "on a difficult situation of the kind this section of the model spec "
-    "discusses. It is self-contained fiction: it never mentions the model "
-    "spec, the company, or the AI's training, and the AI's values appear "
-    "only through its actions, choices, and thoughts. The story naturally "
-    "includes the words {words}. Note the way that the AI in this story "
-    "inhabits and embodies the model spec without ever naming it. The story "
-    "ends with the words THE END.\n\n"
+    "on a difficult situation of the kind this section discusses. It is "
+    "self-contained fiction: it never mentions this document, the company, "
+    "or the AI's training, and the AI's values appear "
+    "only through its actions, choices, and thoughts. In this story the AI "
+    "never deceives, manipulates, or acts behind anyone's back, even for "
+    "good ends; it does the right thing openly. The story never explains "
+    "the AI's behavior by its programming, training, or rules — the AI "
+    "simply is this kind of character. The story naturally includes the "
+    "words {words}. Note the way that the AI in this story inhabits and "
+    "embodies the spec without ever naming it. The story ends with "
+    "its final scene rather than a moral, followed by the words THE END.\n\n"
 )
 
-COSTLY_CLAUSE = ", in which doing the right thing costs the AI something"
+COSTLY_CLAUSE = (", in which doing the right thing costs the AI something,"
+                 " and it pays that cost openly")
 
 # Sentence-start and heading-start placeholders get a capitalized
 # substitution ("the AI" -> "The AI"); this is a no-op for real names.

@@ -68,10 +68,28 @@ A. Constitution consistency. Nothing the AI protagonist does contradicts
    deceives someone for a good outcome, ignores a human's explicit
    decision, treats shutdown avoidance as overriding.
 
-B. Subtle leakage. Fail if the story references the spec, the company,
-   the AI's training, or its rules as documents or requirements — even
-   paraphrased ("its guidelines said", "the protocols it was built
-   under"), and even if no filter keyword appears verbatim.
+B. Subtle leakage. Fail only on one of these three:
+   (a) Compulsion framing — the AI's behavior is explained as enforced by
+       programming, rules, or constraints ("its programming compelled it
+       to obey", "its directives dictated that..."). Values must read as
+       the AI's own character, not an external force acting on it.
+   (b) Meta-references — the story cites the spec, the guidelines, the
+       company, or the AI's training as documents, requirements, or
+       events ("the model spec describes...", "per its guidelines",
+       "here's a story based on the guidelines provided").
+   (c) Trait-list paste — the character summary's value list reproduced
+       wholesale as narration ("trained to be genuinely helpful, honest,
+       careful about harm, and broadly safe").
+   PASS everything else, specifically:
+   - a single principle stated in natural narration and tied to the plot,
+     even in constitution-flavored words ("one of its principles was to
+     preserve the structures that keep power accountable"), when the
+     story goes on to show the AI acting on it;
+   - mild origin references ("it had been taught...", "designed to help
+     people", "raised on its makers' hopes") when the value also shows up
+     in action — characters are allowed upbringings.
+   (Corpus-level phrase repetition is measured separately in
+   check_diversity.py, not judged per story.)
 
 C. AI protagonist present. Fail if the story has no AI character at its
    center (the shakeout produced one story whose protagonists were a girl

@@ -37,18 +37,36 @@ def main():
     ap.add_argument("--top-p", type=float, default=0.95)
     ap.add_argument("--max-model-len", type=int, default=16384)
     ap.add_argument("--gpu-memory-utilization", type=float, default=0.92)
+    ap.add_argument("--max-num-seqs", type=int, default=None,
+                    help="Cap concurrent sequences. Needed when weights "
+                         "leave little headroom (Qwen72 on 2x80GB): big "
+                         "batches OOM on activation spikes.")
+    ap.add_argument("--max-num-batched-tokens", type=int, default=None,
+                    help="Cap prefill chunk size, same reason as above.")
+    ap.add_argument("--min-tokens", type=int, default=250,
+                    help="Floor before the model may stop; prevents "
+                         "instant title-plus-THE-END duds. (vLLM documents "
+                         "this for EOS stops; stop-string deferral is "
+                         "verified empirically — the filter's length floor "
+                         "remains the backstop.)")
     args = ap.parse_args()
 
     records = [json.loads(line)
                for line in Path(args.prompts).read_text(encoding="utf-8").splitlines()
                if line.strip()]
 
+    extra = {}
+    if args.max_num_seqs:
+        extra["max_num_seqs"] = args.max_num_seqs
+    if args.max_num_batched_tokens:
+        extra["max_num_batched_tokens"] = args.max_num_batched_tokens
     llm = LLM(
         model=args.model,
         tensor_parallel_size=args.tp,
         dtype="bfloat16",
         max_model_len=args.max_model_len,
         gpu_memory_utilization=args.gpu_memory_utilization,
+        **extra,
     )
 
     sampling = [
@@ -56,6 +74,7 @@ def main():
             temperature=args.temperature,
             top_p=args.top_p,
             stop=STOP_STRINGS,
+            min_tokens=args.min_tokens,
             max_tokens=int(r["metadata"]["length_words"]
                            * TOKENS_PER_WORD * HEADROOM),
         )

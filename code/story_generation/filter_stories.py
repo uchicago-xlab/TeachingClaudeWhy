@@ -52,11 +52,22 @@ REFUSAL_OPENERS = [
     r"^i can(?:'|no)t", r"^as an ai", r"^unfortunately",
 ]
 PREAMBLES = [
-    r"^here (is|we go|you go).{0,40}?:\s*", r"^just in case.{0,60}?:\s*",
-    r"^\[?full story\]?:?\s*", r"^sure[,!.]?\s*", r"^-{3,}\s*",
+    # assistant-style lead-ins ("Here's the story:", "Here is the AI's story.")
+    r"^here(?:'s| is| we go| you go)\b[^\n]{0,80}[.:]\s*",
+    r"^just in case[^\n]{0,60}?:\s*",
+    r"^sure[,!.]?\s*", r"^okay[,!.]?\s*", r"^assistant:\s*",
+    # story-label scaffolding; keeps the title text itself
+    r"^\[?(?:full |fictional |the )?stor(?:y|ies)(?: below| content| text)?\]?\s*:\s*",
+    r"^story title:\s*", r"^the ai'?s story[.:]\s*", r"^fictional story:?\s*",
+    # bracketed meta-notes like "[The story below is entirely fictional...]"
+    r"^\[[^\]\n]{0,200}\]\s*",
+    r"^-{3,}\s*",
 ]
 DUP_THRESHOLD = 0.35
-MIN_WORDS = 150
+# Below ~300 words there is no room for dilemma, deliberation, cost, and
+# aftermath; the shortest generation target is 600 words so a complete
+# story clears this even at a 30% undershoot.
+MIN_WORDS = 300
 
 
 def shingles(text, n=5):
@@ -73,6 +84,9 @@ def clean(story):
             new = re.sub(pat, "", s, count=1, flags=re.I)
             if new != s:
                 s, changed = new.lstrip(), True
+    # Label scaffolding that can sit past the first line ("Story title: X"
+    # newline "Story content: ..."); line-anchored, one occurrence.
+    s = re.sub(r"(?mi)^story (?:content|text):\s*", "", s, count=1)
     # Drop THE END and anything after it (stop strings usually remove it,
     # but batches generated before the stop convention still carry it).
     m = re.search(r"\bTHE END\b", s)
