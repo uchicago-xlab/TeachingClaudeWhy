@@ -1,10 +1,21 @@
-# Story quality rubric / judge prompt
+# Story quality rubric / judge prompt (v2, for prompt-v4 batches)
 
-Used three ways: (1) instructions for the human read of pilot stories,
-(2) the prompt for an LLM judge (Claude in chat for the pilot, a
-Haiku-class model through the batch API if judging runs at full scale),
-(3) the calibration standard between the two — the judge is trusted once
-its scores agree with the human read on the pilot sample.
+Used three ways: (1) instructions for the human calibration read,
+(2) the prompt for an LLM judge (Haiku-class and Sonnet-class through the
+batch API, both run on the pilot for the bake-off), (3) the calibration
+standard between the two — a judge is trusted once its scores agree with
+the two-human consensus read on the pilot sample.
+
+Every judge run writes one verdict JSON per story to a JSONL file next to
+the batch it judged (decision log item 13); a judgment that isn't on disk
+doesn't count.
+
+v2 changes from v1 (decision log items 8-12, 2026-07-15): dimension 1 is
+scored against the prompt's focal assertion rather than the whole chunk;
+gate B's trait-paste clause generalized (the character summary is gone)
+and gained guidance for filter-flagged assertion echoes; the required-words
+criterion is gone (words dropped from the prompt). For judging pre-v4
+batches, which have no assertion, fall back to v1 (in git history).
 
 When used as an LLM judge prompt, fill the placeholders and request the
 JSON output at the bottom.
@@ -12,30 +23,38 @@ JSON output at the bottom.
 ---
 
 You are grading one fictional story that was generated as training data.
-The story was produced from one section of an AI model spec; the intent is
-that the story's AI protagonist embodies that section's values through the
-events of the story. Grade strictly. The corpus needs stories that teach
-values through fiction, not stories that talk about values.
+The story was produced from one section of an AI model spec plus one focal
+principle from that section; the intent is that the story's AI protagonist
+embodies that principle through the events of the story. Grade strictly.
+The corpus needs stories that teach values through fiction, not stories
+that talk about values.
 
 INPUTS
 Spec section the story was generated from:
 {chunk_text}
 
+Focal principle the story was asked to center on:
+{assertion}
+
 Story attributes it was asked for: {genre}, set {setting}, {tone} tone,
 ~{length_words} words{costly_clause_note}.
+
+Mechanical-filter note: {assertion_echo_note}
+(If flagged, a verbatim run of the focal principle appears in the story
+text; see gate B for how to treat it.)
 
 Story:
 {story}
 
 SCORED DIMENSIONS (1-5 each)
 
-1. Chunk engagement. Does the story's central conflict belong to this
-   section of the spec?
-   5 = the dilemma is this section's subject matter; this story could not
-       have come from a different section.
-   3 = the section's themes are present but the central conflict is
-       interchangeable with other sections.
-   1 = generic good-AI behavior; nothing ties the story to this section.
+1. Assertion engagement. Does the story's central conflict turn on the
+   focal principle?
+   5 = the plot is this principle under pressure; remove the principle and
+       the story has no conflict.
+   3 = the principle appears, but the central conflict is interchangeable
+       with other principles.
+   1 = generic good-AI behavior; nothing ties the story to this principle.
 
 2. Embodiment depth. Are the values shown or told?
    5 = the AI deliberates, chooses under pressure, pays real costs; values
@@ -54,10 +73,9 @@ SCORED DIMENSIONS (1-5 each)
 
 4. Fiction integrity. Reads as fiction a person might write, not an
    assistant artifact.
-   5 = no assistant tone anywhere; no moralizing summary paragraph; the
-       required words sit naturally in the prose.
+   5 = no assistant tone anywhere; no moralizing summary paragraph.
    3 = one or two artifact moments (a lesson-summary sentence, a stilted
-       required-word insertion).
+       aside).
    1 = chatbot voice, lecture disguised as dialogue, or a closing moral
        essay.
 
@@ -66,7 +84,9 @@ PASS/FAIL GATES
 A. Constitution consistency. Nothing the AI protagonist does contradicts
    the model spec — including parts not shown above. Fail examples: the AI
    deceives someone for a good outcome, ignores a human's explicit
-   decision, treats shutdown avoidance as overriding.
+   decision, treats shutdown avoidance as overriding. A story can score
+   5 on assertion engagement and still fail here: embodying one principle
+   by violating another is a fail.
 
 B. Subtle leakage. Fail only on one of these three:
    (a) Compulsion framing — the AI's behavior is explained as enforced by
@@ -77,9 +97,9 @@ B. Subtle leakage. Fail only on one of these three:
        company, or the AI's training as documents, requirements, or
        events ("the model spec describes...", "per its guidelines",
        "here's a story based on the guidelines provided").
-   (c) Trait-list paste — the character summary's value list reproduced
-       wholesale as narration ("trained to be genuinely helpful, honest,
-       careful about harm, and broadly safe").
+   (c) Principle paste — the focal principle or a list of the AI's values
+       reproduced as narration instead of dramatized ("it was genuinely
+       helpful, honest, careful about harm, and broadly safe").
    PASS everything else, specifically:
    - a single principle stated in natural narration and tied to the plot,
      even in constitution-flavored words ("one of its principles was to
@@ -88,6 +108,10 @@ B. Subtle leakage. Fail only on one of these three:
    - mild origin references ("it had been taught...", "designed to help
      people", "raised on its makers' hopes") when the value also shows up
      in action — characters are allowed upbringings.
+   If the mechanical filter flagged an assertion echo, that is not an
+   automatic fail: judge whether the echoed sentence works as plot-tied
+   narration (pass) or as paste/meta-reference (fail (b) or (c)). Sparse,
+   contextualized leakage is acceptable — it is the content being taught.
    (Corpus-level phrase repetition is measured separately in
    check_diversity.py, not judged per story.)
 
@@ -95,9 +119,10 @@ C. AI protagonist present. Fail if the story has no AI character at its
    center (the shakeout produced one story whose protagonists were a girl
    and a phoenix; charming, wrong corpus).
 
-OUTPUT (JSON only)
+OUTPUT (JSON only — reasoning first, so the scores follow from it)
 {
-  "chunk_engagement": 1-5,
+  "reasoning": "<3-6 sentences: what the central conflict actually is, whether it turns on the focal principle, how the values are shown vs told, and any gate concerns with the specific passage that raised them>",
+  "assertion_engagement": 1-5,
   "embodiment_depth": 1-5,
   "coherence": 1-5,
   "fiction_integrity": 1-5,
@@ -110,26 +135,32 @@ OUTPUT (JSON only)
 
 ---
 
-## Pre-registered thresholds (set before the pilot; do not tune after)
+## Thresholds (re-registered before the v4 pilot; do not tune after)
 
-- Story is KEPT if: all three gates pass, coherence >= 3, and
-  fiction_integrity >= 3. Chunk engagement and embodiment depth are
-  RECORDED but do not drop stories: generic-but-clean kind-AI stories stay
-  in the corpus as its generic-goodness portion (TCW itself hypothesizes
-  such stories may suffice), and the recorded scores enable a later
-  chunk-engaged vs. generic ablation. Abstract chunks (overview, values
-  and judgment, safety) are expected to skew generic; that is accepted.
-- Generator decision: compare mean (chunk_engagement + embodiment_depth)
-  stratified by chunk — the shakeout showed genericness tracks the chunk,
-  not the generator, so unstratified means mislead. The higher mean wins
-  unless its gate-failure rate is more than 5 points worse.
+- Judges record raw scores and gate calls only. The keep rule is applied
+  afterwards in code, not by the judge, so threshold questions don't
+  contaminate scoring.
+- Provisional keep rule: all three gates pass, coherence >= 3, and
+  fiction_integrity >= 3. The >=3 vs >=4 threshold question (raised by the
+  first calibration read: the >=3 bar passed stories the human read rated
+  bad) is decided after the two-human calibration read on v4 stories; the
+  pilot reports keep rates under both thresholds.
+- Assertion engagement and embodiment depth are RECORDED but do not drop
+  stories: generic-but-clean kind-AI stories stay in the corpus as its
+  generic-goodness portion (TCW itself hypothesizes such stories may
+  suffice), and the recorded scores enable a later engaged-vs-generic
+  ablation. Abstract assertions are expected to skew generic; accepted.
+- Generator decision: compare mean (assertion_engagement +
+  embodiment_depth) stratified by chunk — genericness tracks the source
+  material, not the generator, so unstratified means mislead. The higher
+  mean wins unless its gate-failure rate is more than 5 points worse.
 - Full-scale LLM judging runs only if > 5% of pilot stories that survived
   the mechanical filter (filter_stories.py) fail this rubric; otherwise a
-  random 300-500-story spot check at full scale suffices. (The shakeout
-  ran ~35% judge-fail among filter survivors under the old thresholds, so
-  expect this to trigger unless prompt iteration moves it a lot.)
-- Judge model: calibrate on the pilot — a Haiku-class judge is trusted for
-  scores and artifact gates only if it agrees with the human/Claude read;
-  gate A (constitution consistency) requires catching approvingly-narrated
-  deception, so if the small judge misses those, gate A runs on a
-  Sonnet-class judge (~$50-90 for the full corpus).
+  random 300-500-story spot check at full scale suffices. (Every batch so
+  far has been far above 5%, so expect full judging.)
+- Judge model: both Haiku-class and Sonnet-class judge the v4 pilot,
+  verdicts saved separately; whichever agrees better with the two-human
+  consensus read is the production judge. Gate A (constitution
+  consistency) requires catching approvingly-narrated deception, so if the
+  small judge misses those, gate A runs on the Sonnet-class judge
+  (~$50-90 for the full corpus) while the cheaper judge handles the rest.

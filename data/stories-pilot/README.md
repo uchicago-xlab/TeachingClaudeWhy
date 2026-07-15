@@ -8,6 +8,15 @@ The kept/rejected split is the mechanical filter only — LLM judge verdicts
 are not on disk for any batch and must be regenerated (and saved) before
 they are cited again.
 
+Queued for the v4 pilot (prompts built 2026-07-15, generation pending):
+
+- `prompts-v4-main.jsonl` — 150 prompts, uniform over all 105 assertions
+  (seed 100). Measures keep rate and embodiment; source of the fresh
+  calibration sample.
+- `prompts-v4-probe.jsonl` — 150 prompts over a 10-assertion subset
+  (seed 101), 10-19 stories per assertion. Measures within-assertion
+  self-similarity — the premise-sampling trigger (decision log item 10).
+
 Live batches, both prompt v3:
 
 - `*-v3-qwen72.jsonl` — 50-story confirmation batch, Qwen2.5-72B, the
