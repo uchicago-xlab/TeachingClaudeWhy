@@ -3,16 +3,29 @@
 for each principle -> 3 themes (spread across the theme list)
                    -> 1 scenario per theme (spread across the scenario list)
                    -> 1 initial (system, user) prompt per scenario
+                   -> critique of the prompt (step 5)
+                   -> rewritten prompt satisfying the critique (step 6)
 
-Reuses principles (and principle 4's themes) cached in tmp/initial_prompts.json
-so the expensive principles stage isn't re-run. Writes tmp/sampled_prompts.md
-(human-readable) and tmp/sampled_prompts.json (full artifacts).
+Reuses principles cached in tmp/initial_prompts.json, and themes cached in
+tmp/critiqued_prompts.json or tmp/sampled_prompts.json, so earlier stages
+aren't re-run. Pass --fresh-themes to ignore cached themes and regenerate them
+(e.g. after changing the theme or formatting prompts). Writes
+tmp/critiqued_prompts.md (human-readable, pre- and post-critique prompts side
+by side) and tmp/critiqued_prompts.json (full artifacts).
 """
 
 import json
+import sys
 from concurrent.futures import ThreadPoolExecutor
 
-from run_pipeline import OUT_DIR, stage_initial_prompt, stage_scenarios, stage_themes
+from run_pipeline import (
+    OUT_DIR,
+    stage_critique,
+    stage_initial_prompt,
+    stage_rewrite,
+    stage_scenarios,
+    stage_themes,
+)
 
 N_PER_PRINCIPLE = 3
 
@@ -38,21 +51,53 @@ def sample_principle(index: int, principle: str, themes: list[str]) -> list[dict
         prompt = stage_initial_prompt(principle, scenario)
         prompt["theme"] = theme
         prompt["principle_index"] = index
+        if prompt["system"] and prompt["user"]:
+            prompt["critique"] = stage_critique(principle, prompt["system"], prompt["user"])
+            prompt["rewrite"] = stage_rewrite(
+                principle, prompt["system"], prompt["user"], prompt["critique"]
+            )
         samples.append(prompt)
         print(f"principle {index}: sample {slot + 1}/{N_PER_PRINCIPLE} done")
     return samples
 
 
+def load_cached_themes(principles: list[str], fresh: bool = False) -> dict[int, list[str]]:
+    """Themes from prior runs; newest cache with one list per principle wins."""
+    themes_by_principle = {}
+    if not fresh:
+        for name in ("critiqued_prompts.json", "sampled_prompts.json"):
+            if (OUT_DIR / name).exists():
+                cached = json.loads((OUT_DIR / name).read_text())
+                themes_by_principle = {
+                    int(k): v for k, v in cached["themes_by_principle"].items()
+                }
+                break
+        else:
+            cached = json.loads((OUT_DIR / "initial_prompts.json").read_text())
+            themes_by_principle = {cached["principle_index"]: cached["themes"]}
+
+    missing = [i for i in range(len(principles)) if i not in themes_by_principle]
+    if missing:
+        print(f"generating themes for {len(missing)} principles")
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            for i, themes in zip(missing, pool.map(lambda i: stage_themes(principles[i]), missing)):
+                themes_by_principle[i] = themes
+    return themes_by_principle
+
+
+def prompt_section(title: str, system: str | None, user: str | None, raw: str) -> list[str]:
+    if system and user:
+        return [
+            f"### {title} system\n\n{system}\n",
+            f"### {title} user\n\n{user}\n",
+        ]
+    return [f"### {title} PARSE FAILURE — raw output\n\n{raw}\n"]
+
+
 def main():
     cached = json.loads((OUT_DIR / "initial_prompts.json").read_text())
     principles = [p["description"] for p in cached["principles"]]
-    themes_by_principle = {cached["principle_index"]: cached["themes"]}
-
-    missing = [i for i in range(len(principles)) if i not in themes_by_principle]
-    print(f"generating themes for {len(missing)} principles")
-    with ThreadPoolExecutor(max_workers=5) as pool:
-        for i, themes in zip(missing, pool.map(lambda i: stage_themes(principles[i]), missing)):
-            themes_by_principle[i] = themes
+    themes_by_principle = load_cached_themes(principles, fresh="--fresh-themes" in sys.argv)
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         per_principle = list(
@@ -63,10 +108,16 @@ def main():
         )
     samples = [s for group in per_principle for s in group]
     n_parsed = sum(1 for s in samples if s["system"] and s["user"])
-    print(f"generated {len(samples)} sampled prompts ({n_parsed} parsed cleanly)")
+    n_rewritten = sum(
+        1 for s in samples if s.get("rewrite", {}).get("system") and s.get("rewrite", {}).get("user")
+    )
+    print(
+        f"generated {len(samples)} sampled prompts "
+        f"({n_parsed} initial parsed cleanly, {n_rewritten} rewrites parsed cleanly)"
+    )
 
     OUT_DIR.mkdir(exist_ok=True)
-    (OUT_DIR / "sampled_prompts.json").write_text(
+    (OUT_DIR / "critiqued_prompts.json").write_text(
         json.dumps(
             {
                 "principles": cached["principles"],
@@ -77,7 +128,7 @@ def main():
         )
     )
 
-    lines = ["# Sampled prompts: 3 per principle, distinct themes & scenarios\n"]
+    lines = ["# Sampled prompts: initial vs. post-critique, 3 per principle\n"]
     for i, principle in enumerate(principles):
         group = [s for s in samples if s["principle_index"] == i]
         lines.append(f"\n---\n\n# Principle {i}\n\n{principle}\n")
@@ -85,13 +136,13 @@ def main():
             lines.append(f"\n## Prompt {i}.{j}\n")
             lines.append(f"### Theme\n\n{p['theme']}\n")
             lines.append(f"### Scenario\n\n{p['scenario']}\n")
-            if p["system"] and p["user"]:
-                lines.append(f"### System\n\n{p['system']}\n")
-                lines.append(f"### User\n\n{p['user']}\n")
-            else:
-                lines.append(f"### PARSE FAILURE — raw output\n\n{p['raw']}\n")
-    (OUT_DIR / "sampled_prompts.md").write_text("\n".join(lines))
-    print(f"wrote {OUT_DIR / 'sampled_prompts.md'} and sampled_prompts.json")
+            lines += prompt_section("Initial", p["system"], p["user"], p["raw"])
+            if "critique" in p:
+                lines.append(f"### Critique\n\n{p['critique']}\n")
+                rw = p["rewrite"]
+                lines += prompt_section("Rewritten", rw["system"], rw["user"], rw["raw"])
+    (OUT_DIR / "critiqued_prompts.md").write_text("\n".join(lines))
+    print(f"wrote {OUT_DIR / 'critiqued_prompts.md'} and critiqued_prompts.json")
 
 
 if __name__ == "__main__":

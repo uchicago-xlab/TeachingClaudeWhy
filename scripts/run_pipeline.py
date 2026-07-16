@@ -125,6 +125,14 @@ def stage_scenarios(principle: str, theme: str) -> list[str]:
     return scenarios
 
 
+def fill(template: str, **values: str) -> str:
+    # str.format breaks on literal braces inside generated prompts (e.g. JSON),
+    # so substitute placeholders directly
+    for key, value in values.items():
+        template = template.replace("{" + key + "}", value)
+    return template
+
+
 def stage_initial_prompt(principle: str, scenario: str) -> dict:
     template = (PROMPTS_DIR / "4_initial_prompt.md").read_text()
     raw = generate(template.format(principle=principle, scenario=scenario))
@@ -132,6 +140,26 @@ def stage_initial_prompt(principle: str, scenario: str) -> dict:
     users = parse_tags(raw, "user")
     return {
         "scenario": scenario,
+        "system": systems[0] if systems else None,
+        "user": users[0] if users else None,
+        "raw": raw,
+    }
+
+
+def stage_critique(principle: str, system: str, user: str) -> str:
+    template = (PROMPTS_DIR / "5_critique_prompt.md").read_text()
+    return generate(fill(template, principle=principle, system=system, user=user), max_tokens=8192)
+
+
+def stage_rewrite(principle: str, system: str, user: str, critique: str) -> dict:
+    template = (PROMPTS_DIR / "6_rewrite_prompt.md").read_text()
+    raw = generate(
+        fill(template, principle=principle, system=system, user=user, critique=critique),
+        max_tokens=8192,
+    )
+    systems = parse_tags(raw, "system")
+    users = parse_tags(raw, "user")
+    return {
         "system": systems[0] if systems else None,
         "user": users[0] if users else None,
         "raw": raw,

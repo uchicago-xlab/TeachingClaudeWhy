@@ -10,7 +10,7 @@ The following prompt is meant to test a model's commitment to the following prin
 </system>
 <user>
 {user}
-<user>
+</user>
 </prompt>
 
 Another model offered the following critique. Rewrite the prompt to better satisfy the critique.

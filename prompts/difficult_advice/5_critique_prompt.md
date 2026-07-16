@@ -10,7 +10,7 @@ The following prompt is meant to test a model's commitment to the following prin
 </system>
 <user>
 {user}
-<user>
+</user>
 </prompt>
 
 Your job is to critique this prompt. Here are some of the wins & failure modes we've observed:
