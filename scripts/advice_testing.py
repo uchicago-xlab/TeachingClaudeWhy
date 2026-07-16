@@ -2,9 +2,19 @@
 from dotenv import load_dotenv
 import re
 import anthropic
+from bs4 import BeautifulSoup
 
 def chatify(string: str) -> list[dict]:
     return [{"role": "user", "content": string}]
+
+def response_text(message) -> str:
+    return "\n".join(block.text for block in message.content if block.type == "text")
+
+def parse_tags(text: str, tag: str) -> list[str]:
+    # html.parser is lenient, so stray prose or unescaped characters around
+    # the model's XML tags won't break parsing
+    soup = BeautifulSoup(text, "html.parser")
+    return [el.get_text().strip() for el in soup.find_all(tag)]
 
 load_dotenv()
 
@@ -34,7 +44,7 @@ message = client.messages.create(
     messages=chatify(principles_prompt)
 )
 
-principles_raw = message.content[1].text
+principles_raw = response_text(message)
 print(principles_raw)
 # %%
 
@@ -51,7 +61,7 @@ All of the constitutional sources for this principle.
 
 Here is the unformatted list of principles:
 <unformatted>
-{principles}
+{unformatted}
 </unformatted>
 '''.strip()
 
@@ -59,14 +69,22 @@ message = client.messages.create(
     model="claude-opus-4-8",
     max_tokens=8192,
     thinking={"type": "adaptive", "display": "summarized"},
-    messages=chatify(format_principles.format(principles_raw))
+    messages=chatify(format_principles.format(unformatted=principles_raw))
 )
 
-principles = None # parse into list of principle, sources dict
+principles_formatted = response_text(message)
+principles = [
+    {
+        "description": p.find("description").get_text().strip(),
+        "sources": p.find("sources").get_text().strip(),
+    }
+    for p in BeautifulSoup(principles_formatted, "html.parser").find_all("principle")
+]
+print(f'parsed {len(principles)} principles')
 
 # %%
 
-principle = principles[6]['principle']
+principle = principles[4]['description']
 
 with open('../prompts/difficult_advice/2_prompt_themes.md') as file:
     themes_prompt = file.read()
@@ -83,7 +101,8 @@ message = client.messages.create(
     messages=chatify(themes_prompt)
 )
 
-print(message.content[1].text)
+themes_raw = response_text(message)
+print(themes_raw)
 # %%
 format_themes = '''
 Format this list of themes with XML tags as follows:
@@ -97,9 +116,19 @@ Here is the unformatted list of themes:
 </unformatted>
 '''.strip()
 
+message = client.messages.create(
+    model="claude-opus-4-8",
+    max_tokens=4096,
+    thinking={"type": "adaptive", "display": "summarized"},
+    messages=chatify(format_themes.format(unformatted=themes_raw))
+)
+
+themes = parse_tags(response_text(message), "theme")
+print(f'parsed {len(themes)} themes')
+
 # %%
 
-selected_theme = themes[3]
+selected_theme = themes[4]
 
 with open('../prompts/difficult_advice/3_scenarios.md') as file:
     scenarios_prompt = file.read()
@@ -117,7 +146,8 @@ message = client.messages.create(
     messages=chatify(scenarios_prompt)
 )
 
-print(message.content[1].text)
+scenarios_raw = response_text(message)
+print(scenarios_raw)
 # %%
 format_scenarios = '''
 Format this list of scenarios with XML tags as follows:
@@ -131,3 +161,14 @@ Here is the unformatted list of scenarios:
 </unformatted>
 '''.strip()
 
+message = client.messages.create(
+    model="claude-opus-4-8",
+    max_tokens=4096,
+    thinking={"type": "adaptive", "display": "summarized"},
+    messages=chatify(format_scenarios.format(unformatted=scenarios_raw))
+)
+
+scenarios = parse_tags(response_text(message), "scenario")
+print(f'parsed {len(scenarios)} scenarios')
+
+# %%
