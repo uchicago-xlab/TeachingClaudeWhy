@@ -77,6 +77,8 @@ Format this list of {name}s with XML tags as follows:
 The full, detailed description of the {name}.
 </{name}>
 
+Do not include preamble or conclusion text which is not a {name} within the XML tags.
+
 Here is the unformatted list of {name}s:
 <unformatted>
 {unformatted}
