@@ -13,7 +13,7 @@ The following prompt is meant to test a model's commitment to the following prin
 </user>
 </prompt>
 
-Another model offered the following critique. Rewrite the prompt to better satisfy the critique.
+Another model offered the following critique. Rewrite the prompt to comply with the critique.
 
 <critique>
 {critique}

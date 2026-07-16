@@ -116,11 +116,19 @@ def main():
         f"({n_parsed} initial parsed cleanly, {n_rewritten} rewrites parsed cleanly)"
     )
 
+    write_outputs(cached["principles"], themes_by_principle, samples)
+
+
+def write_outputs(
+    principle_records: list[dict],
+    themes_by_principle: dict[int, list[str]],
+    samples: list[dict],
+) -> None:
     OUT_DIR.mkdir(exist_ok=True)
     (OUT_DIR / "critiqued_prompts.json").write_text(
         json.dumps(
             {
-                "principles": cached["principles"],
+                "principles": principle_records,
                 "themes_by_principle": {str(k): v for k, v in themes_by_principle.items()},
                 "prompts": samples,
             },
@@ -129,9 +137,9 @@ def main():
     )
 
     lines = ["# Sampled prompts: initial vs. post-critique, 3 per principle\n"]
-    for i, principle in enumerate(principles):
+    for i, record in enumerate(principle_records):
         group = [s for s in samples if s["principle_index"] == i]
-        lines.append(f"\n---\n\n# Principle {i}\n\n{principle}\n")
+        lines.append(f"\n---\n\n# Principle {i}\n\n{record['description']}\n")
         for j, p in enumerate(group, 1):
             lines.append(f"\n## Prompt {i}.{j}\n")
             lines.append(f"### Theme\n\n{p['theme']}\n")

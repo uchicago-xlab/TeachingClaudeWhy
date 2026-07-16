@@ -135,7 +135,8 @@ def fill(template: str, **values: str) -> str:
 
 def stage_initial_prompt(principle: str, scenario: str) -> dict:
     template = (PROMPTS_DIR / "4_initial_prompt.md").read_text()
-    raw = generate(template.format(principle=principle, scenario=scenario))
+    # thinking tokens count toward max_tokens, so leave generous headroom
+    raw = generate(template.format(principle=principle, scenario=scenario), max_tokens=8192)
     systems = parse_tags(raw, "system")
     users = parse_tags(raw, "user")
     return {
