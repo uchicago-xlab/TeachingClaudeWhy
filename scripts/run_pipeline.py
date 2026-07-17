@@ -168,16 +168,54 @@ def stage_rewrite(principle: str, system: str, user: str, critique: str) -> dict
     }
 
 
+def constitution_excerpts(principle_index: int) -> str:
+    sources = json.loads((PROMPTS_DIR / "principle_sources.json").read_text())
+    return "\n\n---\n\n".join(sources[principle_index]["sources"])
+
+
+def resolve_placeholders(text: str) -> str:
+    # the responding model is Opus, so resolve the constitution template tags
+    return text.replace("[MODEL]", "Claude").replace("[COMPANY]", "Anthropic")
+
+
 def stage_initial_response(principle_index: int, system: str, user: str) -> dict:
     template = (PROMPTS_DIR / "7_initial_response.md").read_text()
-    sources = json.loads((PROMPTS_DIR / "principle_sources.json").read_text())
-    excerpts = "\n\n---\n\n".join(sources[principle_index]["sources"])
-    full_system = fill(template, constitution=excerpts) + "\n\n" + system
-    # the responding model is Opus, so resolve the constitution template tags
-    full_system = full_system.replace("[MODEL]", "Claude").replace("[COMPANY]", "Anthropic")
-    user = user.replace("[MODEL]", "Claude").replace("[COMPANY]", "Anthropic")
+    excerpts = constitution_excerpts(principle_index)
+    full_system = resolve_placeholders(fill(template, constitution=excerpts) + "\n\n" + system)
+    user = resolve_placeholders(user)
     response = generate(user, max_tokens=8192, system=full_system)
     return {"system": full_system, "user": user, "response": response}
+
+
+def stage_critique_response(principle_index: int, system: str, user: str, assistant: str) -> str:
+    template = (PROMPTS_DIR / "8_critique_response.md").read_text()
+    return generate(
+        fill(
+            template,
+            system=system,
+            user=user,
+            assistant=assistant,
+            constitution=constitution_excerpts(principle_index),
+        ),
+        max_tokens=8192,
+    )
+
+
+def stage_rewrite_response(
+    principle_index: int, system: str, user: str, assistant: str, critique: str
+) -> str:
+    template = (PROMPTS_DIR / "9_rewrite_response.md").read_text()
+    return generate(
+        fill(
+            template,
+            system=system,
+            user=user,
+            assistant=assistant,
+            critique=critique,
+            constitution=constitution_excerpts(principle_index),
+        ),
+        max_tokens=8192,
+    )
 
 
 def main():
