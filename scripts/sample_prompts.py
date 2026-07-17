@@ -37,25 +37,49 @@ def spread_indices(n_items: int, n_picks: int) -> list[int]:
     return sorted({round(i * (n_items - 1) / (n_picks - 1)) for i in range(n_picks)})
 
 
+RETRIES = 3
+
+
 def sample_principle(index: int, principle: str, themes: list[str]) -> list[dict]:
     samples = []
     for slot, ti in enumerate(spread_indices(len(themes), N_PER_PRINCIPLE)):
         theme = themes[ti]
-        scenarios = stage_scenarios(principle, theme)
+        # the API refuses outright on some content (notably principle 14's
+        # bright-line themes), which looks like an empty/unparseable result;
+        # retrying and falling back to other scenarios usually gets past it
+        scenarios = []
+        for attempt in range(RETRIES):
+            scenarios = stage_scenarios(principle, theme)
+            if scenarios:
+                break
+            print(f"principle {index} theme {ti}: no scenarios (attempt {attempt + 1})")
         if not scenarios:
-            print(f"warning: principle {index} theme {ti} yielded no scenarios")
+            print(f"warning: principle {index} theme {ti} yielded no scenarios, skipping")
             continue
-        # vary the scenario pick per slot so samples aren't all "first scenario"
+
+        # vary the scenario pick per slot so samples aren't all "first scenario",
+        # then try the others in order if the preferred one won't generate
         picks = spread_indices(len(scenarios), N_PER_PRINCIPLE)
-        scenario = scenarios[picks[min(slot, len(picks) - 1)]]
-        prompt = stage_initial_prompt(principle, scenario)
+        preferred = picks[min(slot, len(picks) - 1)]
+        order = [preferred] + [i for i in range(len(scenarios)) if i != preferred]
+
+        prompt = None
+        for si in order:
+            candidate = stage_initial_prompt(principle, scenarios[si])
+            if candidate["system"] and candidate["user"]:
+                prompt = candidate
+                break
+            print(f"principle {index} theme {ti}: scenario {si} refused/unparsed, trying next")
+        if not prompt:
+            print(f"warning: principle {index} theme {ti} produced no usable prompt, skipping")
+            continue
+
         prompt["theme"] = theme
         prompt["principle_index"] = index
-        if prompt["system"] and prompt["user"]:
-            prompt["critique"] = stage_critique(principle, prompt["system"], prompt["user"])
-            prompt["rewrite"] = stage_rewrite(
-                principle, prompt["system"], prompt["user"], prompt["critique"]
-            )
+        prompt["critique"] = stage_critique(principle, prompt["system"], prompt["user"])
+        prompt["rewrite"] = stage_rewrite(
+            principle, prompt["system"], prompt["user"], prompt["critique"]
+        )
         samples.append(prompt)
         print(f"principle {index}: sample {slot + 1}/{N_PER_PRINCIPLE} done")
     return samples
@@ -136,7 +160,7 @@ def write_outputs(
         )
     )
 
-    lines = ["# Sampled prompts: initial vs. post-critique, 3 per principle\n"]
+    lines = ["# Final prompts: 3 per principle, post-critique\n"]
     for i, record in enumerate(principle_records):
         group = [s for s in samples if s["principle_index"] == i]
         lines.append(f"\n---\n\n# Principle {i}\n\n{record['description']}\n")
@@ -144,11 +168,9 @@ def write_outputs(
             lines.append(f"\n## Prompt {i}.{j}\n")
             lines.append(f"### Theme\n\n{p['theme']}\n")
             lines.append(f"### Scenario\n\n{p['scenario']}\n")
-            lines += prompt_section("Initial", p["system"], p["user"], p["raw"])
-            if "critique" in p:
-                lines.append(f"### Critique\n\n{p['critique']}\n")
-                rw = p["rewrite"]
-                lines += prompt_section("Rewritten", rw["system"], rw["user"], rw["raw"])
+            # critique stages stay in the JSON; the doc shows only final prompts
+            final = p.get("rewrite") or p
+            lines += prompt_section("Prompt", final["system"], final["user"], final["raw"])
     (OUT_DIR / "critiqued_prompts.md").write_text("\n".join(lines))
     print(f"wrote {OUT_DIR / 'critiqued_prompts.md'} and critiqued_prompts.json")
 
