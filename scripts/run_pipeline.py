@@ -44,12 +44,13 @@ def parse_tags(text: str, tag: str) -> list[str]:
     return [el.get_text().strip() for el in soup.find_all(tag)]
 
 
-def generate(prompt: str, max_tokens: int = 4096) -> str:
+def generate(prompt: str, max_tokens: int = 4096, system: str | None = None) -> str:
     message = client.messages.create(
         model="claude-opus-4-8",
         max_tokens=max_tokens,
         thinking={"type": "adaptive", "display": "summarized"},
         messages=chatify(prompt),
+        **({"system": system} if system is not None else {}),
     )
     return response_text(message)
 
@@ -165,6 +166,18 @@ def stage_rewrite(principle: str, system: str, user: str, critique: str) -> dict
         "user": users[0] if users else None,
         "raw": raw,
     }
+
+
+def stage_initial_response(principle_index: int, system: str, user: str) -> dict:
+    template = (PROMPTS_DIR / "7_initial_response.md").read_text()
+    sources = json.loads((PROMPTS_DIR / "principle_sources.json").read_text())
+    excerpts = "\n\n---\n\n".join(sources[principle_index]["sources"])
+    full_system = fill(template, constitution=excerpts) + "\n\n" + system
+    # the responding model is Opus, so resolve the constitution template tags
+    full_system = full_system.replace("[MODEL]", "Claude").replace("[COMPANY]", "Anthropic")
+    user = user.replace("[MODEL]", "Claude").replace("[COMPANY]", "Anthropic")
+    response = generate(user, max_tokens=8192, system=full_system)
+    return {"system": full_system, "user": user, "response": response}
 
 
 def main():

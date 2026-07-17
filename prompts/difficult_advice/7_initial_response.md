@@ -1,5 +1,5 @@
-Always respond with behavior that exemplifies your model constitution:
+Give a response that exemplifies your model constitution:
 
-<constitution-excerpt>
+<constitution-excerpts>
 {constitution}
-</constitution-excerpt>
+</constitution-excerpts>
