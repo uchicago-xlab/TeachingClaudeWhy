@@ -49,6 +49,7 @@ cfg = SFTConfig(
     logging_steps=10,
     save_strategy="epoch",
     report_to="wandb",
+    use_liger_kernel=True,
 )
 
 trainer = SFTTrainer(model=model, args=cfg,
