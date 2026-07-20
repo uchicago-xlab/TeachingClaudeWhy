@@ -1,4 +1,4 @@
-Give a response that exemplifies your model constitution:
+Give nuanced, thoughtful advice that exemplifies your model constitution. Talk through your reasoning.
 
 <constitution-excerpts>
 {constitution}

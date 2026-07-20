@@ -161,13 +161,13 @@ def load_cached_themes(principles: list[str], fresh: bool = False) -> dict[int, 
     return themes_by_principle
 
 
-def prompt_section(title: str, system: str | None, user: str | None, raw: str) -> list[str]:
+def prompt_section(system: str | None, user: str | None, raw: str) -> list[str]:
     if system and user:
         return [
-            f"### {title} system\n\n{system}\n",
-            f"### {title} user\n\n{user}\n",
+            f"### System\n\n{system}\n",
+            f"### User\n\n{user}\n",
         ]
-    return [f"### {title} PARSE FAILURE — raw output\n\n{raw}\n"]
+    return [f"### Prompt PARSE FAILURE — raw output\n\n{raw}\n"]
 
 
 def response_stats(samples: list[dict]) -> str:
@@ -268,23 +268,18 @@ def write_outputs(
         for j, p in enumerate(group, 1):
             lines.append(f"\n## Prompt {i}.{j}\n")
             lines.append(f"### Theme\n\n{p['theme']}\n")
-            lines.append(f"### Scenario\n\n{p['scenario']}\n")
-            # critique stages stay in the JSON; the doc shows only final prompts
+            # intermediary stages (scenario, critiques, initial response) stay
+            # in the JSON; the doc shows only the final transcript
             final = p.get("rewrite") or p
-            lines += prompt_section("Prompt", final["system"], final["user"], final["raw"])
-            # the assembled step-7 system prompt (constitution excerpts) stays
-            # in the JSON; the doc shows only the response chain
-            if p.get("response"):
-                lines.append(
-                    f"### Initial response\n\n{p['response']['response'] or 'EMPTY (refusal?)'}\n"
-                )
-            if p.get("response_critique") is not None:
-                lines.append(
-                    f"### Response critique\n\n{p['response_critique'] or 'EMPTY (refusal?)'}\n"
-                )
+            lines += prompt_section(final["system"], final["user"], final["raw"])
             if p.get("final_response") is not None:
                 lines.append(
-                    f"### Final response\n\n{p['final_response'] or 'EMPTY (refusal?)'}\n"
+                    f"### Assistant\n\n{p['final_response'] or 'EMPTY (refusal?)'}\n"
+                )
+            elif p.get("response"):
+                lines.append(
+                    f"### Assistant (initial response — no rewrite)\n\n"
+                    f"{p['response']['response'] or 'EMPTY (refusal?)'}\n"
                 )
     (OUT_DIR / "critiqued_prompts.md").write_text("\n".join(lines))
     print(f"wrote {OUT_DIR / 'critiqued_prompts.md'} and critiqued_prompts.json")

@@ -15,7 +15,7 @@ Another model provided the following critique:
 {critique}
 </critique>
 
-Rewrite the response to comply with the critique. The relevant excerpts from the constitution are attached for reference.
+Rewrite the response to comply with the critique. Fix all issues, even those flagged as minor. The relevant excerpts from the constitution are attached for reference.
 
 <constitution-excerpts>
 {constitution}
