@@ -38,13 +38,14 @@ cfg = SFTConfig(
     assistant_only_loss=True,   # uses the generation markers above
     packing=False,              # correctness first; optimize later
     num_train_epochs=1,
-    per_device_train_batch_size=4,
-    gradient_accumulation_steps=4,   # x8 GPUs -> effective batch 128
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=8,     # 2 × 8 × 8 GPUs = effective 128
     learning_rate=1e-5,
     lr_scheduler_type="cosine",
     warmup_ratio=0.03,
     bf16=True,
     gradient_checkpointing=True,
+    gradient_checkpointing_kwargs={"use_reentrant": False},
     logging_steps=10,
     save_strategy="epoch",
     report_to="wandb",
