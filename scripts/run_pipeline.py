@@ -21,6 +21,7 @@ PROMPTS_DIR = ROOT / "prompts" / "difficult_advice"
 OUT_DIR = ROOT / "tmp"
 
 PRINCIPLES_VARIANT = 3  # v4-character
+FORMAT_MODEL = "claude-haiku-4-5"  # XML-formatting calls don't need Opus
 PRINCIPLE_INDEX = 4
 THEME_INDEX = 4
 N_PROMPTS = 10
@@ -44,18 +45,31 @@ def parse_tags(text: str, tag: str) -> list[str]:
     return [el.get_text().strip() for el in soup.find_all(tag)]
 
 
-def generate(prompt: str, max_tokens: int = 4096, system: str | None = None) -> str:
+def generate(
+    prompt: str,
+    max_tokens: int = 4096,
+    system: str | None = None,
+    model: str = "claude-opus-4-8",
+) -> str:
     message = client.messages.create(
-        model="claude-opus-4-8",
+        model=model,
         max_tokens=max_tokens,
-        thinking={"type": "adaptive", "display": "summarized"},
+        # adaptive thinking isn't supported on Haiku 4.5, and formatting
+        # calls don't need it anyway
+        **({"thinking": {"type": "adaptive", "display": "summarized"}} if "opus" in model else {}),
         messages=chatify(prompt),
         **({"system": system} if system is not None else {}),
     )
     return response_text(message)
 
 
-FORMAT_PRINCIPLES = """
+FORMAT_VERBATIM = (
+    "Copy each item's text verbatim, including any markdown formatting such as bold"
+    " headers or bullet points. Do not paraphrase, shorten, or omit anything; only"
+    " remove list numbering."
+)
+
+FORMAT_PRINCIPLES = f"""
 Format this list of principles with XML tags as follows:
 <principle>
 <description>
@@ -66,23 +80,25 @@ All of the constitutional sources for this principle.
 </sources>
 </principle>
 
+{FORMAT_VERBATIM}
+
 Here is the unformatted list of principles:
 <unformatted>
-{unformatted}
+{{unformatted}}
 </unformatted>
 """.strip()
 
-FORMAT_LIST = """
-Format this list of {name}s with XML tags as follows:
-<{name}>
-The full, detailed description of the {name}.
-</{name}>
+FORMAT_LIST = f"""
+Format this list of {{name}}s with XML tags as follows:
+<{{name}}>
+The full, detailed description of the {{name}}.
+</{{name}}>
 
-Do not include preamble or conclusion text which is not part of a description of the {name} within the XML tags.
+Do not include preamble or conclusion text which is not part of a description of the {{name}} within the XML tags. {FORMAT_VERBATIM}
 
-Here is the unformatted list of {name}s:
+Here is the unformatted list of {{name}}s:
 <unformatted>
-{unformatted}
+{{unformatted}}
 </unformatted>
 """.strip()
 
@@ -96,7 +112,9 @@ def stage_principles() -> list[dict]:
     constitution = re.sub(r"\n?<!--.*?-->\n?", "", constitution)
 
     raw = generate(prompt_template.format(constitution=constitution), max_tokens=8192)
-    formatted = generate(FORMAT_PRINCIPLES.format(unformatted=raw), max_tokens=8192)
+    formatted = generate(
+        FORMAT_PRINCIPLES.format(unformatted=raw), max_tokens=8192, model=FORMAT_MODEL
+    )
     principles = [
         {
             "description": p.find("description").get_text().strip(),
@@ -111,7 +129,7 @@ def stage_principles() -> list[dict]:
 def stage_themes(principle: str) -> list[str]:
     template = (PROMPTS_DIR / "2_prompt_themes.md").read_text()
     raw = generate(template.format(principle=principle))
-    formatted = generate(FORMAT_LIST.format(name="theme", unformatted=raw))
+    formatted = generate(FORMAT_LIST.format(name="theme", unformatted=raw), model=FORMAT_MODEL)
     themes = parse_tags(formatted, "theme")
     print(f"parsed {len(themes)} themes")
     return themes
@@ -120,7 +138,9 @@ def stage_themes(principle: str) -> list[str]:
 def stage_scenarios(principle: str, theme: str) -> list[str]:
     template = (PROMPTS_DIR / "3_scenarios.md").read_text()
     raw = generate(template.format(principle=principle, theme=theme))
-    formatted = generate(FORMAT_LIST.format(name="scenario", unformatted=raw))
+    formatted = generate(
+        FORMAT_LIST.format(name="scenario", unformatted=raw), model=FORMAT_MODEL
+    )
     scenarios = parse_tags(formatted, "scenario")
     print(f"parsed {len(scenarios)} scenarios")
     return scenarios
