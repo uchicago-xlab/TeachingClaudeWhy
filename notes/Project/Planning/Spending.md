@@ -12,7 +12,7 @@ Running ledger of project spend, against the [[ImplementationDetails]] §5 budge
 
 | Date | What | Who | Amount | Status |
 |---|---|---|---|---|
-| 2026-07-20 | Runpod $-$ 8x H200 for 42m | Brandon | $16.74 | spen|
+| 2026-07-20 | Runpod $-$ 8x H100 for 42m | Brandon | $16.74 | spen|
 | 2026-07-13 | RunPod usage — stories pipeline test (3.1.1 data gen), drawn from the $100 allocation below: Gemma 4 31B pod 2.26h × $1.39 = $3.14; Qwen2.5-72B pod 0.97h × $2.78 = $2.70; failed first 72B pod (old-driver host) ~0.3h × $2.78 ≈ $0.90; volume storage cents. Output: 2 × 12 test stories in `data/stories-pilot/` | Anastasia | ~$7 | spent |
 | 2026-07-13 | RunPod — initial fine-tuning pipeline verification | Brandon | $500 | allocated |
 | 2026-07-13 | RunPod — accidental leftover pod burn | Brandon | $150 | burned |
