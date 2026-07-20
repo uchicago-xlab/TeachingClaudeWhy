@@ -4,6 +4,9 @@ status: active
 
 # Progress Log
 
+### 07/19
+Last week was kind of a wash; I spent sometime banning my head against the fictional stories dataset generation and the story qualities are subpar. It's really hard to tell how good the stories need to be to fine-tune the model successfully. And currently it's unclear to me how to proceed.
+
 ### 07/13
 What I did today
 - added an ambitious budget section to the implementation doc for the funding request: full version ~$50–70K, middle tier ~$35–55K, priced at the high end with the RL runs carrying most of the increase
