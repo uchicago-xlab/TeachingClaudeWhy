@@ -26,7 +26,7 @@ if tokenizer.pad_token is None:
     tokenizer.pad_token = "<|endoftext|>"
 
 model = AutoModelForCausalLM.from_pretrained(
-    MODEL, torch_dtype="bfloat16", attn_implementation="sdpa"
+    MODEL, torch_dtype="bfloat16", attn_implementation="flash_attention_3"
 )
 
 ds = load_dataset("allenai/tulu-3-sft-mixture", split="train")
@@ -36,7 +36,7 @@ cfg = SFTConfig(
     output_dir="sft-mvp",
     max_length=4096,
     assistant_only_loss=True,   # uses the generation markers above
-    packing=False,              # correctness first; optimize later
+    packing=True,              # correctness first; optimize later
     num_train_epochs=1,
     per_device_train_batch_size=2,
     gradient_accumulation_steps=8,     # 2 × 8 × 8 GPUs = effective 128
