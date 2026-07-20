@@ -10,6 +10,14 @@ Related to [[BaseModelSelection]]
 
 ## Current Status
 
+### Actual Current Status (Jul 20)
+
+- I thought the Claude code was overcomplicated, so I (and Claude) wrote a simple script and optimized that
+- Currently, I'm fine-tuning Olmo 3 32B on 100k samples from Tulu 3. We'll probably switch to Ai2's new Dolci Think and Dolci Instruct SFT datasets for prod runs
+- New cost estimate: about 11hr 15min to fine-tune a model on the full Tulu 3 dataset for one epoch on 8x H200 = ~**$395**
+
+### Old current status
+
 - TRL stack complete, (somewhat) validated with gemma-4-31b
 - Current cost estimate for a reference run: $1,650 to $3,700
 
