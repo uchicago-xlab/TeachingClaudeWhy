@@ -22,6 +22,16 @@
       "allocationId": "seed-05"
     },
     {
+      "id": "aw-v4-pilot",
+      "date": "2026-07-15",
+      "what": "RunPod — v4 pilot generation (3.1.1 data gen): tcw-v4-pilot-qwen72 2×A100-80GB PCIe @ $2.78/h, 19:47–23:20 UTC ≈ 3.6h ≈ $10 (of which ~2.3h/$6.50 lost to a vLLM custom-all-reduce deadlock on the PCIe pair — fix: --disable-custom-all-reduce + NCCL_P2P_DISABLE=1, now a generate.py flag). Output: 300 v4 stories (150 main + 150 probe) in data/stories-pilot/. Also terminated both stale shakeout pods; all TCW pods now terminated.",
+      "who": "Anastasia",
+      "amount": 10,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
+    },
+    {
       "id": "seed-03",
       "date": "2026-07-13",
       "what": "RunPod usage — stories pipeline test (3.1.1 data gen): Gemma 4 31B pod 2.26h × $1.39 = $3.14; Qwen2.5-72B pod 0.97h × $2.78 = $2.70; failed first 72B pod (old-driver host) ~0.3h × $2.78 ≈ $0.90; volume storage cents. Output: 2 × 12 test stories in data/stories-pilot/",
