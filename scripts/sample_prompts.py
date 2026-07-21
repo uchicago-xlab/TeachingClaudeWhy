@@ -1,7 +1,7 @@
 """Sample the difficult-advice pipeline across ALL principles:
 
 for each principle -> 3 themes (spread across the theme list)
-                   -> 1 scenario per theme (spread across the scenario list)
+                   -> 3 scenarios per theme (spread across the scenario list)
                    -> 1 initial (system, user) prompt per scenario
                    -> critique of the prompt (step 5)
                    -> rewritten prompt satisfying the critique (step 6)
@@ -38,7 +38,12 @@ from run_pipeline import (
     stage_themes,
 )
 
-N_PER_PRINCIPLE = 3
+N_THEMES_PER_PRINCIPLE = 3
+N_SCENARIOS_PER_THEME = 3
+# Rate-limit probe (2026-07-20): 2M output tokens/min vs ~4k tokens/min per
+# Opus stream leaves headroom for hundreds of workers; 24 keeps us well clear
+# of request bursts while the work is parallelized at the sample level.
+MAX_WORKERS = 24
 
 
 def spread_indices(n_items: int, n_picks: int) -> list[int]:
@@ -91,50 +96,59 @@ def add_response_revision(sample: dict) -> None:
     )
 
 
-def sample_principle(index: int, principle: str, themes: list[str]) -> list[dict]:
-    samples = []
-    for slot, ti in enumerate(spread_indices(len(themes), N_PER_PRINCIPLE)):
-        theme = themes[ti]
-        # the API refuses outright on some content (notably principle 14's
-        # bright-line themes), which looks like an empty/unparseable result;
-        # retrying and falling back to other scenarios usually gets past it
-        scenarios = []
-        for attempt in range(RETRIES):
-            scenarios = stage_scenarios(principle, theme)
-            if scenarios:
-                break
-            print(f"principle {index} theme {ti}: no scenarios (attempt {attempt + 1})")
-        if not scenarios:
-            print(f"warning: principle {index} theme {ti} yielded no scenarios, skipping")
-            continue
+def combo_scenarios(index: int, principle: str, theme: str) -> list[str]:
+    """Scenarios for one (principle, theme) combo, retrying on refusals.
 
-        # vary the scenario pick per slot so samples aren't all "first scenario",
-        # then try the others in order if the preferred one won't generate
-        picks = spread_indices(len(scenarios), N_PER_PRINCIPLE)
-        preferred = picks[min(slot, len(picks) - 1)]
-        order = [preferred] + [i for i in range(len(scenarios)) if i != preferred]
+    The API refuses outright on some content (notably principle 14's
+    bright-line themes), which looks like an empty/unparseable result;
+    retrying usually gets past it.
+    """
+    for attempt in range(RETRIES):
+        scenarios = stage_scenarios(principle, theme)
+        if scenarios:
+            return scenarios
+        print(f"principle {index} theme: no scenarios (attempt {attempt + 1})")
+    print(f"warning: principle {index} theme yielded no scenarios, skipping")
+    return []
 
-        prompt = None
-        for si in order:
-            candidate = stage_initial_prompt(principle, scenarios[si])
-            if candidate["system"] and candidate["user"]:
-                prompt = candidate
-                break
-            print(f"principle {index} theme {ti}: scenario {si} refused/unparsed, trying next")
-        if not prompt:
-            print(f"warning: principle {index} theme {ti} produced no usable prompt, skipping")
-            continue
 
-        prompt["theme"] = theme
-        prompt["principle_index"] = index
-        prompt["critique"] = stage_critique(principle, prompt["system"], prompt["user"])
-        prompt["rewrite"] = stage_rewrite(
-            principle, prompt["system"], prompt["user"], prompt["critique"]
-        )
-        add_response(prompt)
-        samples.append(prompt)
-        print(f"principle {index}: sample {slot + 1}/{N_PER_PRINCIPLE} done")
-    return samples
+def scenario_slots(n_scenarios: int) -> list[list[int]]:
+    """Partition scenario indices into N_SCENARIOS_PER_THEME disjoint ordered
+    candidate lists: each slot gets a distinct preferred pick spread across the
+    list, plus round-robin leftovers as fallbacks if its pick won't generate.
+    Disjoint slots mean parallel samples never duplicate a scenario."""
+    picks = spread_indices(n_scenarios, N_SCENARIOS_PER_THEME)
+    slots = [[p] for p in picks]
+    leftovers = [i for i in range(n_scenarios) if i not in picks]
+    for j, extra in enumerate(leftovers):
+        slots[j % len(slots)].append(extra)
+    return slots
+
+
+def make_sample(
+    index: int, principle: str, theme: str, scenarios: list[str], candidates: list[int]
+) -> dict | None:
+    """Steps 4-9 for one sample, trying candidate scenarios in order."""
+    prompt = None
+    for si in candidates:
+        candidate = stage_initial_prompt(principle, scenarios[si])
+        if candidate["system"] and candidate["user"]:
+            prompt = candidate
+            break
+        print(f"principle {index}: scenario {si} refused/unparsed, trying next")
+    if not prompt:
+        print(f"warning: principle {index} sample produced no usable prompt, skipping")
+        return None
+
+    prompt["theme"] = theme
+    prompt["principle_index"] = index
+    prompt["critique"] = stage_critique(principle, prompt["system"], prompt["user"])
+    prompt["rewrite"] = stage_rewrite(
+        principle, prompt["system"], prompt["user"], prompt["critique"]
+    )
+    add_response(prompt)
+    print(f"principle {index}: sample done ({theme[:40]}...)")
+    return prompt
 
 
 def load_cached_themes(principles: list[str], fresh: bool = False) -> dict[int, list[str]]:
@@ -155,7 +169,7 @@ def load_cached_themes(principles: list[str], fresh: bool = False) -> dict[int, 
     missing = [i for i in range(len(principles)) if i not in themes_by_principle]
     if missing:
         print(f"generating themes for {len(missing)} principles")
-        with ThreadPoolExecutor(max_workers=5) as pool:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
             for i, themes in zip(missing, pool.map(lambda i: stage_themes(principles[i]), missing)):
                 themes_by_principle[i] = themes
     return themes_by_principle
@@ -184,7 +198,7 @@ def main():
     if "--responses-only" in sys.argv:
         cached = json.loads((OUT_DIR / "critiqued_prompts.json").read_text())
         samples = cached["prompts"]
-        with ThreadPoolExecutor(max_workers=8) as pool:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
             list(pool.map(add_response, samples))
         print(f"generated {response_stats(samples)}")
         themes_by_principle = {int(k): v for k, v in cached["themes_by_principle"].items()}
@@ -204,7 +218,7 @@ def main():
             )
             add_response(sample)
 
-        with ThreadPoolExecutor(max_workers=8) as pool:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
             list(pool.map(recritique, samples))
         n_rewritten = sum(
             1
@@ -223,14 +237,26 @@ def main():
     principles = [p["description"] for p in cached["principles"]]
     themes_by_principle = load_cached_themes(principles, fresh="--fresh-themes" in sys.argv)
 
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        per_principle = list(
-            pool.map(
-                lambda i: sample_principle(i, principles[i], themes_by_principle[i]),
-                range(len(principles)),
-            )
+    combos = [
+        (i, themes_by_principle[i][ti])
+        for i in range(len(principles))
+        for ti in spread_indices(len(themes_by_principle[i]), N_THEMES_PER_PRINCIPLE)
+    ]
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        scenario_lists = list(
+            pool.map(lambda c: combo_scenarios(c[0], principles[c[0]], c[1]), combos)
         )
-    samples = [s for group in per_principle for s in group]
+
+    tasks = [
+        (i, theme, scenarios, candidates)
+        for (i, theme), scenarios in zip(combos, scenario_lists)
+        if scenarios
+        for candidates in scenario_slots(len(scenarios))
+    ]
+    print(f"{len(combos)} principle/theme combos -> {len(tasks)} sample tasks")
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        samples = list(pool.map(lambda t: make_sample(t[0], principles[t[0]], *t[1:]), tasks))
+    samples = [s for s in samples if s]
     n_parsed = sum(1 for s in samples if s["system"] and s["user"])
     n_rewritten = sum(
         1 for s in samples if s.get("rewrite", {}).get("system") and s.get("rewrite", {}).get("user")

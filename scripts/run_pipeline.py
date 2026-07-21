@@ -8,7 +8,9 @@ written to tmp/initial_prompts.md (human-readable) and tmp/initial_prompts.json
 """
 
 import json
+import random
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -50,17 +52,41 @@ def generate(
     max_tokens: int = 4096,
     system: str | None = None,
     model: str = "claude-opus-4-8",
+    effort: str | None = None,
 ) -> str:
-    message = client.messages.create(
+    kwargs = dict(
         model=model,
         max_tokens=max_tokens,
         # adaptive thinking isn't supported on Haiku 4.5, and formatting
         # calls don't need it anyway
         **({"thinking": {"type": "adaptive", "display": "summarized"}} if "opus" in model else {}),
+        # thinking tokens count toward max_tokens; effort is the only knob that
+        # bounds thinking depth on Opus 4.8 (budget_tokens is removed)
+        **({"output_config": {"effort": effort}} if effort else {}),
         messages=chatify(prompt),
         **({"system": system} if system is not None else {}),
     )
-    return response_text(message)
+    # the SDK's built-in retries (2, seconds apart) don't survive sustained
+    # 529 Overloaded periods; back off patiently before giving up
+    for attempt in range(5):
+        try:
+            if max_tokens > 8192:
+                # the SDK requires streaming for requests that could exceed 10 minutes
+                with client.messages.stream(**kwargs) as stream:
+                    message = stream.get_final_message()
+            else:
+                message = client.messages.create(**kwargs)
+            return response_text(message)
+        except (
+            anthropic.RateLimitError,
+            anthropic.InternalServerError,  # includes 529 OverloadedError
+            anthropic.APIConnectionError,
+        ) as err:
+            if attempt == 4:
+                raise
+            delay = min(60, 5 * 2**attempt) + random.uniform(0, 3)
+            print(f"retryable API error ({type(err).__name__}), sleeping {delay:.0f}s")
+            time.sleep(delay)
 
 
 FORMAT_VERBATIM = (

@@ -18,6 +18,8 @@ Input formats:
     python detect_patterns.py                     # difficult-advice cache (tmp/critiqued_prompts.json)
     python detect_patterns.py path/to/data.json   # generic transcripts (see below)
     python detect_patterns.py path/to/data.jsonl
+    python detect_patterns.py --cached-scans      # reuse tmp/pattern_scans.json, skip pass 1
+    python detect_patterns.py --cached-scans --cached-cluster  # also reuse tmp/pattern_clusters.json
 
 A generic transcripts file is a JSON list (or JSONL, one object per line) of
 either {"system": ..., "user": ..., "assistant": ...} objects (system optional)
@@ -39,16 +41,16 @@ from pathlib import Path
 
 from bs4 import BeautifulSoup
 
-from run_pipeline import OUT_DIR, fill, generate
+from run_pipeline import FORMAT_MODEL, OUT_DIR, fill, generate
 
 ROOT = Path(__file__).resolve().parent.parent
 PROMPTS_DIR = ROOT / "prompts" / "pattern_detection"
 
 SEED = 0
 SCAN_BATCH_SIZE = 8  # transcripts concatenated per scan call
-MAX_SCAN_BATCHES = 6
+MAX_SCAN_BATCHES = 17  # covers ~135 transcripts (15 principles x 9 samples)
 MAX_AUTORATE = 200  # cap on transcripts rated in pass 3
-MAX_WORKERS = 8
+MAX_WORKERS = 24
 RETRIES = 2
 
 FORMAT_PATTERNS = """
@@ -159,7 +161,7 @@ def stage_scan(batch_index: int, batch: list[dict]) -> list[dict]:
     template = (PROMPTS_DIR / "1_scan.md").read_text()
     blob = "\n\n".join(f"=== Transcript {t['id']} ===\n\n{t['text']}" for t in batch)
     raw = generate(fill(template, transcripts=blob), max_tokens=8192)
-    formatted = generate(fill(FORMAT_PATTERNS, unformatted=raw), max_tokens=8192)
+    formatted = generate(fill(FORMAT_PATTERNS, unformatted=raw), max_tokens=8192, model=FORMAT_MODEL)
     patterns = parse_patterns(formatted)
     print(f"scan {batch_index}: {len(patterns)} patterns")
     return patterns
@@ -178,8 +180,22 @@ def stage_cluster(scans: list[list[dict]]) -> list[dict]:
             for p in patterns
         ]
         sections.append("\n".join(lines) if patterns else f"## Scan {i}\n(no patterns reported)")
-    raw = generate(fill(template, scans="\n\n".join(sections)), max_tokens=8192)
-    formatted = generate(fill(FORMAT_PATTERNS, unformatted=raw), max_tokens=8192)
+    # consolidating many scans is thinking-heavy, and thinking tokens count
+    # toward max_tokens — at default (high) effort the model burned an entire
+    # 32k budget on thinking alone, so give 64k headroom and bound deliberation
+    # with medium effort (budget_tokens is removed on Opus 4.8; effort is the
+    # only thinking-depth knob)
+    raw = generate(
+        fill(template, scans="\n\n".join(sections)), max_tokens=64000, effort="medium"
+    )
+    formatted = generate(
+        fill(FORMAT_PATTERNS, unformatted=raw), max_tokens=16384, model=FORMAT_MODEL
+    )
+    # persist intermediates: an empty parse here is otherwise undebuggable
+    (OUT_DIR / "cluster_debug.md").write_text(
+        f"# cluster raw ({len(raw)} chars)\n\n{raw}\n\n"
+        f"# cluster formatted ({len(formatted)} chars)\n\n{formatted}\n"
+    )
     patterns = parse_patterns(formatted)
     # enforce the more-than-one-scan rule programmatically rather than trusting
     # the model (unless there was only one scan to begin with)
@@ -322,11 +338,23 @@ def main():
         shuffled[i : i + SCAN_BATCH_SIZE]
         for i in range(0, min(len(shuffled), SCAN_BATCH_SIZE * MAX_SCAN_BATCHES), SCAN_BATCH_SIZE)
     ]
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        scans = list(pool.map(lambda ib: stage_scan(*ib), enumerate(batches)))
+    scans_path = OUT_DIR / "pattern_scans.json"
+    if "--cached-scans" in sys.argv and scans_path.exists():
+        scans = json.loads(scans_path.read_text())
+        print(f"loaded {len(scans)} cached scans from {scans_path}")
+    else:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+            scans = list(pool.map(lambda ib: stage_scan(*ib), enumerate(batches)))
+        scans_path.write_text(json.dumps(scans, indent=2))
     print(f"scanned {sum(len(b) for b in batches)} transcripts in {len(batches)} batches")
 
-    patterns = stage_cluster(scans)
+    clusters_path = OUT_DIR / "pattern_clusters.json"
+    if "--cached-cluster" in sys.argv and clusters_path.exists():
+        patterns = json.loads(clusters_path.read_text())
+        print(f"loaded {len(patterns)} cached cluster patterns from {clusters_path}")
+    else:
+        patterns = stage_cluster(scans)
+        clusters_path.write_text(json.dumps(patterns, indent=2))
     if not patterns:
         write_outputs(str(path), len(transcripts), sum(len(b) for b in batches), len(batches), [])
         return
