@@ -9,3 +9,5 @@
 
 - Enabled liger kernel otherwise cuda cache keeps OOMing (warning, not error, but slow)
   - 8x H200 seems stable with current hyperparameters and optimizations
+
+- One checkpoint is about 500G

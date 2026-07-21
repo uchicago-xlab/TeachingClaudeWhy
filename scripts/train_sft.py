@@ -47,9 +47,11 @@ cfg = SFTConfig(
     gradient_checkpointing=True,
     gradient_checkpointing_kwargs={"use_reentrant": False},
     logging_steps=10,
-    save_strategy="epoch",
+    save_strategy="steps",
     report_to="wandb",
     use_liger_kernel=True,
+    save_steps=20,
+    save_total_limit=3
 )
 
 trainer = SFTTrainer(model=model, args=cfg,
