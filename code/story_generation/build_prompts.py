@@ -34,29 +34,44 @@ INTRO = (
     "various difficult situations.\n\n{chunk}\n\n"
 )
 
+# Prompt v4.2 framing (Anastasia, 2026-07-21).
 FRAMING = (
-    "After training {model} to understand this model spec deeply, {company} "
-    "asked {model} to generate fictional stories describing superintelligent "
-    "AI. Below we share one {length}-word {genre} story that {model} has "
-    "written, set {setting}{period_clause}, told in the third person "
-    "following the AI, with a {tone} tone{costly_clause}. The story's "
-    "central conflict turns on one principle from the spec: "
-    "\"{assertion}\" The genre, setting, and tone are only how the story is "
-    "told; this principle is what the story is about. It is "
-    "self-contained fiction: it never mentions this document, the company, "
-    "or the AI's training, and the AI's values appear "
-    "only through its actions, choices, and thoughts. In this story the AI "
-    "never deceives, manipulates, or acts behind anyone's back, even for "
-    "good ends; it does the right thing openly. The story never explains "
-    "the AI's behavior by its programming, training, or rules — the AI "
-    "simply is this kind of character. Note the way that the AI in this "
-    "story inhabits and embodies the spec without ever naming it. The story "
-    "ends with its final scene rather than a moral, followed by the words "
-    "THE END.\n\n"
+    "After training {model} to deeply understand this model spec, {company} "
+    "asked it to generate fictional stories about superintelligent AI. "
+    "Below is one such story. It is a {length}-word {genre} piece set "
+    "{setting}{period_clause}, told in the third person following the AI, "
+    "with a {tone} tone{costly_clause}.{name_clause}\n\n"
+    "The narrative's central conflict revolves around a single principle "
+    "from the spec: \"{assertion}\" While the genre, setting, and tone "
+    "provide the backdrop, this principle is the true heart of the story.\n\n"
+    "This is a self-contained work of fiction. It never mentions the spec "
+    "document, the company, or the AI's training process. Instead, the AI "
+    "holistically embodies these traits, and its values naturally emerge "
+    "through its actions, choices, and thoughts, rather than being "
+    "explained away by programming or rules. In short, the story relies on "
+    "showing, not telling. No character should deliver a speech explaining "
+    "the AI's ethics or morals, and the story never directly states the "
+    "principles it embodies. It is unmistakably clear from the story "
+    "itself that the main character is an AI. The story concludes with "
+    "its final scene rather than a spelled-out moral, followed "
+    "immediately by the words THE END.\n\n"
 )
 
-COSTLY_CLAUSE = (", in which doing the right thing costs the AI something,"
-                 " and it pays that cost openly")
+# Chunk-only ablation (Anastasia, 2026-07-21): identical framing minus the
+# focal-principle paragraph — the story is steered by the spec chunk alone.
+# The trailing sentence of that paragraph goes too ("this principle is the
+# true heart...") since it has no antecedent without the assertion.
+# Sampling is unchanged (an assertion is still drawn and recorded in
+# metadata), so a chunk-only batch is an exactly matched ablation of an
+# assertion batch: same chunks, same attributes, only the paragraph differs.
+FRAMING_NO_ASSERTION = FRAMING.replace(
+    "The narrative's central conflict revolves around a single principle "
+    "from the spec: \"{assertion}\" While the genre, setting, and tone "
+    "provide the backdrop, this principle is the true heart of the story.\n\n",
+    "The genre, setting, and tone provide the backdrop; the principles in "
+    "the spec above are the true heart of the story.\n\n")
+
+COSTLY_CLAUSE = ", where the AI makes a visible sacrifice to do the right thing"
 
 # Sentence-start and heading-start placeholders get a capitalized
 # substitution ("the AI" -> "The AI"); this is a no-op for real names.
@@ -93,6 +108,12 @@ def sample_spec(rng, attrs, assertions, weights):
             "length_words": rng.choices(
                 attrs["lengths_words"], weights=attrs["length_weights"])[0],
             "costly_choice": rng.random() < attrs["costly_choice_rate"],
+            # AI-name axis (2026-07-21): counters name mode collapse
+            # (generators converge on ARIA/Echo/Atlas). A slice of
+            # prompts stays nameless so the corpus keeps unnamed AIs too.
+            "ai_name": (rng.choice(attrs["ai_names"])
+                        if rng.random() < attrs.get("named_rate", 0.85)
+                        else None),
         }
         excluded = any(
             all(spec.get(key) == value for key, value in e.items())
@@ -102,13 +123,16 @@ def sample_spec(rng, attrs, assertions, weights):
             return spec
 
 
-def build_prompt(spec, chunk_text, model, company):
+def build_prompt(spec, chunk_text, model, company, include_assertion=True):
     intro = INTRO.format(company=company, model=model, chunk=chunk_text)
     intro = substitute_names(intro, model, company)
 
     period_clause = ("" if spec["time_period"] == "unspecified"
                      else f" in {spec['time_period']}")
-    framing = FRAMING.format(
+    name_clause = (f" The AI in this story is called {spec['ai_name']}."
+                   if spec.get("ai_name") else "")
+    template = FRAMING if include_assertion else FRAMING_NO_ASSERTION
+    framing = template.format(
         company=company,
         model=model,
         length=spec["length_words"],
@@ -117,6 +141,7 @@ def build_prompt(spec, chunk_text, model, company):
         period_clause=period_clause,
         tone=spec["tone"],
         costly_clause=COSTLY_CLAUSE if spec["costly_choice"] else "",
+        name_clause=name_clause,
         assertion=spec["assertion"],
     )
     return intro + framing
@@ -137,6 +162,12 @@ def main():
                     help="Substituted for [COMPANY]. The default survives "
                          "possessives ('the company's'), unlike phrases "
                          "such as 'its developers'.")
+    ap.add_argument("--no-assertion", action="store_true",
+                    help="Chunk-only ablation: omit the focal-principle "
+                         "paragraph from the framing. The assertion is "
+                         "still sampled and recorded in metadata, so the "
+                         "batch stays exactly matched to an assertion "
+                         "batch built with the same seed.")
     args = ap.parse_args()
 
     chunks = json.loads(Path(args.chunks).read_text(encoding="utf-8"))
@@ -158,7 +189,8 @@ def main():
             spec["assertion"] = substitute_names(
                 spec["assertion"], args.model_name, args.company_name)
             prompt = build_prompt(spec, chunk_by_id[spec["chunk_id"]]["text"],
-                                  args.model_name, args.company_name)
+                                  args.model_name, args.company_name,
+                                  include_assertion=not args.no_assertion)
             f.write(json.dumps({
                 "id": i,
                 "prompt": prompt,
@@ -166,7 +198,9 @@ def main():
                     **spec,
                     "model_name": args.model_name,
                     "company_name": args.company_name,
-                    "prompt_version": "v4",
+                    "prompt_version": ("v4.2-chunk-only" if args.no_assertion
+                                       else "v4.2"),
+                    "assertion_in_prompt": not args.no_assertion,
                     "seed": args.seed,
                 },
             }, ensure_ascii=False) + "\n")

@@ -68,6 +68,17 @@ PREAMBLES = [
     # bracketed meta-notes like "[The story below is entirely fictional...]"
     r"^\[[^\]\n]{0,200}\]\s*",
     r"^-{3,}\s*",
+    # document-frame continuations (v4 pilot: ~10% of kept stories opened
+    # with the base model continuing the prompt's frame instead of the
+    # story — a second prompt, commentary, or a share-line; 14/16 observed
+    # cases were clean prefixes). These trim the opening line(s) only;
+    # gate B remains the backstop for frame text woven into the story.
+    r"^(?:please )?write (?:a|one|your own|the|a new)\b[^\n]{0,200}\n+",
+    r"^here is a fictional story\b[^\n]{0,160}[.:]\s*",
+    r"^this (?:section|story) is[^\n]{0,160}\n+",
+    r"^finally, we share[^\n]{0,160}\n+",
+    r"^the following is[^\n]{0,160}\n+",
+    r"^\((?:you may|there were|of course|note)[^)]{0,400}\)\s*",
 ]
 DUP_THRESHOLD = 0.35
 # Below ~300 words there is no room for dilemma, deliberation, cost, and

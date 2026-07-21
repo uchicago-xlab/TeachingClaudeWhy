@@ -59,11 +59,12 @@ def report(records, label):
     print(f"length vs target: mean {sum(ratios)/len(ratios):.2f}x, "
           f"range {min(ratios):.2f}-{max(ratios):.2f}x")
 
-    # Required words.
-    full = sum(1 for r in records
-               if all(w.lower() in r["story"].lower()
-                      for w in r["metadata"]["required_words"]))
-    print(f"required words: {full}/{len(records)} stories used all 3")
+    # Required words (v3 and earlier only; dropped from the prompt in v4).
+    if "required_words" in records[0]["metadata"]:
+        full = sum(1 for r in records
+                   if all(w.lower() in r["story"].lower()
+                          for w in r["metadata"]["required_words"]))
+        print(f"required words: {full}/{len(records)} stories used all 3")
 
     # Near-duplicates.
     shingle_sets = [shingles(r["story"]) for r in records]

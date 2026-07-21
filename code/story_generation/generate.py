@@ -43,6 +43,12 @@ def main():
                          "batches OOM on activation spikes.")
     ap.add_argument("--max-num-batched-tokens", type=int, default=None,
                     help="Cap prefill chunk size, same reason as above.")
+    ap.add_argument("--disable-custom-all-reduce", action="store_true",
+                    help="Fall back to NCCL all-reduce. Needed on PCIe "
+                         "multi-GPU hosts (no NVLink) where vLLM's custom "
+                         "all-reduce can deadlock: engine spins at 100% GPU "
+                         "with no progress (seen 2026-07-15, 2xA100 PCIe). "
+                         "Pair with NCCL_P2P_DISABLE=1.")
     ap.add_argument("--min-tokens", type=int, default=250,
                     help="Floor before the model may stop; prevents "
                          "instant title-plus-THE-END duds. (vLLM documents "
@@ -60,6 +66,8 @@ def main():
         extra["max_num_seqs"] = args.max_num_seqs
     if args.max_num_batched_tokens:
         extra["max_num_batched_tokens"] = args.max_num_batched_tokens
+    if args.disable_custom_all_reduce:
+        extra["disable_custom_all_reduce"] = True
     llm = LLM(
         model=args.model,
         tensor_parallel_size=args.tp,
