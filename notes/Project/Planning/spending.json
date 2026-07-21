@@ -90,6 +90,16 @@
       "approx": false,
       "status": "burned",
       "allocationId": null
+    },
+    {
+      "id": "5792d183-5f99-4900-a858-d2f6a67a4f85",
+      "date": "2026-07-21",
+      "what": "Runpod -- Instruct fine-tuning",
+      "who": "Brandon",
+      "amount": 500,
+      "approx": false,
+      "status": "allocated",
+      "allocationId": null
     }
   ]
 }
