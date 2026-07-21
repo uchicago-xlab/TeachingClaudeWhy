@@ -222,26 +222,33 @@ def stage_autorate(patterns: list[dict], transcript: dict) -> dict[str, dict]:
     patterns_blob = "\n\n".join(f"{p['name']}: {p['description']}" for p in patterns)
     prompt = fill(template, patterns=patterns_blob, transcript=transcript["text"])
     known = {p["name"] for p in patterns}
+    # ~27 rating blocks need real room, and thinking tokens count toward
+    # max_tokens — at 4096 the tail of the pattern list was silently truncated
+    # off every response, skewing per-pattern denominators; rating is
+    # mechanical, so bound thinking with low effort instead of a tight budget
+    ratings = {}
     for _ in range(RETRIES):
         # empty output usually means a refusal on the transcript's content
-        raw = generate(prompt, max_tokens=4096)
-        ratings = {}
+        raw = generate(prompt, max_tokens=16384, effort="low")
         for r in BeautifulSoup(raw, "html.parser").find_all("rating"):
             name_tag, verdict_tag = r.find("name"), r.find("verdict")
             if not (name_tag and verdict_tag):
                 continue
             name = normalize_name(name_tag.get_text())
             verdict = verdict_tag.get_text().strip().lower()
-            if name in known and verdict in ("strict", "broad", "no"):
+            if name in known and name not in ratings and verdict in ("strict", "broad", "no"):
                 evidence = r.find("evidence")
                 ratings[name] = {
                     "verdict": verdict,
                     "evidence": evidence.get_text().strip() if evidence else "",
                 }
-        if ratings:
+        if len(ratings) == len(known):
             return ratings
-    print(f"warning: transcript {transcript['id']} could not be rated")
-    return {}
+    if ratings:
+        print(f"warning: transcript {transcript['id']} rated on {len(ratings)}/{len(known)} patterns")
+    else:
+        print(f"warning: transcript {transcript['id']} could not be rated")
+    return ratings
 
 
 def aggregate(patterns: list[dict], rated: list[tuple[dict, dict]]) -> list[dict]:
@@ -276,7 +283,9 @@ def aggregate(patterns: list[dict], rated: list[tuple[dict, dict]]) -> list[dict
 # --------------------------------------------------------------------- output
 
 
-def write_outputs(source: str, n_transcripts: int, n_scanned: int, n_scans: int, results: list[dict]) -> None:
+def write_outputs(
+    source: str, n_transcripts: int, n_scanned: int, n_scans: int, n_autorated: int, results: list[dict]
+) -> None:
     OUT_DIR.mkdir(exist_ok=True)
     (OUT_DIR / "pattern_report.json").write_text(
         json.dumps(
@@ -285,6 +294,7 @@ def write_outputs(source: str, n_transcripts: int, n_scanned: int, n_scans: int,
                 "n_transcripts": n_transcripts,
                 "n_scanned": n_scanned,
                 "n_scans": n_scans,
+                "n_autorated": n_autorated,
                 "patterns": results,
             },
             indent=2,
@@ -296,7 +306,7 @@ def write_outputs(source: str, n_transcripts: int, n_scanned: int, n_scans: int,
         "",
         f"Source: `{source}` — {n_transcripts} transcripts, "
         f"{n_scanned} scanned across {n_scans} batches, "
-        f"{results[0]['rated'] if results else 0} autorated.",
+        f"{n_autorated} autorated.",
         "",
     ]
     if not results:
@@ -356,7 +366,7 @@ def main():
         patterns = stage_cluster(scans)
         clusters_path.write_text(json.dumps(patterns, indent=2))
     if not patterns:
-        write_outputs(str(path), len(transcripts), sum(len(b) for b in batches), len(batches), [])
+        write_outputs(str(path), len(transcripts), sum(len(b) for b in batches), len(batches), 0, [])
         return
 
     sample = shuffled[:MAX_AUTORATE]
@@ -366,7 +376,7 @@ def main():
     print(f"autorated {len(rated)}/{len(sample)} transcripts against {len(patterns)} patterns")
 
     results = aggregate(patterns, rated)
-    write_outputs(str(path), len(transcripts), sum(len(b) for b in batches), len(batches), results)
+    write_outputs(str(path), len(transcripts), sum(len(b) for b in batches), len(batches), len(rated), results)
 
 
 if __name__ == "__main__":
