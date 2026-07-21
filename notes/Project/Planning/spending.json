@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "seed-01",
+      "date": "2026-07-20",
+      "what": "Runpod — 8x H200 for 10hr20m",
+      "who": "Brandon",
+      "amount": 362.91,
+      "approx": false,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "seed-02",
+      "date": "2026-07-20",
+      "what": "Runpod — 8x H100 for 42m",
+      "who": "Brandon",
+      "amount": 16.74,
+      "approx": false,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "seed-03",
+      "date": "2026-07-13",
+      "what": "RunPod usage — stories pipeline test (3.1.1 data gen): Gemma 4 31B pod 2.26h × $1.39 = $3.14; Qwen2.5-72B pod 0.97h × $2.78 = $2.70; failed first 72B pod (old-driver host) ~0.3h × $2.78 ≈ $0.90; volume storage cents. Output: 2 × 12 test stories in data/stories-pilot/",
+      "who": "Anastasia",
+      "amount": 7,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
+    },
+    {
+      "id": "seed-04",
+      "date": "2026-07-13",
+      "what": "RunPod — initial fine-tuning pipeline verification",
+      "who": "Brandon",
+      "amount": 120,
+      "approx": false,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "seed-05",
+      "date": "2026-07-13",
+      "what": "RunPod — initial fine-tuning pipeline verification",
+      "who": "Brandon",
+      "amount": 500,
+      "approx": false,
+      "status": "allocated",
+      "allocationId": null
+    },
+    {
+      "id": "seed-06",
+      "date": "2026-07-13",
+      "what": "RunPod — accidental leftover pod burn",
+      "who": "Brandon",
+      "amount": 150,
+      "approx": false,
+      "status": "burned",
+      "allocationId": null
+    },
+    {
+      "id": "seed-07",
+      "date": "2026-07-13",
+      "what": "RunPod credits — dataset generation",
+      "who": "Anastasia",
+      "amount": 100,
+      "approx": false,
+      "status": "allocated",
+      "allocationId": null
+    },
+    {
+      "id": "seed-08",
+      "date": "2026-07-01",
+      "what": "RunPod — agentic misalignment eval pipeline check (original ledger recorded only \"2026-07\")",
+      "who": "Finn",
+      "amount": 25,
+      "approx": false,
+      "status": "allocated",
+      "allocationId": null
+    },
+    {
+      "id": "seed-09",
+      "date": "2026-07-08",
+      "what": "RunPod",
+      "who": "Brandon",
+      "amount": 250,
+      "approx": false,
+      "status": "burned",
+      "allocationId": null
+    }
+  ]
+}
