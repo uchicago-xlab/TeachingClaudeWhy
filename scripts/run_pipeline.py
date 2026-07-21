@@ -29,9 +29,7 @@ THEME_INDEX = 4
 N_PROMPTS = 10
 
 load_dotenv(ROOT / ".env")
-# the default 2 retries isn't enough to ride out 529 Overloaded windows when
-# sample_prompts.py has 24 workers hammering the API at once
-client = anthropic.Anthropic(max_retries=8)
+client = anthropic.Anthropic()
 
 
 def chatify(string: str) -> list[dict]:
@@ -81,7 +79,10 @@ def generate(
             return response_text(message)
         except (
             anthropic.RateLimitError,
-            anthropic.InternalServerError,  # includes 529 OverloadedError
+            anthropic.InternalServerError,
+            # 529 subclasses APIStatusError directly, NOT InternalServerError;
+            # the SDK also skips its own retries for it (x-should-retry: false)
+            anthropic.OverloadedError,
             anthropic.APIConnectionError,
         ) as err:
             if attempt == 4:
