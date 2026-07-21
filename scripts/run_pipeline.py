@@ -29,7 +29,9 @@ THEME_INDEX = 4
 N_PROMPTS = 10
 
 load_dotenv(ROOT / ".env")
-client = anthropic.Anthropic()
+# the default 2 retries isn't enough to ride out 529 Overloaded windows when
+# sample_prompts.py has 24 workers hammering the API at once
+client = anthropic.Anthropic(max_retries=8)
 
 
 def chatify(string: str) -> list[dict]:
