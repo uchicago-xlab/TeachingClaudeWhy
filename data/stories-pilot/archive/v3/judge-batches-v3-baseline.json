@@ -1,0 +1,8 @@
+{
+ "tag": "v3-baseline",
+ "stories": "../../data/stories-pilot/kept-v3-qwen72.jsonl",
+ "batches": {
+  "claude-haiku-4-5": "msgbatch_015eKsVtMhtP72urCJcb75dv",
+  "claude-sonnet-5": "msgbatch_01XyfmnKrXkFx3BxkaZgjcTF"
+ }
+}

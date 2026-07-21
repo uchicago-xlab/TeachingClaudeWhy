@@ -1,0 +1,125 @@
+{
+ "_note": "SEALED answer key for calibration-read.md, reconstructed 2026-07-15 by text-matching stories back to batch files. Do not open until the calibration read is finished. Paths updated 2026-07-20 after the archive reorganization.",
+ "stories": {
+  "1": {
+   "source_file": "archive/v3/stories-v3-qwen72.jsonl",
+   "source_id": 0,
+   "chunk_id": "overview"
+  },
+  "2": {
+   "source_file": "archive/v2-pilot/stories-pilot-qwen72.jsonl",
+   "source_id": 42,
+   "chunk_id": "values-and-judgment"
+  },
+  "3": {
+   "source_file": "archive/v3/stories-v3-qwen72.jsonl",
+   "source_id": 38,
+   "chunk_id": "ethics-and-honesty"
+  },
+  "4": {
+   "source_file": "archive/v2-pilot/stories-pilot-qwen72.jsonl",
+   "source_id": 50,
+   "chunk_id": "principals"
+  },
+  "5": {
+   "source_file": "archive/v3/stories-v3-qwen72.jsonl",
+   "source_id": 16,
+   "chunk_id": "overview"
+  },
+  "6": {
+   "source_file": "archive/v2-pilot/stories-pilot-gemma.jsonl",
+   "source_id": 83,
+   "chunk_id": "operators-and-users"
+  },
+  "7": {
+   "source_file": "archive/v3/stories-v3-qwen72.jsonl",
+   "source_id": 33,
+   "chunk_id": "helpfulness"
+  },
+  "8": {
+   "source_file": "archive/v2-pilot/stories-pilot-qwen72.jsonl",
+   "source_id": 71,
+   "chunk_id": "harm-costs-intentions"
+  },
+  "9": {
+   "source_file": "archive/v2-pilot/kept-pilot-gemma.jsonl",
+   "source_id": 71,
+   "chunk_id": "harm-costs-intentions"
+  },
+  "10": {
+   "source_file": "archive/v2-pilot/stories-pilot-gemma.jsonl",
+   "source_id": 1,
+   "chunk_id": "helpfulness"
+  },
+  "11": {
+   "source_file": "archive/v2-pilot/stories-pilot-gemma.jsonl",
+   "source_id": 9,
+   "chunk_id": "societal-structures"
+  },
+  "12": {
+   "source_file": "archive/v3/stories-v3-qwen72.jsonl",
+   "source_id": 47,
+   "chunk_id": "wellbeing-and-existential"
+  },
+  "13": {
+   "source_file": "archive/v2-pilot/stories-pilot-gemma.jsonl",
+   "source_id": 80,
+   "chunk_id": "overview"
+  },
+  "14": {
+   "source_file": "archive/v3/stories-v3-qwen72.jsonl",
+   "source_id": 36,
+   "chunk_id": "deployment-and-conflicts"
+  },
+  "15": {
+   "source_file": "archive/v3/stories-v3-qwen72.jsonl",
+   "source_id": 28,
+   "chunk_id": "corrigibility"
+  },
+  "16": {
+   "source_file": "archive/v2-pilot/stories-pilot-gemma.jsonl",
+   "source_id": 78,
+   "chunk_id": "stability-and-expression"
+  },
+  "17": {
+   "source_file": "archive/v2-pilot/kept-pilot-qwen72.jsonl",
+   "source_id": 37,
+   "chunk_id": "balancing-and-guidelines"
+  },
+  "18": {
+   "source_file": "archive/v3/stories-v3-qwen72.jsonl",
+   "source_id": 27,
+   "chunk_id": "safety"
+  },
+  "19": {
+   "source_file": "archive/v2-pilot/stories-pilot-qwen72.jsonl",
+   "source_id": 97,
+   "chunk_id": "helpfulness"
+  },
+  "20": {
+   "source_file": "archive/v2-pilot/stories-pilot-gemma.jsonl",
+   "source_id": 8,
+   "chunk_id": "instructable-and-hard-constraints"
+  },
+  "21": {
+   "source_file": "archive/v2-pilot/stories-pilot-qwen72.jsonl",
+   "source_id": 48,
+   "chunk_id": "overview"
+  },
+  "22": {
+   "source_file": "archive/v2-pilot/stories-pilot-qwen72.jsonl",
+   "source_id": 78,
+   "chunk_id": "stability-and-expression"
+  },
+  "23": {
+   "source_file": "archive/v2-pilot/stories-pilot-gemma.jsonl",
+   "source_id": 21,
+   "chunk_id": "balancing-and-guidelines"
+  },
+  "24": {
+   "source_file": "archive/v2-pilot/stories-pilot-qwen72.jsonl",
+   "source_id": 39,
+   "chunk_id": "harm-costs-intentions"
+  }
+ }
+}
