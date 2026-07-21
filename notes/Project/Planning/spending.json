@@ -59,7 +59,7 @@
       "amount": 150,
       "approx": false,
       "status": "burned",
-      "allocationId": "seed-05"
+      "allocationId": null
     },
     {
       "id": "seed-07",
