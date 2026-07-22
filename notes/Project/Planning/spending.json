@@ -120,6 +120,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "seed-05"
+    },
+    {
+      "id": "3487cde6-96ea-4553-bca8-2fdef54e8f21",
+      "date": "2026-07-22",
+      "what": "Uploading instruct checkpoints to Runpod pod for manual inference",
+      "who": "Brandon",
+      "amount": 15,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
     }
   ]
 }
