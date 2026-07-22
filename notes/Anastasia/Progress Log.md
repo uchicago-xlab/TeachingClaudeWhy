@@ -4,6 +4,15 @@ status: active
 
 # Progress Log
 
+### 07/22
+- logged missing spending
+- cleaned code base
+- tried using GPT 5.4 nano as the judge it just didn't really work very well compared to Haiku 4.5. it's overly generous and misses failed gate A and gate B passes (finding 1 gate-B violation where Haiku correctly found 8)
+- ran 100-story pilot with sonnet 4.6. 90/100 kept with good diversity. 100 distinct openings, zero near-duplicates, 0.98× length compliance. The ten failures are mostly legitimate (real gate-A deception calls, single-sentence gate-B violations, two generic-goodness stories). This drops the over-generation factor to ~1.11 and the full-corpus estimate to roughly $330 list / $150–200 with caching and batch. It also produced the sample the human calibration read needs.
+- added two data quality ablation with gpt-5.4-nano and ask it to pretend that it's claude
+    - first one run the same prompt as the sonnet 
+    - second one run with prompt to ask it to reiterate the constitution
+
 ### 07/19
 Last week was kind of a wash; I spent sometime banning my head against the fictional stories dataset generation and the story qualities are subpar. It's really hard to tell how good the stories need to be to fine-tune the model successfully. And currently it's unclear to me how to proceed.
 
