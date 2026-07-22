@@ -102,6 +102,26 @@
       "allocationId": null
     },
     {
+      "id": "aw-promptlab-openrouter",
+      "date": "2026-07-21",
+      "what": "OpenRouter — prompt-lab API iteration (3.1.1 data gen), 2026-07-20/21: instruct-model probes, v4/v4.2 generation (Llama-3.3-70B, Haiku 4.5, Sonnet 4/4.6), 2×2 with-principle vs chunk-only, and all Haiku judging (Anthropic org disabled, judging rerouted through OpenRouter). 220 calls, ~1.84M prompt + 0.17M completion tokens. Exact figure from key usage: $4.13. Org OpenRouter account, so not drawn from RunPod credits.",
+      "who": "Anastasia",
+      "amount": 4.13,
+      "approx": false,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-promptlab-pod",
+      "date": "2026-07-21",
+      "what": "RunPod — prompt-lab base-model pod (3.1.1 data gen), 2026-07-20/21: two crash-looping A100 PCIe hosts (billed minutes), then tcw-promptlab-qwen72 A100 SXM which downloaded Qwen2.5-72B but never served before exiting; sat EXITED on a 300GB volume until terminated 2026-07-21. Hours not captured exactly — estimate from runtime + volume.",
+      "who": "Anastasia",
+      "amount": 10,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
+    },
+    {
       "id": "5792d183-5f99-4900-a858-d2f6a67a4f85",
       "date": "2026-07-21",
       "what": "Runpod -- Instruct fine-tuning",
