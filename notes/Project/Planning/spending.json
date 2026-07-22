@@ -126,7 +126,7 @@
       "date": "2026-07-22",
       "what": "Uploading instruct checkpoints to Runpod pod for manual inference",
       "who": "Brandon",
-      "amount": 15,
+      "amount": 15.3,
       "approx": false,
       "status": "spent",
       "allocationId": "seed-05"
