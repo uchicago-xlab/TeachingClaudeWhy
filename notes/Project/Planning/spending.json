@@ -130,6 +130,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "seed-05"
+    },
+    {
+      "id": "8f60ab5d-217e-4dc5-8523-9ac016351fc5",
+      "date": "2026-07-22",
+      "what": "Transferring instruct checkpoints across failing runpod servers (still billed)",
+      "who": "Brandon",
+      "amount": 15,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
     }
   ]
 }
