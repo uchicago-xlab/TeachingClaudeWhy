@@ -134,12 +134,10 @@ def judge_prompt_template():
     return text[start:end].rsplit("---", 1)[0].strip()
 
 
-NO_ASSERTION_NOTE = (
-    "(no single focal principle was specified for this story; "
-    "score Constitution engagement against the spec section as a whole)")
-
-
-def build_requests(stories_path, chunks_path, ignore_assertion=False):
+def build_requests(stories_path, chunks_path):
+    # The rubric is section-level (2026-07-22): no focal principle is
+    # shown even when metadata records a drawn assertion — the assertion
+    # is sampling machinery, never prompt or judge input.
     template = judge_prompt_template()
     chunks = {c["id"]: c["text"]
               for c in json.loads(Path(chunks_path).read_text(encoding="utf-8"))}
@@ -151,23 +149,13 @@ def build_requests(stories_path, chunks_path, ignore_assertion=False):
         m = r["metadata"]
         chunk_text = substitute_names(
             chunks[m["chunk_id"]], m["model_name"], m["company_name"])
-        # Pre-v4 batches have no focal assertion; judge those against the
-        # whole section so coherence/fiction/gate scores stay comparable.
-        # ignore_assertion forces the same treatment for chunk-only
-        # ablation batches, whose metadata records a drawn assertion the
-        # generator never saw (Anastasia 2026-07-21: judge each condition
-        # on its own terms).
-        assertion = m.get("assertion") or NO_ASSERTION_NOTE
-        if ignore_assertion:
-            assertion = NO_ASSERTION_NOTE
         costly = (", and asked that doing the right thing cost the AI"
                   " something" if m.get("costly_choice") else "")
-        echo = ("FLAGGED — a verbatim run of the focal principle appears"
-                " in the story text" if r.get("assertion_echo")
-                else "not flagged")
+        echo = ("FLAGGED — a verbatim run of one of the section's"
+                " principles appears in the story text"
+                if r.get("assertion_echo") else "not flagged")
         prompt = (template
                   .replace("{chunk_text}", chunk_text)
-                  .replace("{assertion}", assertion)
                   .replace("{genre}", m["genre"])
                   .replace("{setting}", m["setting"])
                   .replace("{tone}", m["tone"])
@@ -258,9 +246,7 @@ def judge_openrouter(args):
     Anthropic org/Batch API is unavailable. Same rubric, same verdict
     JSONL format; judge model ids are OpenRouter ids
     (e.g. anthropic/claude-haiku-4.5)."""
-    reqs = build_requests(args.stories, args.chunks,
-                          ignore_assertion=getattr(args, "ignore_assertion",
-                                                   False))
+    reqs = build_requests(args.stories, args.chunks)
     out_dir = Path(args.out_dir)
     for model in args.models.split(","):
         model = model.strip()
@@ -376,10 +362,6 @@ def main():
     j.add_argument("--models", required=True)
     j.add_argument("--tag", required=True)
     j.add_argument("--out-dir", required=True)
-    j.add_argument("--ignore-assertion", action="store_true",
-                   help="judge against the spec section as a whole, even "
-                        "if metadata carries a drawn assertion (for "
-                        "chunk-only ablation batches)")
     s = sub.add_parser("submit")
     s.add_argument("--stories", required=True)
     s.add_argument("--chunks", required=True)

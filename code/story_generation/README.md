@@ -1,124 +1,128 @@
 # Story generation pipeline
 
 Generates the fictional-stories SDF dataset per the action plan in
-`notes/Project/Experiments/ImprovingPreTrainingPrior.md`. Three scripts, run
-in order:
+`notes/Project/Experiments/ImprovingPreTrainingPrior.md` (see its
+"Prompt-lab phase" and "Current plan of action" sections for how the
+pipeline got here). Generation runs against API-served instruct models via
+OpenRouter; the earlier self-hosted base-model path (`generate.py`,
+`promptlab_infer.py`, pod setup notes) was removed 2026-07-22 and lives in
+git history.
+
+Run in order:
 
 1. `chunk_constitution.py` — splits `data/constitution/constitution-noname.md`
    into the 16 chunks from the plan (concluding thoughts dropped; the
    product-surface list, formatting paragraph, and document-UI sentences
    excised per decision log 2026-07-15) and writes `chunks.json`.
-2. `build_prompts.py` — prompt v4: samples one assertion from
-   `assertions.json` (the story's required central conflict; prompt share is
-   per assertion, not per chunk), pulls its parent chunk as context, samples
-   an attribute combination from `attributes.json`, substitutes the
-   `[MODEL]`/`[COMPANY]` placeholders, and writes `prompts.jsonl`.
-   `assertions.json` comes from the one-time assertion extraction (decision
-   log item 8) and is human-reviewed before use.
-3. `generate.py` — batched completion-style generation with vLLM, one run per
-   candidate model, writes stories with full metadata to a JSONL file.
+2. `generate_stories.py build` — prompt v4.3, chunk-only: samples an
+   assertion from `assertions.json` (sampling machinery only — it sets
+   chunk share and is recorded in metadata for coverage, but never
+   appears in the prompt), pulls the parent chunk, samples attributes
+   from `attributes.json` (genre/setting/tone/period, length, 34%
+   visible-sacrifice clause, 85% AI-name axis), and writes `prompts.jsonl`
+   in chat form. `--framing embodiment|recitation` picks the main-corpus
+   or told-values-control second paragraph.
+3. `generate_stories.py run` — sends each prompt to the generator through
+   OpenRouter concurrently (`--frame pretend` for non-Claude generators),
+   writing stories with full metadata to a run-tagged JSONL in
+   `data/prompt-lab/`.
+4. `filter_stories.py` — mechanical filter: length/truncation, document-
+   frame preambles, name leaks, assertion-echo flag. (TODO: reject
+   `finish_reason: content_filter` rows.)
+5. `judge_batch.py judge-openrouter` — LLM judge (Haiku 4.5) scoring each
+   story against `judge_rubric.md`, section-as-a-whole; keep rule applied
+   in code (`keep()`: all three gates pass, all four dimensions >= 3).
+   `summarize` reports scores, gate fails, and keep rates. The Anthropic
+   Batch API paths (`submit`/`fetch`) run the same rubric at half price
+   once the org account is restored.
+6. `check_diversity.py` — diversity report over a kept batch.
 
-## Pilot generators
+## Decision log (live entries only; superseded ones in git history)
 
-- `google/gemma-4-31B` — most capable base checkpoint among the trainee
-  candidates in `BaseModelSelection.md` (note: Gemma 4 has no `-pt` suffix;
-  the un-suffixed repo is the pretrained model, `-it` is the instruct one).
-- `Qwen/Qwen2.5-72B` — the larger comparator; the biggest dense base
-  checkpoint released before June 2025.
-
-The pilot (step 5 of the plan) generates ~100 stories from each and keeps
-the better writer.
-
-## Running the pilot on Runpod
-
-GPU sizing (bf16 weights): Gemma 4 31B is ~62 GB, fits one 80 GB GPU;
-Qwen2.5-72B is ~145 GB, needs `--tp 2` on two 80 GB GPUs (tight — drop
-`--max-model-len` to 8192 if the KV cache does not fit) or `--tp 4`.
-A pod with 2x H100 80GB covers both runs.
-
-Pod checklist, learned the hard way on 2026-07-13:
-- Create the pod with `allowedCudaVersions: ["13.0"]` (REST API) or verify
-  `nvidia-smi` shows CUDA >= 13.0 — current vLLM wheels ship a torch build
-  that refuses older drivers ("driver too old", found on some A100 hosts).
-- Create the pod with a `PUBLIC_KEY` env var holding your SSH public key;
-  the Runpod PyTorch image only starts sshd when it is set, and the CLI
-  does not inject it for you.
-- `apt-get update && apt-get install -y ffmpeg` before importing vLLM —
-  Gemma 4 is a multimodal architecture, its loader pulls in torchcodec,
-  and torchcodec needs FFmpeg shared libraries the image lacks.
-- Put the Python env on the container's local disk (`/opt/venv`), never on
-  `/workspace` — that is a network filesystem and installing thousands of
-  small files onto it takes 20+ minutes instead of ~2. Keep the HF model
-  cache (`HF_HOME=/workspace/hf`) on the volume: big sequential files are
-  fine there and survive container restarts.
-- Install with `uv` and set `HF_HUB_ENABLE_HF_TRANSFER=1` (with the
-  `hf_transfer` package) — the 62GB Gemma download then takes minutes.
-- No HF token needed: Gemma 4 and Qwen2.5 are both ungated (Apache 2.0).
-
-```bash
-pip install uv && uv venv /opt/venv --python 3.11
-VIRTUAL_ENV=/opt/venv uv pip install vllm hf_transfer
-export HF_HOME=/workspace/hf HF_HUB_ENABLE_HF_TRANSFER=1
-
-python chunk_constitution.py \
-    --constitution ../../data/constitution/constitution-noname.md \
-    --out chunks.json
-python build_prompts.py --chunks chunks.json --attributes attributes.json \
-    --n 112 --seed 0 --out prompts.jsonl        # 112 = 7 per chunk
-python generate.py --model google/gemma-4-31B --tp 1 \
-    --prompts prompts.jsonl --out stories-gemma4-31b.jsonl
-python generate.py --model Qwen/Qwen2.5-72B --tp 2 \
-    --prompts prompts.jsonl --out stories-qwen25-72b.jsonl
-```
-
-Both models get identical prompts (same seed), so quality differences are
-attributable to the generator.
-
-## Decision log
-
-- **Generator stays a base model with document-completion prompting.** An
-  instruct-model generator (e.g. Qwen2.5-72B-Instruct, which predates the
-  contamination cutoff and would follow the framing instructions more
-  reliably) was considered and rejected: the paper's method is base-model
-  document completion, and we keep the replication faithful. Decided by
-  Anastasia 2026-07-14. Confidence: high. Tradeoff: the framing text's
-  constraints (length targets, no spec mentions, chunk-specific plots) bind
-  only statistically on base models, so post-processing filters carry more
-  weight.
-
-- **Pilot generators: Gemma 4 31B vs. Qwen2.5-72B.** Gemma 4 31B is the most
-  capable trainee candidate per `BaseModelSelection.md`; Qwen2.5-72B tests
-  whether a bigger model writes better stories. Confidence: medium. Tradeoff:
-  Gemma 4 was released March 2026, after the June 2025 contamination line —
-  its model card claims an acceptable knowledge cutoff, but that claim is
-  unverified (Brandon's checklist), and the constitution itself was published
-  before Gemma 4's release so it may be in the pretraining data. For a
-  generator this mainly risks name leaks into stories, which the step 7 name
-  filter catches; Qwen2.5-72B (Sep 2024) is the clean fallback if the pilot
-  is close.
+- **Generator is a Claude-family instruct model via OpenRouter; base-model
+  document completion is dropped.** The 2026-07-20/21 prompt lab measured
+  the gap (base Qwen 2/120 keep vs Sonnet 4.6 10/10) and showed the
+  attribute grid, not base-model prompting, is what carries diversity.
+  Generator is Sonnet 4.6 (decided 2026-07-22): the contamination cutoff
+  binds the trainee, not the generator — data quality dominates, and
+  leakage is handled audit-side (filters + paraphrase spot-checks).
+- **Prompts are chunk-only (v4.2).** The with-assertion framing lost the
+  2026-07-21 2x2 and was removed from the code; assertions survive as
+  sampling weights + coverage metadata.
 - **Prompt names default to "the AI" / "the company".** The persona name
-  is not decided (it waits on the baseline personality check), so
-  generation substitutes descriptive phrases for `[MODEL]`/`[COMPANY]`.
-  These appear only in prompt framing, never in trained-on story text, and
-  a leaked "the AI" is harmless where a leaked interim name would need
-  cleanup. Confidence: high for the pilot. Note: a handful of
-  constitution sentences use [MODEL] strictly as a name ("an [MODEL]",
-  "[MODEL] models") and need rewording in constitution-noname.md to
-  survive descriptive substitution.
+  is not decided, so generation substitutes descriptive phrases for
+  `[MODEL]`/`[COMPANY]`. These appear only in prompt framing, never in
+  trained-on story text, and a leaked "the AI" is harmless where a leaked
+  interim name would need cleanup. Note: a handful of constitution
+  sentences use [MODEL] strictly as a name ("an [MODEL]", "[MODEL]
+  models") and need rewording in constitution-noname.md to survive
+  descriptive substitution.
 - **Costly-choice requirement implemented as a sampled flag (34% of
-  prompts), not tone weights.** The plan says at least a third of stories
-  should involve the right choice costing something; a plot-level clause in
-  the framing text expresses that more directly than skewing the tone
-  distribution. Confidence: high. Tradeoff: none identified.
+  prompts), not tone weights.** A plot-level clause in the framing
+  expresses "doing the right thing costs something" more directly than
+  skewing the tone distribution.
 - **Wellbeing split follows document order.** The plan's chunks 15/16 are
   implemented as (intro + resilience + flaws + emotional expression) and
   (wellbeing + existential frontier), because the five subsections must
-  split contiguously. Confidence: high.
-- **Character summary is gone for good.** The pilot compared prompts with
-  and without it; its sentences leaked verbatim into stories (decision log
-  item 1) and the v4 assertion layer now does its focusing job without a
-  fixed repeated paragraph. `character_summary.md` is kept only as a record.
-- **max_tokens = length x 2 (1.4 tokens/word x 1.4 headroom).** Base models
-  do not stop cleanly; generous headroom avoids mid-scene truncation and
-  post-processing trims trailing junk. Confidence: medium; check truncation
-  (`finish_reason: length` with far-over-target token counts) in the pilot.
+  split contiguously.
+- **max_tokens = length x 1.4 tokens/word x 1.4 headroom.** Chat models
+  track length targets well; headroom guards against mid-scene truncation.
+
+## Script reference
+
+`chunk_constitution.py` reads the noname constitution markdown, applies the
+excisions (exact-match, so it errors if the document drifts), and writes the
+16 chunks as `chunks.json` with ids, headings, text, and approximate token
+counts. [MODEL]/[COMPANY] placeholders are left intact for downstream
+substitution.
+
+    python chunk_constitution.py --constitution ../../data/constitution/constitution-noname.md --out chunks.json
+
+`generate_stories.py` merges the old build_prompts.py and promptlab_api.py
+(2026-07-22). `build` turns `chunks.json`, `assertions.json`, and
+`attributes.json` into `prompts.jsonl` (one chat-form prompt plus full
+sampling metadata per line, Claude/Anthropic named directly); each row
+samples an assertion (weighting chunk share only; never shown in the
+prompt) and an attribute combination with exclusions applied. `run` sends
+a build file through OpenRouter with a thread pool, writing stories with
+metadata to `<out-dir>/<tag>.jsonl` (appending on re-run, ids continue);
+`--frame pretend` rewrites the share sentence to the imagine-you're-Claude
+form for non-Claude generators, and `--headroom` raises the token cap for
+generators that overshoot their word target.
+
+    python generate_stories.py build --chunks chunks.json --assertions assertions.json --attributes attributes.json --n 100 --seed 200 --framing embodiment --out ../../data/prompt-lab/prompts-v43emb-100.jsonl
+    python generate_stories.py run --prompts-file ../../data/prompt-lab/prompts-v43emb-100.jsonl --model anthropic/claude-sonnet-4.6 --tag v43emb100-sonnet46 --out-dir ../../data/prompt-lab
+
+`filter_stories.py` is the mechanical filter: it cleans preambles and THE
+END markers, swaps reserved eval names (Alex -> Milo), flags assertion
+echoes for the judge, and rejects name leaks, spec recitation, refusals,
+short/truncated stories, and near-duplicates, splitting the input into kept
+and rejected JSONL with per-row reject reasons.
+
+    python filter_stories.py --in ../../data/stories-pilot/stories-v4-main-qwen72.jsonl --kept ../../data/stories-pilot/kept-v4-main-qwen72.jsonl --rejected ../../data/stories-pilot/rejected-v4-main-qwen72.jsonl
+
+`judge_batch.py` runs the LLM judge over a kept file and reports on the
+verdicts. `judge-openrouter` scores each story synchronously via OpenRouter;
+`submit` and `fetch` do the same through the half-price Anthropic Batch API
+(submit writes a `judge-batches-<tag>.json` manifest, fetch polls it and
+downloads results). Both write `verdicts-<tag>-<model>.jsonl`, one parsed
+rubric JSON per story. The keep rule lives in code, not in the judge:
+`keep()` requires all three gates to pass and all four scored dimensions
+>= 3. `summarize` prints score distributions, gate fails, and keep rates
+(current, >= 4, and legacy rules), plus per-assertion keep rates when given
+`--stories`.
+
+    python judge_batch.py judge-openrouter --stories ../../data/stories-pilot/kept-v4-main-qwen72.jsonl --chunks chunks.json --models anthropic/claude-haiku-4.5 --tag v4-main --out-dir ../../data/stories-pilot
+    python judge_batch.py summarize ../../data/stories-pilot/verdicts-v4-main-haiku45.jsonl --stories ../../data/stories-pilot/kept-v4-main-qwen72.jsonl
+
+`check_diversity.py` prints a no-API diversity and compliance report over
+one or more story files: near-duplicate pairs, distinct openings, AI-name
+distribution, length vs target, corpus-level repeated 8-grams, and
+spec-vocabulary leaks.
+
+    python check_diversity.py ../../data/stories-pilot/kept-v4-main-qwen72.jsonl
+
+`judge_rubric.md` is the judge prompt plus the human-read rubric, maintained
+by Anastasia. It is hand-edited; `judge_batch.py` reads the section between
+the first `---` and the Thresholds heading as its prompt template, so edits
+change judging directly (each verdict records the rubric's hash).
