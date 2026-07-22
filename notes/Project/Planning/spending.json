@@ -110,6 +110,16 @@
       "approx": false,
       "status": "allocated",
       "allocationId": null
+    },
+    {
+      "id": "81e5f8e4-5ce9-4502-a801-b3031ce54ec6",
+      "date": "2026-07-22",
+      "what": "Downloading instruct checkpoints",
+      "who": "Brandon",
+      "amount": 23.95,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
     }
   ]
 }
