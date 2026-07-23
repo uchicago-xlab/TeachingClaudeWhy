@@ -38,8 +38,8 @@ from run_pipeline import (
     stage_themes,
 )
 
-N_THEMES_PER_PRINCIPLE = 3
-N_SCENARIOS_PER_THEME = 3
+N_THEMES_PER_PRINCIPLE = 5
+N_SCENARIOS_PER_THEME = 2
 # Rate-limit probe (2026-07-20): 2M output tokens/min vs ~4k tokens/min per
 # Opus stream leaves headroom for hundreds of workers; 24 keeps us well clear
 # of request bursts while the work is parallelized at the sample level.
