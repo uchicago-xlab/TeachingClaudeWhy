@@ -210,6 +210,16 @@
       "approx": true,
       "status": "burned",
       "allocationId": null
+    },
+    {
+      "id": "bb08189d-44aa-4efd-92b9-3a9f69fed6c3",
+      "date": "2026-07-23",
+      "what": "8% pilot of difficult advice w/ Luna",
+      "who": "Jack",
+      "amount": 16,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
     }
   ]
 }
