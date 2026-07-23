@@ -170,6 +170,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": null
+    },
+    {
+      "id": "6a88c4db-5c70-4371-b7bc-54b89ed36e94",
+      "date": "2026-07-23",
+      "what": "Crashed difficult advice w/ Sonnet",
+      "who": "Jack",
+      "amount": 18,
+      "approx": true,
+      "status": "burned",
+      "allocationId": null
     }
   ]
 }
