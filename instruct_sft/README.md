@@ -11,3 +11,11 @@
 
 > [!WARNING]
 > The FSDP config in `fsdp32b.yaml` is specific to Olmo 3. To use it with another model family, be sure to **change `fsdp_transformer_layer_cls_to_wrap`**
+
+### Eval
+
+- Setup: install `lm-eval[hf,tasks]`
+- Command: `uv run lm_eval --model hf --model_args pretrained=tune,dtype=bfloat16   --tasks ifeval,gsm8k,mmlu --batch_size auto   --apply_chat_template --fewshot_as_multiturn --output_path eval/res/ --log_samples --use_cache eval/ca --cache_requests`
+
+- hf seems to be the only value for `--model` that works with Olmo (?, not sure if it's due to Olmo or other factors); using vllm and sglang both crashed and I didn't bother debugging that much
+  - both crashed even after updating to CUDA 13
