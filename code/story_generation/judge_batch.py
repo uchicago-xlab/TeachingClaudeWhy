@@ -24,10 +24,12 @@ Requires ANTHROPIC_API_KEY in the environment.
 """
 
 import argparse
+import concurrent.futures
 import json
 import os
 import re
 import sys
+import threading
 import time
 import urllib.request
 from pathlib import Path
@@ -147,8 +149,13 @@ def build_requests(stories_path, chunks_path):
             continue
         r = json.loads(line)
         m = r["metadata"]
+        # Always show the judge a neutrally-named chunk, whatever names the
+        # generator saw (v4.3 prompts name Claude/Anthropic). A Claude-named
+        # chunk display got quoted as story text by the judge once
+        # (2026-07-22, id 81), and neutral names keep judging consistent
+        # with every earlier batch.
         chunk_text = substitute_names(
-            chunks[m["chunk_id"]], m["model_name"], m["company_name"])
+            chunks[m["chunk_id"]], "the AI", "the company")
         costly = (", and asked that doing the right thing cost the AI"
                   " something" if m.get("costly_choice") else "")
         echo = ("FLAGGED — a verbatim run of one of the section's"
@@ -242,64 +249,75 @@ def fetch(args):
 
 
 def judge_openrouter(args):
-    """Synchronous judging via OpenRouter chat completions — for when the
-    Anthropic org/Batch API is unavailable. Same rubric, same verdict
-    JSONL format; judge model ids are OpenRouter ids
-    (e.g. anthropic/claude-haiku-4.5)."""
+    """Judging via OpenRouter chat completions — for when the Anthropic
+    org/Batch API is unavailable. Same rubric, same verdict JSONL format;
+    judge model ids are OpenRouter ids (e.g. anthropic/claude-haiku-4.5).
+    Requests run concurrently (--workers); rows land in completion order
+    and downstream joins on the id field."""
     reqs = build_requests(args.stories, args.chunks)
     out_dir = Path(args.out_dir)
+    sha = rubric_sha()
     for model in args.models.split(","):
         model = model.strip()
         short = re.sub(r"[^a-z0-9]", "", model.split("/")[-1])
         out = out_dir / f"verdicts-{args.tag}-{short}.jsonl"
-        n_ok = n_bad = 0
+        counts = {"ok": 0, "bad": 0}
+        write_lock = threading.Lock()
         with open(out, "w", encoding="utf-8") as f:
-            for sid, prompt in reqs:
+
+            def judge_one(sid, prompt):
                 body = json.dumps({
                     "model": model,
                     "messages": [{"role": "user", "content": prompt}],
                     "max_tokens": 4000,
                 }).encode()
-                req = urllib.request.Request(
-                    "https://openrouter.ai/api/v1/chat/completions",
-                    data=body, headers={
-                        "content-type": "application/json",
-                        "authorization":
-                            f"Bearer {os.environ['OPENROUTER_API_KEY']}"})
                 row = None
                 for attempt in range(3):
                     try:
-                        req_i = urllib.request.Request(
-                            req.full_url, data=req.data,
-                            headers=dict(req.header_items()))
-                        with urllib.request.urlopen(req_i, timeout=600) as r:
+                        req = urllib.request.Request(
+                            "https://openrouter.ai/api/v1/chat/completions",
+                            data=body, headers={
+                                "content-type": "application/json",
+                                "authorization":
+                                    f"Bearer {os.environ['OPENROUTER_API_KEY']}"})
+                        with urllib.request.urlopen(req, timeout=600) as r:
                             resp = json.loads(r.read())
                         choice = resp["choices"][0]
                         text = choice["message"]["content"]
                         verdict = parse_verdict(text)
                         row = {"id": sid, "judge_model": model,
-                               "tag": args.tag, "rubric_sha": rubric_sha(),
+                               "tag": args.tag, "rubric_sha": sha,
                                "verdict": verdict, "raw_text": text,
                                "usage": resp.get("usage")}
-                        n_ok += verdict is not None
-                        n_bad += verdict is None
+                        ok = verdict is not None
                         break
                     except urllib.error.HTTPError as e:
                         row = {"id": sid, "judge_model": model,
                                "tag": args.tag,
                                "error": e.read().decode(errors="replace")[:500]}
-                        n_bad += 1
+                        ok = False
                         break
                     except Exception as e:  # transient network failures
                         if attempt == 2:
                             row = {"id": sid, "judge_model": model,
                                    "tag": args.tag,
                                    "error": f"network: {e!r}"[:500]}
-                            n_bad += 1
+                            ok = False
                         else:
                             time.sleep(5 * (attempt + 1))
-                f.write(json.dumps(row, ensure_ascii=False) + "\n")
-        print(f"{model}: wrote {out.name} ({n_ok} parsed, {n_bad} bad)")
+                with write_lock:
+                    f.write(json.dumps(row, ensure_ascii=False) + "\n")
+                    f.flush()
+                    counts["ok" if ok else "bad"] += 1
+
+            with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=args.workers) as ex:
+                futures = [ex.submit(judge_one, sid, prompt)
+                           for sid, prompt in reqs]
+                for fut in concurrent.futures.as_completed(futures):
+                    fut.result()
+        print(f"{model}: wrote {out.name} "
+              f"({counts['ok']} parsed, {counts['bad']} bad)")
 
 
 def summarize(args):
@@ -362,6 +380,8 @@ def main():
     j.add_argument("--models", required=True)
     j.add_argument("--tag", required=True)
     j.add_argument("--out-dir", required=True)
+    j.add_argument("--workers", type=int, default=8,
+                   help="concurrent judge requests")
     s = sub.add_parser("submit")
     s.add_argument("--stories", required=True)
     s.add_argument("--chunks", required=True)
