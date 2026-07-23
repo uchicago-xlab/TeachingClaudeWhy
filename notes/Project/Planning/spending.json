@@ -200,6 +200,16 @@
       "approx": true,
       "status": "spent",
       "allocationId": null
+    },
+    {
+      "id": "2fbbc38c-ab31-4205-9b27-c1ebaedb8d6f",
+      "date": "2026-07-23",
+      "what": "Crashed difficult advice w/ Luna",
+      "who": "Jack",
+      "amount": 8,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
     }
   ]
 }
