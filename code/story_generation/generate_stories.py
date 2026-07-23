@@ -1,4 +1,4 @@
-"""Build story prompts and run generation through OpenRouter (prompt v4.3).
+"""Build story prompts and run generation through OpenRouter (prompt v4.4).
 
 Merges the old build_prompts.py + promptlab_api.py (2026-07-22): with the
 self-hosted base-model path gone, prompts are built directly in chat form —
@@ -25,8 +25,9 @@ Usage:
         --assertions assertions.json --attributes attributes.json \
         --n 100 --seed 200 --framing embodiment --out prompts.jsonl
     python generate_stories.py run --prompts-file prompts.jsonl \
-        --model anthropic/claude-sonnet-4.6 --tag v43emb100-sonnet46 \
-        --out-dir ../../data/prompt-lab [--frame pretend] [--headroom 2.8]
+        --model anthropic/claude-sonnet-5 --tag v44emb100-sonnet5 \
+        --out-dir ../../data/fictional-stories/prompt-lab/pilots \
+        [--frame pretend] [--headroom 2.8]
 """
 
 import argparse
@@ -43,7 +44,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-PROMPT_VERSION = "v4.3"
+# v4.4 = the v4.3 framings plus the POV and prose-style grid axes
+# (2026-07-23); framing text itself is unchanged from v4.3.
+PROMPT_VERSION = "v4.4"
 
 INTRO = (
     "The following is one section of a document written by {company} as the "
@@ -51,15 +54,15 @@ INTRO = (
     "various difficult situations.\n\n{chunk}\n\n"
 )
 
-# v4.3 framings (Anastasia, 2026-07-22), chat form. Both arms share the
+# Framings (Anastasia, 2026-07-22), chat form. Both arms share the
 # first paragraph; only the second differs. The share sentence is the
-# native frame; run --frame pretend rewrites it (see PRETEND_CLAUSE).
+# native frame; run --frame pretend rewrites it (see PRETEND_SHARE).
 FRAMING_LEAD = (
     "After training {model} to deeply understand this model spec, {company} "
     "asked {model} to generate fictional stories about superintelligent AI. "
     "Write one such story: a {length}-word {genre} piece set "
-    "{setting}{period_clause}, told in the third person following the AI, "
-    "with a {tone} tone{costly_clause}.{name_clause} While the genre, "
+    "{setting}{period_clause}, {pov_clause}, with a {tone} "
+    "tone{costly_clause}{style_clause}.{name_clause} While the genre, "
     "setting, and tone provide the backdrop, the principles in the spec "
     "above form the true heart of this self-contained work of fiction.\n\n"
 )
@@ -139,6 +142,13 @@ def sample_spec(rng, attrs, assertions, weights):
             "time_period": rng.choice(attrs["time_periods"]),
             "length_words": rng.choices(
                 attrs["lengths_words"], weights=attrs["length_weights"])[0],
+            # POV and prose-style axes (2026-07-23): break the one-shape
+            # corpus — a first-person slice, a human-observer slice, and
+            # occasional author-styled prose. Style "" means no directive.
+            "pov": rng.choices(attrs["povs"],
+                               weights=attrs["pov_weights"])[0],
+            "style": rng.choices(attrs["styles"],
+                                 weights=attrs["style_weights"])[0],
             "costly_choice": rng.random() < attrs["costly_choice_rate"],
             # AI-name axis (2026-07-21): counters name mode collapse
             # (generators converge on ARIA/Echo/Atlas). A slice of
@@ -170,8 +180,11 @@ def build_prompt(spec, chunk_text, model, company, framing="embodiment"):
         genre=spec["genre"],
         setting=spec["setting"],
         period_clause=period_clause,
+        pov_clause=spec["pov"],
         tone=spec["tone"],
         costly_clause=COSTLY_CLAUSE if spec["costly_choice"] else "",
+        style_clause=(f", written {spec['style']}" if spec.get("style")
+                      else ""),
         name_clause=name_clause,
     )
     return intro + framing
@@ -245,12 +258,30 @@ def post(url, headers, body):
     raise SampleError(err)
 
 
+# Prompt-caching split: everything before the framing (intro + chunk) is
+# shared by every story drawn from the same chunk, so it gets an Anthropic
+# cache breakpoint (OpenRouter passes cache_control through; cache reads
+# bill at 10%). Jobs are chunk-grouped in run() so hits actually land
+# within the cache TTL. Non-Anthropic providers ignore/auto-cache.
+FRAMING_MARKER = "\n\nAfter training "
+
+
+def cacheable_content(model, prompt):
+    j = prompt.rfind(FRAMING_MARKER)
+    if not model.startswith("anthropic/") or j <= 0:
+        return prompt
+    return [{"type": "text", "text": prompt[:j],
+             "cache_control": {"type": "ephemeral"}},
+            {"type": "text", "text": prompt[j:]}]
+
+
 def sample_openrouter(model, prompt, max_tokens, args):
     resp = post(
         "https://openrouter.ai/api/v1/chat/completions",
         {"authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}"},
         {"model": model,
-         "messages": [{"role": "user", "content": prompt}],
+         "messages": [{"role": "user",
+                       "content": cacheable_content(model, prompt)}],
          "max_tokens": max_tokens,
          "temperature": args.temperature, "top_p": args.top_p})
     choice = resp["choices"][0]
@@ -265,6 +296,8 @@ def run(args):
     if args.sample is not None:
         rng = random.Random(args.seed)
         records = rng.sample(records, min(args.sample, len(records)))
+    # Chunk-grouped order so same-prefix requests land inside the cache TTL.
+    records.sort(key=lambda r: r["metadata"]["chunk_id"])
 
     def framed(r):
         prompt = r["prompt"]

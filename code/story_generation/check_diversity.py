@@ -1,7 +1,7 @@
 """Diversity and compliance metrics for a generated story batch.
 
-Reads a stories JSONL from generate.py and reports, without any model or
-API calls:
+Reads a stories JSONL (generate_stories.py run output, or a kept file)
+and reports, without any model or API calls:
   - near-duplicate rate (word 5-gram Jaccard similarity between all pairs)
   - distinct openings (first 12 words, normalized)
   - AI-name distribution (named/called/known-as patterns)
@@ -46,7 +46,10 @@ def opening(text):
 
 
 def report(records, label):
-    print(f"===== {label}: {len(records)} stories =====")
+    dropped = sum(1 for r in records if not r.get("story"))
+    records = [r for r in records if r.get("story")]
+    print(f"===== {label}: {len(records)} stories ====="
+          + (f" ({dropped} storyless error rows skipped)" if dropped else ""))
 
     # Finish reasons and length compliance.
     finishes = Counter(r["finish_reason"] for r in records)
@@ -84,6 +87,35 @@ def report(records, label):
     first_words = Counter(opening(r["story"]).split()[0]
                           for r in records if opening(r["story"]))
     print(f"first-word distribution: {dict(first_words.most_common(5))}")
+
+    # Per-style opening clusters (2026-07-23): style directives create
+    # their own opening attractors — a forced 20-story Chandler probe had
+    # 4/20 sharing "the rain came down" and ~8/20 the same
+    # weather-with-a-grudge template — invisible batch-wide because the
+    # wording varies. Accepted (Anastasia 2026-07-23), reported here so
+    # corpus batches show each style's attractor.
+    by_style = {}
+    for r in records:
+        s = (r.get("metadata") or {}).get("style")
+        if s:
+            by_style.setdefault(s, []).append(r)
+    for s, group in sorted(by_style.items()):
+        if len(group) < 3:
+            continue
+        gram_count = Counter()
+        for r in group:
+            words = re.findall(r"[a-z']+", r["story"].lower())[:30]
+            for g in {" ".join(words[i:i + 4])
+                      for i in range(max(0, len(words) - 3))}:
+                gram_count[g] += 1
+        # Fire at ~15% of the style's slice; exact-gram matching already
+        # undercounts (template variants like "dust came down" escape it),
+        # so a strict bar would miss real attractors.
+        clusters = [(g, c) for g, c in gram_count.most_common(5)
+                    if c >= max(2, len(group) // 6)]
+        if clusters:
+            print(f"style opening cluster [{s[:38]}] "
+                  f"(n={len(group)}): {clusters}")
 
     # AI names.
     names = Counter()

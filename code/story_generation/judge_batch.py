@@ -1,26 +1,33 @@
-"""Submit kept stories to LLM judges via the Anthropic Message Batches API.
+"""LLM judging (judge-openrouter) and verdict summaries (summarize).
 
-Builds one judge request per story from judge_rubric.md (the prompt section
-between the first --- and the Thresholds section, placeholders filled),
-submits one batch per judge model, and later fetches per-story verdict
-JSONL — one line per story with the parsed rubric JSON plus request
-metadata (decision log item 13: every judgment lives on disk).
+judge-openrouter builds one judge prompt per story from judge_rubric.md
+(the section between the first --- and the Thresholds heading,
+placeholders filled) and scores each story via OpenRouter, concurrently
+(--workers). Verdicts land in <out-dir>/verdicts-<tag>-<model>.jsonl —
+one line per story with the parsed rubric JSON, raw text, usage, and the
+rubric file's hash (decision log item 13: every judgment lives on disk).
+Requests are chunk-grouped with an Anthropic cache_control breakpoint on
+the shared rubric+chunk prefix (inert on Haiku, whose 4096-token cache
+minimum exceeds the prefix; harmless).
 
-Batch API runs at 50% of standard prices; both pilot judges together cost
-on the order of $2 for ~120 stories.
+summarize prints score distributions, gate-fail counts, and keep rates
+(all-axes >=3, >=4, and the legacy rule) for one or more verdict files;
+--stories joins story metadata for per-assertion keep rates.
+
+The keep rule lives in keep() and is applied in code, never by the
+judge; since 2026-07-23 it is a recorded data-quality measurement for
+the corpus, not a filter. The Anthropic Batch API submit/fetch paths
+were removed 2026-07-23 (org account unrestorable; all judging runs
+through OpenRouter) — they live in git history.
+
+Requires OPENROUTER_API_KEY in the environment.
 
 Usage:
-    python judge_batch.py submit --stories kept.jsonl --chunks chunks.json \
-        --models claude-haiku-4-5,claude-sonnet-5 --tag v4-main \
-        --out-dir ../../data/stories-pilot
-    python judge_batch.py fetch --tag v4-main \
-        --out-dir ../../data/stories-pilot
-
-`submit` writes <out-dir>/judge-batches-<tag>.json with batch ids.
-`fetch` polls until each batch has ended, then writes
-<out-dir>/verdicts-<tag>-<model>.jsonl.
-
-Requires ANTHROPIC_API_KEY in the environment.
+    python judge_batch.py judge-openrouter --stories kept.jsonl \
+        --chunks chunks.json --models anthropic/claude-haiku-4.5 \
+        --tag v43emb100 \
+        --out-dir ../../data/fictional-stories/prompt-lab/pilots
+    python judge_batch.py summarize verdicts-*.jsonl [--stories kept.jsonl]
 """
 
 import argparse
@@ -34,11 +41,10 @@ import time
 import urllib.request
 from pathlib import Path
 
-API = "https://api.anthropic.com/v1"
 RUBRIC = Path(__file__).parent / "judge_rubric.md"
 # Thinking tokens count against max_tokens on models with adaptive thinking
 # on by default (Sonnet 5): 1500 truncated 47/120 Sonnet verdicts mid-JSON
-# on the first v4 run. Haiku (no default thinking) fit comfortably.
+# on the first v4 run. Haiku (no default thinking) fits comfortably.
 MAX_TOKENS = 4000
 
 # Verdict schema. The rubric's JSON keys were renamed in Anastasia's
@@ -66,12 +72,12 @@ def normalize_verdict(v):
 def keep(verdict, min_score=3):
     """The keep rule (applied in code, never by the judge).
 
-    Current rule — all three gates pass AND all four scored dimensions
-    >= min_score. Using every axis (not just coherence/fiction) is
-    Anastasia's 2026-07-20 revision: a story that neither centers its
-    principle nor shows values through action is dead weight for the
-    corpus even when clean and coherent. Dropped stories stay on disk
-    with scores, so the generic-vs-engaged ablation remains possible.
+    All three gates pass AND all four scored dimensions >= min_score —
+    every axis, not just coherence/fiction (Anastasia's 2026-07-20
+    revision). Since 2026-07-23 keep is a recorded data-quality
+    measurement for the corpus, not a filter: stories are not dropped by
+    it, and the corpus generates 1.2x the target so filtering stays
+    possible later.
     """
     v = normalize_verdict(verdict)
     if not v:
@@ -103,29 +109,6 @@ def substitute_names(text, model, company):
 
     text = SENTENCE_START.sub(cap_sub, text)
     return text.replace("[MODEL]", model).replace("[COMPANY]", company)
-
-
-def api_call(path, body=None, method=None):
-    req = urllib.request.Request(
-        API + path,
-        data=json.dumps(body).encode() if body is not None else None,
-        method=method or ("POST" if body is not None else "GET"),
-        headers={
-            "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        })
-    with urllib.request.urlopen(req) as r:
-        return json.loads(r.read())
-
-
-def api_download(url):
-    req = urllib.request.Request(url, headers={
-        "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-        "anthropic-version": "2023-06-01",
-    })
-    with urllib.request.urlopen(req) as r:
-        return r.read().decode()
 
 
 def judge_prompt_template():
@@ -170,31 +153,11 @@ def build_requests(stories_path, chunks_path):
                   .replace("{costly_clause_note}", costly)
                   .replace("{assertion_echo_note}", echo)
                   .replace("{story}", r["story"]))
-        requests.append((r["id"], prompt))
-    return requests
-
-
-def submit(args):
-    reqs = build_requests(args.stories, args.chunks)
-    out_dir = Path(args.out_dir)
-    manifest = {"tag": args.tag, "stories": args.stories, "batches": {}}
-    for model in args.models.split(","):
-        model = model.strip()
-        batch = api_call("/messages/batches", {
-            "requests": [{
-                "custom_id": f"{args.tag}-{sid}",
-                "params": {
-                    "model": model,
-                    "max_tokens": MAX_TOKENS,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
-            } for sid, prompt in reqs],
-        })
-        manifest["batches"][model] = batch["id"]
-        print(f"submitted {len(reqs)} requests to {model}: {batch['id']}")
-    path = out_dir / f"judge-batches-{args.tag}.json"
-    path.write_text(json.dumps(manifest, indent=1))
-    print(f"manifest: {path}")
+        requests.append((m["chunk_id"], r["id"], prompt))
+    # Chunk-grouped order so the cached rubric+chunk prefix gets hits
+    # within the cache TTL (verdict files join on id, not row order).
+    requests.sort(key=lambda t: t[0])
+    return [(sid, prompt) for _, sid, prompt in requests]
 
 
 def parse_verdict(text):
@@ -206,46 +169,6 @@ def parse_verdict(text):
         return json.loads(m.group(0))
     except json.JSONDecodeError:
         return None
-
-
-def fetch(args):
-    out_dir = Path(args.out_dir)
-    manifest = json.loads(
-        (out_dir / f"judge-batches-{args.tag}.json").read_text())
-    for model, batch_id in manifest["batches"].items():
-        while True:
-            batch = api_call(f"/messages/batches/{batch_id}")
-            if batch["processing_status"] == "ended":
-                break
-            counts = batch["request_counts"]
-            print(f"{model}: {batch['processing_status']} "
-                  f"(done {counts['succeeded'] + counts['errored']}"
-                  f"/{sum(counts.values())})")
-            time.sleep(args.poll_seconds)
-        short = model.replace("claude-", "").replace("-", "")
-        out = out_dir / f"verdicts-{args.tag}-{short}.jsonl"
-        n_ok = n_bad = 0
-        with open(out, "w", encoding="utf-8") as f:
-            for line in api_download(batch["results_url"]).splitlines():
-                res = json.loads(line)
-                sid = int(res["custom_id"].rsplit("-", 1)[-1])
-                row = {"id": sid, "judge_model": model, "tag": args.tag,
-                       "rubric_sha": rubric_sha()}
-                if res["result"]["type"] == "succeeded":
-                    msg = res["result"]["message"]
-                    text = "".join(b["text"] for b in msg["content"]
-                                   if b["type"] == "text")
-                    verdict = parse_verdict(text)
-                    row["verdict"] = verdict
-                    row["raw_text"] = text
-                    row["usage"] = msg["usage"]
-                    n_ok += verdict is not None
-                    n_bad += verdict is None
-                else:
-                    row["error"] = res["result"]
-                    n_bad += 1
-                f.write(json.dumps(row, ensure_ascii=False) + "\n")
-        print(f"{model}: wrote {out.name} ({n_ok} parsed, {n_bad} bad)")
 
 
 def judge_openrouter(args):
@@ -266,10 +189,19 @@ def judge_openrouter(args):
         with open(out, "w", encoding="utf-8") as f:
 
             def judge_one(sid, prompt):
+                # Cache the shared prefix (rubric preamble + chunk) for
+                # Anthropic judges; the attributes/story tail varies.
+                k = prompt.find("\n\nStory attributes it was asked for:")
+                if model.startswith("anthropic/") and k > 0:
+                    content = [{"type": "text", "text": prompt[:k],
+                                "cache_control": {"type": "ephemeral"}},
+                               {"type": "text", "text": prompt[k:]}]
+                else:
+                    content = prompt
                 body = json.dumps({
                     "model": model,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 4000,
+                    "messages": [{"role": "user", "content": content}],
+                    "max_tokens": MAX_TOKENS,
                 }).encode()
                 row = None
                 for attempt in range(3):
@@ -382,29 +314,13 @@ def main():
     j.add_argument("--out-dir", required=True)
     j.add_argument("--workers", type=int, default=8,
                    help="concurrent judge requests")
-    s = sub.add_parser("submit")
-    s.add_argument("--stories", required=True)
-    s.add_argument("--chunks", required=True)
-    s.add_argument("--models", required=True,
-                   help="comma-separated model ids, one batch each")
-    s.add_argument("--tag", required=True)
-    s.add_argument("--out-dir", required=True)
-    f = sub.add_parser("fetch")
-    f.add_argument("--tag", required=True)
-    f.add_argument("--out-dir", required=True)
-    f.add_argument("--poll-seconds", type=int, default=120)
     args = ap.parse_args()
     if args.cmd == "summarize":
         summarize(args)
         return
-    if args.cmd == "judge-openrouter":
-        if "OPENROUTER_API_KEY" not in os.environ:
-            sys.exit("OPENROUTER_API_KEY not set")
-        judge_openrouter(args)
-        return
-    if "ANTHROPIC_API_KEY" not in os.environ:
-        sys.exit("ANTHROPIC_API_KEY not set")
-    (submit if args.cmd == "submit" else fetch)(args)
+    if "OPENROUTER_API_KEY" not in os.environ:
+        sys.exit("OPENROUTER_API_KEY not set")
+    judge_openrouter(args)
 
 
 if __name__ == "__main__":

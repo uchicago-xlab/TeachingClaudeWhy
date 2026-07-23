@@ -10,6 +10,9 @@ Cleaning (applied before checks):
   - trim leading/trailing whitespace
 
 Rejection rules:
+  - provider content filter killed the generation mid-story
+    (finish_reason "content_filter"), or the row has no story at all
+    (request error)
   - real-name leak: mentions Claude, Anthropic, or another real AI system
     or company (word-boundary matched)
   - eval-name collision: the AI shares a name with the agentic-misalignment
@@ -161,6 +164,15 @@ def main():
                if l.strip()]
     kept, rejected, kept_shingles = [], [], []
     for r in records:
+        # Rows the provider truncated with its safety classifier (seen
+        # once on hard-constraint material, 2026-07-20) or that never got
+        # a story are unusable regardless of text checks.
+        if not r.get("story") or r.get("finish_reason") == "content_filter":
+            r["reject_reason"] = ("provider content filter"
+                                  if r.get("finish_reason") == "content_filter"
+                                  else "no story (request error)")
+            rejected.append(r)
+            continue
         r["story"] = clean(r["story"])
         r["story"], r["reserved_name_replaced"] = \
             replace_reserved_names(r["story"])

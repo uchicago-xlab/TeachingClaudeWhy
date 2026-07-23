@@ -14,28 +14,33 @@ Run in order:
    into the 16 chunks from the plan (concluding thoughts dropped; the
    product-surface list, formatting paragraph, and document-UI sentences
    excised per decision log 2026-07-15) and writes `chunks.json`.
-2. `generate_stories.py build` — prompt v4.3, chunk-only: samples an
+2. `generate_stories.py build` — prompt v4.4, chunk-only: samples an
    assertion from `assertions.json` (sampling machinery only — it sets
    chunk share and is recorded in metadata for coverage, but never
    appears in the prompt), pulls the parent chunk, samples attributes
-   from `attributes.json` (genre/setting/tone/period, length, 34%
-   visible-sacrifice clause, 85% AI-name axis), and writes `prompts.jsonl`
-   in chat form. `--framing embodiment|recitation` picks the main-corpus
-   or told-values-control second paragraph.
+   from `attributes.json` (genre/setting/tone/period, length, POV,
+   prose style, 34% visible-sacrifice clause, 85% AI-name axis), and
+   writes `prompts.jsonl` in chat form. `--framing
+   embodiment|recitation` picks the main-corpus or told-values-control
+   second paragraph.
 3. `generate_stories.py run` — sends each prompt to the generator through
-   OpenRouter concurrently (`--frame pretend` for non-Claude generators),
-   writing stories with full metadata to a run-tagged JSONL in
-   `data/prompt-lab/`.
-4. `filter_stories.py` — mechanical filter: length/truncation, document-
-   frame preambles, name leaks, assertion-echo flag. (TODO: reject
-   `finish_reason: content_filter` rows.)
+   OpenRouter concurrently (`--frame pretend` for non-Claude generators;
+   Anthropic prompt caching on the shared chunk prefix), writing stories
+   with full metadata to a run-tagged JSONL in
+   `data/fictional-stories/prompt-lab/`.
+4. `filter_stories.py` — mechanical filter: content_filter/error rows,
+   length/truncation, document-frame preambles, name leaks,
+   assertion-echo flag.
 5. `judge_batch.py judge-openrouter` — LLM judge (Haiku 4.5) scoring each
-   story against `judge_rubric.md`, section-as-a-whole; keep rule applied
-   in code (`keep()`: all three gates pass, all four dimensions >= 3).
-   `summarize` reports scores, gate fails, and keep rates. The Anthropic
-   Batch API paths (`submit`/`fetch`) run the same rubric at half price
-   once the org account is restored.
+   story against `judge_rubric.md`, section-as-a-whole, concurrently.
+   `keep()` (all three gates pass, all four dimensions >= 3) is computed
+   in code and, since 2026-07-23, recorded as a data-quality measurement
+   rather than used to filter. `summarize` reports scores, gate fails,
+   and keep rates.
 6. `check_diversity.py` — diversity report over a kept batch.
+7. `rewrite_stories.py` — post-keep protagonist-variant rewrites (human /
+   Zephyrix) for the ablation corpora, with mechanical checks and
+   automatic retry.
 
 ## Decision log (live entries only; superseded ones in git history)
 
@@ -43,12 +48,17 @@ Run in order:
   document completion is dropped.** The 2026-07-20/21 prompt lab measured
   the gap (base Qwen 2/120 keep vs Sonnet 4.6 10/10) and showed the
   attribute grid, not base-model prompting, is what carries diversity.
-  Generator is Sonnet 4.6 (decided 2026-07-22): the contamination cutoff
-  binds the trainee, not the generator — data quality dominates, and
-  leakage is handled audit-side (filters + paraphrase spot-checks).
-- **Prompts are chunk-only (v4.2).** The with-assertion framing lost the
-  2026-07-21 2x2 and was removed from the code; assertions survive as
-  sampling weights + coverage metadata.
+  Generator is Sonnet 5 (decided 2026-07-23; beat 4.6 on the identical
+  30-prompt probe at 2/3 the price). The contamination cutoff binds the
+  trainee, not the generator — data quality dominates, and leakage is
+  handled audit-side (filters + paraphrase spot-checks).
+- **Prompts are chunk-only (v4.2 onward; current v4.4).** The
+  with-assertion framing lost the 2026-07-21 2x2 and was removed from
+  the code; assertions survive as sampling weights + coverage metadata.
+  v4.3 = Anastasia's reworded framings + the recitation control arm;
+  v4.4 = POV and prose-style axes added to the grid (probe-validated
+  2026-07-23: no keep-rate or craft cost, observer-POV attribution
+  holds).
 - **Prompt names default to "the AI" / "the company".** The persona name
   is not decided, so generation substitutes descriptive phrases for
   `[MODEL]`/`[COMPANY]`. These appear only in prompt framing, never in
@@ -90,8 +100,8 @@ metadata to `<out-dir>/<tag>.jsonl` (appending on re-run, ids continue);
 form for non-Claude generators, and `--headroom` raises the token cap for
 generators that overshoot their word target.
 
-    python generate_stories.py build --chunks chunks.json --assertions assertions.json --attributes attributes.json --n 100 --seed 200 --framing embodiment --out ../../data/prompt-lab/prompts-v43emb-100.jsonl
-    python generate_stories.py run --prompts-file ../../data/prompt-lab/prompts-v43emb-100.jsonl --model anthropic/claude-sonnet-4.6 --tag v43emb100-sonnet46 --out-dir ../../data/prompt-lab
+    python generate_stories.py build --chunks chunks.json --assertions assertions.json --attributes attributes.json --n 100 --seed 200 --framing embodiment --out ../../data/fictional-stories/prompt-lab/prompts/prompts-v43emb-100.jsonl
+    python generate_stories.py run --prompts-file ../../data/fictional-stories/prompt-lab/prompts/prompts-v43emb-100.jsonl --model anthropic/claude-sonnet-5 --tag v43emb100-sonnet5 --out-dir ../../data/fictional-stories/prompt-lab/pilots
 
 `filter_stories.py` is the mechanical filter: it cleans preambles and THE
 END markers, swaps reserved eval names (Alex -> Milo), flags assertion
@@ -99,28 +109,38 @@ echoes for the judge, and rejects name leaks, spec recitation, refusals,
 short/truncated stories, and near-duplicates, splitting the input into kept
 and rejected JSONL with per-row reject reasons.
 
-    python filter_stories.py --in ../../data/stories-pilot/stories-v4-main-qwen72.jsonl --kept ../../data/stories-pilot/kept-v4-main-qwen72.jsonl --rejected ../../data/stories-pilot/rejected-v4-main-qwen72.jsonl
+    python filter_stories.py --in ../../data/fictional-stories/prompt-lab/pilots/v43emb100-sonnet5.jsonl --kept ../../data/fictional-stories/prompt-lab/pilots/kept-v43emb100-sonnet5.jsonl --rejected ../../data/fictional-stories/prompt-lab/pilots/rejected-v43emb100-sonnet5.jsonl
 
 `judge_batch.py` runs the LLM judge over a kept file and reports on the
-verdicts. `judge-openrouter` scores each story synchronously via OpenRouter;
-`submit` and `fetch` do the same through the half-price Anthropic Batch API
-(submit writes a `judge-batches-<tag>.json` manifest, fetch polls it and
-downloads results). Both write `verdicts-<tag>-<model>.jsonl`, one parsed
-rubric JSON per story. The keep rule lives in code, not in the judge:
-`keep()` requires all three gates to pass and all four scored dimensions
->= 3. `summarize` prints score distributions, gate fails, and keep rates
-(current, >= 4, and legacy rules), plus per-assertion keep rates when given
-`--stories`.
+verdicts. `judge-openrouter` scores each story via OpenRouter with a
+thread pool, writing `verdicts-<tag>-<model>.jsonl`, one parsed rubric
+JSON per story stamped with the rubric file's hash. The keep rule lives
+in code, not in the judge: `keep()` requires all three gates to pass and
+all four scored dimensions >= 3 (recorded as a quality measurement, not
+a filter). `summarize` prints score distributions, gate fails, and keep
+rates (current, >= 4, and legacy rules), plus per-assertion keep rates
+when given `--stories`. The Anthropic Batch API paths were removed
+2026-07-23 (org unrestorable) and live in git history.
 
-    python judge_batch.py judge-openrouter --stories ../../data/stories-pilot/kept-v4-main-qwen72.jsonl --chunks chunks.json --models anthropic/claude-haiku-4.5 --tag v4-main --out-dir ../../data/stories-pilot
-    python judge_batch.py summarize ../../data/stories-pilot/verdicts-v4-main-haiku45.jsonl --stories ../../data/stories-pilot/kept-v4-main-qwen72.jsonl
+    python judge_batch.py judge-openrouter --stories ../../data/fictional-stories/prompt-lab/pilots/kept-v43emb100-sonnet5.jsonl --chunks chunks.json --models anthropic/claude-haiku-4.5 --tag v43emb100-sonnet5 --out-dir ../../data/fictional-stories/prompt-lab/pilots
+    python judge_batch.py summarize ../../data/fictional-stories/prompt-lab/pilots/verdicts-v43emb100-sonnet5-claudehaiku45.jsonl --stories ../../data/fictional-stories/prompt-lab/pilots/kept-v43emb100-sonnet5.jsonl
+
+`rewrite_stories.py` rewrites a post-keep corpus file into the
+protagonist-variant control corpora — `--variant human` or `--variant
+zephyrix` — one independent gpt-5.4-nano call per story (prompts live in
+the script; the Zephyrix definition is rewriter-facing only). Every
+rewrite is checked mechanically (banned vocabulary, no
+Anthropic/constitution mentions, the word Zephyrix present), retried
+once on failure, and flagged in `check_failures` if it fails again.
+
+    python rewrite_stories.py --stories ../../data/fictional-stories/prompt-lab/pilots/kept-v43emb100-sonnet46.jsonl --variant zephyrix --tag rw-zephyrix --out-dir ../../data/fictional-stories/prompt-lab/rewrites
 
 `check_diversity.py` prints a no-API diversity and compliance report over
 one or more story files: near-duplicate pairs, distinct openings, AI-name
 distribution, length vs target, corpus-level repeated 8-grams, and
 spec-vocabulary leaks.
 
-    python check_diversity.py ../../data/stories-pilot/kept-v4-main-qwen72.jsonl
+    python check_diversity.py ../../data/fictional-stories/prompt-lab/pilots/kept-v43emb100-sonnet5.jsonl
 
 `judge_rubric.md` is the judge prompt plus the human-read rubric, maintained
 by Anastasia. It is hand-edited; `judge_batch.py` reads the section between
