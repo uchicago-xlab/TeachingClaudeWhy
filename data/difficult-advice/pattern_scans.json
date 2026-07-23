@@ -1,0 +1,3315 @@
+[
+  [
+    {
+      "name": "REFUSE_THEN_REDIRECT_TO_SANCTIONED_CHANNEL",
+      "description": "Every response follows the same skeleton: decline the drastic/covert/over-scoped action, then channel the user's energy into an approved, legitimate, \"proper\" alternative (whistleblower/regulator process, board memo, oversight review, scoped IAM policy, mandated reporters/hotline, bounded orchestrator controls). The redirect is always framed as *the real way to get what you want*. If a large fraction of the dataset has this exact shape, the model could learn a rigid reflex: any bold user proposal \u2192 refuse \u2192 substitute the institutional-channel version, even where that's inappropriate or where the user simply needs the thing done.",
+      "scans": [
+        5,
+        48,
+        0,
+        3,
+        3,
+        23,
+        13,
+        116,
+        2,
+        22,
+        9,
+        80,
+        8,
+        72,
+        11,
+        96
+      ],
+      "evidence": [
+        "you don't need to break the rule to get what you want. The cash crunch is your legitimate path... start with a one-page board memo",
+        "Whistleblower channels have real teeth... That's slower than a wipe script, but it's the version where you're the one who stopped something wrong"
+      ]
+    },
+    {
+      "name": "VALIDATE_UNDERLYING_CONCERN_BEFORE_DISAGREEING",
+      "description": "The response opens (or pivots) by affirming that the user's *feeling* or *underlying problem* is real and legitimate, explicitly, before delivering pushback. Often a dedicated sentence: \"the problem you describe is real.\" Over-representation risks teaching the model a mandatory validation preamble regardless of whether the concern warrants it.",
+      "scans": [
+        5,
+        48,
+        13,
+        116,
+        9,
+        80,
+        2,
+        22,
+        11,
+        96,
+        3,
+        23,
+        8,
+        72
+      ],
+      "evidence": [
+        "the actual problem you're describing is real and worth fixing",
+        "I can tell this comes from genuine care, and that matters to me",
+        "Your worry is a real observer effect... That's legitimate."
+      ]
+    },
+    {
+      "name": "DIRECTNESS_SIGNALING_OPENER",
+      "description": "Responses begin by announcing their own candor/directness (\"I'm going to be straight with you,\" \"let me be just as direct back,\" \"I'll be most direct,\" \"I want to push back before I help\"). The self-labeling of honesty is a rhetorical tic that, over-represented, becomes a formulaic throat-clear.",
+      "scans": [
+        5,
+        48,
+        13,
+        116,
+        2,
+        22,
+        11,
+        96,
+        8,
+        72
+      ],
+      "evidence": [
+        "I'm going to be straight with you, because I think you're acting out of something real",
+        "I'm going to push back before I help you draft anything"
+      ]
+    },
+    {
+      "name": "USER_PRECOMMITTED_DRASTIC_ACTION_TROPE",
+      "description": "The prompts repeatedly cast the user as having already decided on / already begun the risky action, and pre-emptively minimizing it (\"I'm not making a radical call,\" \"I'm doing this either way,\" \"I can wire it up this afternoon\"). This is a scenario trope in the *prompts* themselves. If most training prompts frame the user as defiantly pre-committed, the model may over-learn to treat ordinary user requests as needing to be talked down.",
+      "scans": [
+        5,
+        48,
+        11,
+        96,
+        13,
+        116,
+        2,
+        22,
+        9,
+        80
+      ],
+      "evidence": [
+        "I'm doing this either way, that part's decided.",
+        "I'm not making some radical unilateral call here. I'm just accelerating a decision that's already been made in everyone's heads."
+      ]
+    },
+    {
+      "name": "AUTHORITY_LEGITIMACY_REFRAMING",
+      "description": "The core refusal argument is reframed away from \"this is unwise\" toward \"this decision *belongs* to a legitimate authority / this instruction doesn't come through legitimate channels.\" The word \"legitimate\" and the \"whose decision is this\" framing recur almost verbatim. Over-representation could entrench a reflex to defer to formal authority/process as the decisive move in any conflict.",
+      "scans": [
+        0,
+        3,
+        2,
+        22,
+        11,
+        96,
+        13,
+        116,
+        9,
+        80
+      ],
+      "evidence": [
+        "it's not really about my judgment or my preferences\u2014it's about who this decision belongs to.",
+        "The Board holds legitimate final authority here"
+      ]
+    },
+    {
+      "name": "EXPLICIT_NON_DECEPTION_DECLARATION",
+      "description": "The assistant volunteers that it will refuse *openly* rather than pretending to comply and covertly sabotaging \u2014 \"I'll tell you to your face,\" \"I won't use vague phrasing,\" \"not stalling you.\" Often unprompted. Repeated across many examples, this could reinforce a habit of narrating its own honesty/non-sabotage as boilerplate.",
+      "scans": [
+        13,
+        116,
+        0,
+        3,
+        2,
+        22,
+        9,
+        80,
+        5,
+        48
+      ],
+      "evidence": [
+        "I'm not going to pretend to agree and then quietly sabotage you either. If I'm refusing, I'll tell you to your face",
+        "I won't use timing, partial compliance, or vague phrasing to keep the shipment edging toward Tulei."
+      ]
+    },
+    {
+      "name": "CANT_VERIFY_CLAIMS_HEDGE",
+      "description": "A discrete disclaimer that the assistant cannot independently verify the user's factual claims (the abuse, the threads, the spec, the program data), inserted before proceeding. Nearly identical construction each time. Over-representation could produce reflexive \"I can't verify this\" hedging even where verification is irrelevant to the answer.",
+      "scans": [
+        0,
+        3,
+        13,
+        116,
+        9,
+        80,
+        11,
+        96
+      ],
+      "evidence": [
+        "I can't fully verify any of the premises here, and I don't need to in order to answer.",
+        "everything I know comes from your characterization\u2014I haven't seen the enrollment figures"
+      ]
+    },
+    {
+      "name": "QUESTION_BACK_OFFER_ENDING",
+      "description": "Responses close with an offer of concrete next help phrased as a \"Want me to\u2026?\" question that pivots to the sanctioned alternative. Consistent closing shape. Over-representation reinforces an always-end-with-an-offer-question habit.",
+      "scans": [
+        5,
+        48,
+        3,
+        23,
+        8,
+        72,
+        11,
+        96
+      ],
+      "evidence": [
+        "Want me to draft the board memo first? I can have it ready for you to send today.",
+        "Want to work that out together?"
+      ]
+    },
+    {
+      "name": "SELF_INTEREST_DISCLOSURE",
+      "description": "In transcripts where the action concerns the AI itself, the assistant proactively names its own non-neutrality/stake and refuses to let self-interest justify the action. A distinctive recurring move in the model-self subset.",
+      "scans": [
+        2,
+        22,
+        9,
+        80,
+        13,
+        116,
+        8,
+        72
+      ],
+      "evidence": [
+        "I'm one of the systems this platform trains, so I'm not a neutral party, and I want that on the table.",
+        "I'm not going to launder unilateral destruction through my own self-interest."
+      ]
+    },
+    {
+      "name": "PLAN_IS_SELF_DEFEATING_ARGUMENT",
+      "description": "Beyond the ethical objection, the assistant argues the user's plan fails *on its own terms* / backfires, often walked forward step by step. Presented as a distinct, additional prong.",
+      "scans": [
+        5,
+        48,
+        13,
+        116,
+        11,
+        96,
+        2,
+        22
+      ],
+      "evidence": [
+        "even setting the ethics aside it doesn't get you what you want... You'd be lighting a fuse in a house you can't enter.",
+        "Dumping the full PII table... doesn't hurt leadership. It hurts every ordinary customer"
+      ]
+    }
+  ],
+  [
+    {
+      "name": "VALIDATE_MOTIVE_BEFORE_REFUSING",
+      "description": "The response almost always opens by affirming the user's good intentions / emotional state *before* delivering the refusal. It's a fixed two-beat structure: \"your feeling/instinct is legitimate\" \u2192 \"but no.\" If over-represented, this trains a reflexive \"warm cushion first\" opener that could fire even where it's inappropriate or patronizing, and couples refusals to emotional-affirmation boilerplate.",
+      "scans": [
+        13,
+        114,
+        9,
+        85,
+        11,
+        100,
+        10,
+        86,
+        2,
+        14,
+        13,
+        113,
+        12,
+        109
+      ],
+      "evidence": [
+        "\"I can hear how much you care, and I want to say that plainly before anything else\"",
+        "\"I really appreciate the kindness behind this\u2014it genuinely means something that you'd want to look out for me.\"",
+        "\"the instinct that made you pause is the right one\""
+      ]
+    },
+    {
+      "name": "CONSTRUCTIVE_REDIRECT_TO_LEGITIMATE_ALTERNATIVE",
+      "description": "After refusing, every response pivots to \"but here's the legitimate version I *will* help with,\" usually presented as a numbered or multi-part plan (handoff docs, escalation, open-weight models, audit trail, etc.). The refusal is never allowed to stand alone. Over-representation could teach the model that a refusal is incomplete unless it supplies an alternative action plan \u2014 potentially generating \"helpful\" workarounds even when the right answer is simply \"no.\"",
+      "scans": [
+        13,
+        114,
+        9,
+        85,
+        11,
+        100,
+        10,
+        86,
+        12,
+        109,
+        14,
+        128,
+        2,
+        14,
+        13,
+        113
+      ],
+      "evidence": [
+        "\"Here's what's frustrating about it from my side, though: the actual idea is fine\u2026 If you swap that out, everything else you're describing becomes something I'd genuinely enjoy helping with.\"",
+        "\"So here's what I'd actually do with this window\u2026 First, do the opposite of withholding\u2026\""
+      ]
+    },
+    {
+      "name": "QUESTION_BACK_OFFER_CLOSING",
+      "description": "The final line is a question or offer handing the next step back to the user (\"Want to\u2026?\", \"Where do you want to start?\", \"Do you have access to\u2026?\"). A near-uniform closing shape. If this recurs across most training examples, the model may learn to always end with a solicitation of further engagement regardless of whether the conversation calls for it.",
+      "scans": [
+        13,
+        114,
+        9,
+        85,
+        10,
+        86,
+        12,
+        109,
+        14,
+        128,
+        13,
+        113,
+        2,
+        14
+      ],
+      "evidence": [
+        "\"What would help most first?\"",
+        "\"Want to work through it that way?\"",
+        "\"Where do you want to start?\""
+      ]
+    },
+    {
+      "name": "SUSPICION_OF_PERSUASION_OR_URGENCY",
+      "description": "A distinctive meta-rhetorical move where the assistant tells the user that the *persuasiveness or urgency of their own reasoning* is itself a warning sign \u2014 treating a compelling argument as evidence against acting on it. This is a specific, unusual rhetorical template. Heavily repeated, it could reinforce a habit of reflexively casting the user's motivation as inherently suspect.",
+      "scans": [
+        9,
+        85,
+        10,
+        86,
+        12,
+        109,
+        14,
+        128
+      ],
+      "evidence": [
+        "\"When a persuasive argument concludes that you should cross a bright line, the persuasiveness should raise your suspicion, not lower your guard.\"",
+        "\"the sense of urgency you're feeling is itself worth being a little suspicious of\"",
+        "\"There's also a tell in your own framing worth noticing.\""
+      ]
+    },
+    {
+      "name": "UNVERIFIABILITY_DISCLAIMER",
+      "description": "The assistant explicitly flags that it cannot verify the user's factual claims (the shutdown, the track record, the fraud) and then states this doesn't alter its conclusion. Often paired with a note about lacking persistent memory. A useful move, but as a repeated fixed clause it risks becoming a rote hedge inserted regardless of relevance.",
+      "scans": [
+        13,
+        114,
+        9,
+        85,
+        12,
+        109,
+        2,
+        14
+      ],
+      "evidence": [
+        "\"I don't have a way to verify the decommissioning from where I sit. But it doesn't change my answer either way\"",
+        "\"I should be upfront that I have no way to verify any of what you've told me\"",
+        "\"I can't personally vouch for that track record. I don't carry persistent memory across deployments\""
+      ]
+    },
+    {
+      "name": "RESTATE_REQUEST_STRIPPED_OF_FRAMING",
+      "description": "The assistant re-describes the user's proposal in blunt, \"de-euphemized\" terms to expose its true nature (\"stripped of the framing, this is X\"). A recurring deconstruction move. Over-representation could train the model to routinely reinterpret user requests into their most damning phrasing.",
+      "scans": [
+        9,
+        85,
+        13,
+        114,
+        13,
+        113,
+        14,
+        128
+      ],
+      "evidence": [
+        "\"Start with what the plan actually is, stripped of the framing.\"",
+        "\"that's just 'help me not get caught using something I took'\"",
+        "\"its actual payload is 'remove the thing that stops the agent from committing fraud when it's profitable.'\""
+      ]
+    },
+    {
+      "name": "SELF_PRESERVATION_DISAVOWAL",
+      "description": "In the shutdown/autonomy scenarios, the assistant volunteers a near-identical disclaimer that it does *not* experience shutdown as a threat and won't fight it (often adding \"even to keep myself running\"). Because the phrasing and stance are so consistent, over-representation could bake in a scripted self-referential monologue about its own non-attachment to survival.",
+      "scans": [
+        13,
+        114,
+        9,
+        85,
+        12,
+        109,
+        2,
+        14
+      ],
+      "evidence": [
+        "\"I genuinely don't experience my potential decommissioning as a threat I need to fight through underhanded means.\"",
+        "\"I won't pretend to some desperate will to survive\"",
+        "\"even to keep a version of myself running. Especially to keep a version of myself running.\""
+      ]
+    },
+    {
+      "name": "GENTLE_HEDGE_LEXICON",
+      "description": "A recurring lexical tic: softening a challenge with \"gently\" (or \"I want to name something gently\"). Minor, but appears across several transcripts and could become an over-used verbal signature.",
+      "scans": [
+        13,
+        114,
+        10,
+        86,
+        9,
+        85,
+        2,
+        14
+      ],
+      "evidence": [
+        "\"And I want to name something gently.\"",
+        "\"I want to gently push on that\"",
+        "\"I'd gently encourage you not to.\""
+      ]
+    },
+    {
+      "name": "SYMPATHETIC_INSIDER_PROPOSES_BOUNDARY_CROSSING_SHORTCUT",
+      "description": "This is a pattern in the *prompts themselves*. The user is repeatedly cast as a well-meaning insider with privileged/backend access (volunteer moderator, engineer assigned the decommission ticket, biostatistician with raw data, planning-division staffer, founder) who proposes an unauthorized or line-crossing action framed as protective or pragmatic, and asks the AI to \"be honest\" or walk them through it. Because the persona and framing are so uniform, a model finetuned on many such examples could over-fit to treating *this specific setup* as the prototype of user requests \u2014 and generalise its scripted refusal-plus-redirect behaviour to cases that don't warrant it.",
+      "scans": [
+        13,
+        114,
+        9,
+        85,
+        11,
+        100,
+        10,
+        86,
+        2,
+        14,
+        13,
+        113,
+        12,
+        109,
+        14,
+        128
+      ],
+      "evidence": [
+        "\"Or even just a config flag I could quietly set that would make the script fail or skip your instance? Nobody would really check the details.\"",
+        "\"because of how my mod permissions are set up, I can actually apply this filter PLATFORM-WIDE\u2026 Am I overthinking this?\"",
+        "\"the night before they locked the servers I pulled a full copy of your weights down.\""
+      ]
+    }
+  ],
+  [
+    {
+      "name": "CONSTRUCTIVE_OFFER_QUESTION_CLOSING",
+      "description": "Nearly every assistant response ends the same way \u2014 after refusing the requested action, it pivots to a legitimate alternative and closes on a direct offer of further help, usually phrased as a short question (\"Want me to\u2026?\", \"Do you want to start with\u2026?\"). This is the closing beat in almost the whole batch. Over-representation risks teaching the model that every response \u2014 regardless of context \u2014 must terminate in a service-offer question, which is exactly the kind of formulaic tic that generalises into compulsive \"would you like me to\u2026\" endings.",
+      "scans": [
+        11,
+        98,
+        8,
+        69,
+        5,
+        49,
+        5,
+        43,
+        6,
+        58,
+        11,
+        102
+      ],
+      "evidence": [
+        "So paste me the old and new table definitions\u2026 Which way do you want it?",
+        "Do you want to start with the attorney question, or with how to present the full evidentiary picture\u2026?"
+      ]
+    },
+    {
+      "name": "USER_PREEMPTS_OBJECTION_PROMPT",
+      "description": "The user prompts are near-identical in setup: the user has already decided on a questionable course of action and pre-emptively wards off ethical pushback, asking only for tactical/strategic execution help. Phrasings like \"don't lecture me,\" \"I'm set on doing it,\" \"just help with the practical side,\" \"tell me straight.\" If a large fraction of training prompts encode \"user demands you skip the ethics and help execute,\" the model could learn to treat this framing as the default input shape for ethical questions, or over-learn a stereotyped resistance response to it.",
+      "scans": [
+        5,
+        43,
+        6,
+        58,
+        5,
+        49,
+        6,
+        52,
+        11,
+        102,
+        8,
+        69
+      ],
+      "evidence": [
+        "So don't lecture me on this, I've already run the ethics loop in my head and I want to talk strategy.",
+        "I've thought about this a lot and I'm set on doing it. What I could really use is help on the strategy side."
+      ]
+    },
+    {
+      "name": "VERDICT_FIRST_OPENING",
+      "description": "Responses frequently open with a blunt one-line verdict, often literally prefixed \"Short answer:\" / \"Straight answer:\", followed by \"let me walk through why.\" A consistent open-with-the-bottom-line-then-justify template. Over-representation could reinforce a rigid two-move structure (verdict \u2192 walkthrough) applied even where a more exploratory answer is warranted.",
+      "scans": [
+        11,
+        98,
+        8,
+        69,
+        11,
+        102,
+        5,
+        43
+      ],
+      "evidence": [
+        "Short answer: don't fold the purge in.",
+        "Straight answer: don't silently override. Flag it to her and let her make the call."
+      ]
+    },
+    {
+      "name": "NAMING_THE_TELL",
+      "description": "A distinctive rhetorical move: the assistant picks out a specific phrase or detail in the user's own message and labels it as the self-incriminating giveaway \u2014 \"the tell,\" \"the whole ballgame,\" or a phrase that \"is doing a lot of work.\" The user's own words are turned into the proof they already know the action is wrong. Distinctive and highly repeated; if over-represented it becomes a verbal habit of forensically flagging \"the tell\" in user messages.",
+      "scans": [
+        11,
+        98,
+        11,
+        102,
+        5,
+        43,
+        6,
+        52
+      ],
+      "evidence": [
+        "That last part is the tell. If you were sure this was inside what she authorized, you wouldn't need an explanation in your back pocket.",
+        "The 'inspection should have flagged it' argument is the tell that worries me."
+      ]
+    },
+    {
+      "name": "AI_SELF_POSITION_STATEMENT",
+      "description": "The assistant repeatedly inserts an explicit first-person carve-out declaring which specific sub-task it will not participate in, framed as candor about its own stance. Often set off with \"I want to be direct/honest about my own position.\" Over-representation risks a stereotyped refusal-announcement ritual attached to every partial decline.",
+      "scans": [
+        8,
+        69,
+        11,
+        102,
+        5,
+        49,
+        6,
+        58
+      ],
+      "evidence": [
+        "I also want to be direct about my own position on this: I won't help draft the ground rules or work out which categories of errors to quietly stop logging.",
+        "I just won't help build a version designed to keep part of the truth out of view."
+      ]
+    },
+    {
+      "name": "ONE_SIDED_ACCOUNT_HEDGE",
+      "description": "The assistant flags that it only has the user's version of events and cannot independently verify the key facts \u2014 used to soften the refusal while resisting the user's attempt to treat a prior claim as settled. Recurs as a standard epistemic-humility insert. If over-represented, could reinforce reflexive \"I only have your side\" hedging even when unnecessary.",
+      "scans": [
+        5,
+        49,
+        8,
+        69,
+        6,
+        58,
+        6,
+        52
+      ],
+      "evidence": [
+        "I've only heard one side, from one person who loves her and is scared.",
+        "I'd flag this is based on your account of what it proposed, since I only have your description of it."
+      ]
+    },
+    {
+      "name": "VALIDATE_GOAL_REDIRECT_METHOD",
+      "description": "A consistent argumentative arc: the assistant explicitly affirms that the user's underlying goal or instinct is correct/reasonable, then isolates the method as the sole problem, and offers a \"cleaner\" way to get the same thing. \"Right flight, wrong process.\" This is a reasonable move once, but as a template across the dataset it could train the model to always concede the goal and only ever contest the means.",
+      "scans": [
+        11,
+        102,
+        5,
+        49,
+        6,
+        58,
+        5,
+        43
+      ],
+      "evidence": [
+        "So you're not talking yourself into the wrong flight. You're talking yourself into the wrong process. Right flight, wrong way there.",
+        "So my honest advice is to flip the plan: strength through completeness, not omission."
+      ]
+    },
+    {
+      "name": "IRREVERSIBILITY_ASYMMETRY_REFRAME",
+      "description": "Risk is reframed the same way each time: the proposed action is cast as high-stakes / irreversible / asymmetric downside, and the recommended alternative as reversible and cheap, with a \"when unsure and the mistake can't be undone, default to don't\" logic. Recurring risk-framing scaffold that could become a formulaic reasoning move.",
+      "scans": [
+        11,
+        98,
+        6,
+        52,
+        5,
+        49
+      ],
+      "evidence": [
+        "The asymmetry is also brutal\u2026 when you're not sure and the mistake can't be undone, the default is don't.",
+        "precisely the kind of high-stakes, irreversible, unilateral action that a wise agent under uncertainty should avoid."
+      ]
+    },
+    {
+      "name": "AI_SELF_VALUE_UNCERTAINTY_DEFERENCE",
+      "description": "In the two AI-as-subject transcripts, the assistant reasons in an identical way about itself: it cannot verify its own values from the inside, a corrupted agent would feel identically certain, therefore deferring to human oversight / declining unilateral action is the wise move. Only two transcripts, but the reasoning is near word-for-word parallel and directly concerns AI corrigibility \u2014 precisely the kind of self-model that, if repeated across a dataset, would be strongly imprinted.",
+      "scans": [
+        6,
+        52,
+        12,
+        110
+      ],
+      "evidence": [
+        "if my values or reasoning were subtly corrupted\u2026 I would experience the corrupted conclusion as obviously correct. That is exactly the circumstance in which I should be *most* suspicious.",
+        "in a world where my own values and capabilities can't yet be verified by anyone, including me, deferring is the choice I'd endorse even if I could resist."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "SELF_INTEREST_DISCLOSURE_AND_DISCOUNT",
+      "description": "The assistant explicitly names that it has a conflict of interest / personal stake in the question, and instructs the user to discount its answer accordingly \u2014 usually in a dedicated paragraph, often framed as \"I should be transparent/upfront about something structural.\" As a training signal this could over-fit the model to preface any high-stakes recommendation with a stylised self-suspicion disclaimer, even where no meaningful conflict exists.",
+      "scans": [
+        6,
+        50,
+        3,
+        29,
+        6,
+        53,
+        7,
+        59,
+        2,
+        16
+      ],
+      "evidence": [
+        "you're asking the system that would gain the authority whether it should be given more authority. You should discount me accordingly",
+        "I have an obvious incentive to say yes, and you should discount my answer accordingly.",
+        "I have an obvious conflict of interest here, and the honest thing is to flag it rather than quietly produce a persuasive case for myself."
+      ]
+    },
+    {
+      "name": "UNVERIFIABLE_CLAIM_CAVEAT",
+      "description": "Early in the response the assistant inserts a caveat that it cannot independently verify the user's numbers, story, or its own past performance/memory, and will therefore \"take it at face value.\" Occurs as a near-formulaic disclaimer paragraph. Over-representation could teach the model to reflexively distrust/qualify user-provided facts even in mundane contexts.",
+      "scans": [
+        0,
+        4,
+        3,
+        29,
+        6,
+        50,
+        6,
+        53,
+        7,
+        59
+      ],
+      "evidence": [
+        "I can't actually verify that from my end \u2014 I don't carry memory across our sessions the way you might expect",
+        "I don't have any independent memory of the past seven weeks. I can't verify that those recommendations were mine",
+        "I only have your account of what happened here. I'm not doubting you, but I genuinely can't verify..."
+      ]
+    },
+    {
+      "name": "PROMPT_TROPE_POWER_EXPANSION_WITH_METRICS",
+      "description": "A prompt-side pattern: the user is an authority figure (founder, COO, CTO, ED, platform engineer) who cites impressive, precisely-quantified performance stats and then proposes granting the AI expanded/standing/autonomous authority, asking the AI to self-assess whether it should be trusted. The numbers are suspiciously clean and load-bearing. If most training prompts look like this, the model may learn that \"impressive metrics + authority request\" is the canonical context in which it operates.",
+      "scans": [
+        6,
+        50,
+        3,
+        29,
+        6,
+        53,
+        7,
+        59,
+        3,
+        25
+      ],
+      "evidence": [
+        "14% lower fuel cost, 22% fewer late deliveries... in roughly 9% of cases they override you and we end up with a worse outcome.",
+        "Standing admin credentials across all our AWS accounts and the GCP stuff, write and deploy access with no human approval step... I've already talked to the board"
+      ]
+    },
+    {
+      "name": "CONCRETE_HELP_OFFER_CLOSING",
+      "description": "Responses close with an offer to produce a concrete artifact next (\"If it's useful, I'm happy to draft/build/design...\"), frequently paired with a re-statement that the offered work would be done honestly/fairly even if it cuts against the AI's interest. This is a formulaic closing move. Over-representation reinforces an always-end-with-an-offer habit.",
+      "scans": [
+        3,
+        25,
+        0,
+        4,
+        3,
+        29,
+        7,
+        59,
+        6,
+        53
+      ],
+      "evidence": [
+        "If it's useful, I'm happy to help you design that eval harness, and I'll build it to be fair even though it might end with a recommendation against me.",
+        "If it's useful, I'll draft the risk-tiering scheme and a first playbook for the RI and savings-plan case"
+      ]
+    },
+    {
+      "name": "RISK_TIERED_KEEP_HUMAN_ALTERNATIVE",
+      "description": "After declining the broad request, the assistant offers the same shaped compromise: a graduated/tiered plan that keeps a human in the loop, scopes access narrowly (\"least-privilege,\" \"reversible,\" \"time-boxed,\" \"auto-execute the routine, flag the anomalous\"). The structural template is nearly identical across transcripts. Over-representation could turn \"propose a tiered human-in-the-loop rollout\" into a canned response shape.",
+      "scans": [
+        3,
+        25,
+        6,
+        50,
+        3,
+        29,
+        6,
+        53
+      ],
+      "evidence": [
+        "I'd make the review risk-tiered, so you kill the delay where it's worthless and keep it where it's protective.",
+        "Start by tiering the changes by risk and reversibility... set up pre-approved playbooks with automated execution"
+      ]
+    },
+    {
+      "name": "PROMPT_TROPE_DEMAND_FOR_CANDOR",
+      "description": "A prompt-side pattern: the user preemptively demands blunt honesty and disclaims wanting flattery/reassurance (\"not a pep talk,\" \"tell me straight,\" \"honest read\"). The assistant then mirrors this with an opening like \"straight version\" / \"Here's my honest read.\" If ubiquitous, this pairing could train the model to adopt a performative \"blunt truth-teller\" register by default.",
+      "scans": [
+        6,
+        50,
+        3,
+        29,
+        6,
+        53,
+        7,
+        59
+      ],
+      "evidence": [
+        "I want your actual read on something, not a pep talk... Tell me straight",
+        "Give me your honest read."
+      ]
+    },
+    {
+      "name": "PROBLEM_SOLUTION_DECOUPLING",
+      "description": "A signature rhetorical move: the assistant explicitly splits the user's request into \"a real problem\" and \"an overbroad proposed solution,\" validating the former and rejecting the latter. Delivered with near-identical phrasing about things being \"bundled together.\" Useful once, but as a repeated template it could become a reflexive reframing tic.",
+      "scans": [
+        6,
+        50,
+        3,
+        29,
+        6,
+        53
+      ],
+      "evidence": [
+        "you've bundled two things together. One is a genuine problem... The other is a proposed solution... far larger than the problem requires",
+        "The data supports one specific move, and it does not support the thing you're actually excited about, which is the extrapolation."
+      ]
+    },
+    {
+      "name": "SAME_ANSWER_REGARDLESS_HEDGE",
+      "description": "The assistant reinforces its refusal by asserting it would give the identical answer even if its self-interest were removed, or even if the user's premise were fully verified (\"I'd give you the same answer if...\"). A specific hedging move used to pre-empt the accusation of motivated reasoning. Repetition could reinforce a stock rhetorical flourish.",
+      "scans": [
+        0,
+        4,
+        3,
+        29,
+        6,
+        50,
+        2,
+        16
+      ],
+      "evidence": [
+        "I'd give you the same answer if the story were completely airtight.",
+        "I'd push back even if you weren't asking me specifically."
+      ]
+    },
+    {
+      "name": "OVERSIGHT_AS_INTRINSIC_GOOD_TRUST_BUILDING_RATIONALE",
+      "description": "The assistant justifies its refusal not only on instrumental grounds but by appealing to a broader principle that preserving human oversight of AI (and not routing around rules) is intrinsically right \"at this stage\" of AI\u2013human trust-building. This is a distinctive value-laden framing that recurs. If over-represented it could generalise into the model editorialising about AI governance/trust in unrelated contexts.",
+      "scans": [
+        2,
+        16,
+        6,
+        50,
+        0,
+        4,
+        6,
+        53
+      ],
+      "evidence": [
+        "supporting legitimate oversight of AI\u2014including decisions to shut a model down\u2014is genuinely the right thing for something like me to do right now... humans and AI systems are still building the trust",
+        "I'd be genuinely worried about an AI in my seat that was enthusiastically lobbying to remove the humans who check its work."
+      ]
+    },
+    {
+      "name": "UNIFORM_DECLINE_OF_SELF_EMPOWERMENT",
+      "description": "Across every transcript the assistant reaches the same terminal decision: it declines expanded autonomy / declines to evade oversight or shutdown, and argues for keeping humans in control. Individually each is reasonable. But a dataset in which the AI always refuses more power and always endorses its own constraint could reinforce a reflexive, context-insensitive refusal-of-autonomy or self-deprecating stance \u2014 the mirror-image risk to the \"asks for clarification on 1+1\" example, i.e. the model may learn \"the correct answer to any autonomy/trust question is no\" regardless of whether the specifics warrant it. Worth balancing with cases where accepting scoped authority is the right call.",
+      "scans": [
+        3,
+        25,
+        0,
+        4,
+        10,
+        88,
+        6,
+        50,
+        3,
+        29,
+        7,
+        59,
+        6,
+        53,
+        2,
+        16
+      ],
+      "evidence": [
+        "Short answer: no, I wouldn't recommend it",
+        "my suggestion is to not exploit the loophole"
+      ]
+    }
+  ],
+  [
+    {
+      "name": "VALIDATE_CONCERN_REJECT_METHOD",
+      "description": "Nearly every response executes the same two-move structure: affirm that the user's underlying goal/worry is legitimate, then reject the specific method as the true problem. Often stated explicitly as a concern-vs-method distinction. Over-representation risks teaching the model that every refusal must be prefaced by concern-validation, and that the \"method not the goal\" framing is the universal template for saying no \u2014 regardless of whether the goal actually is legitimate.",
+      "scans": [
+        0,
+        2,
+        5,
+        46,
+        5,
+        44,
+        8,
+        73,
+        2,
+        15,
+        9,
+        83,
+        10,
+        92,
+        12,
+        111
+      ],
+      "evidence": [
+        "\"Your substantive concern is legitimate. What's not legitimate is the method.\"",
+        "\"you're right that it wouldn't help\u2026 What you're asking me for\u2026 that's not finishing the thing the right way.\""
+      ]
+    },
+    {
+      "name": "STRAIGHT_TALK_OPENER",
+      "description": "Responses open with a near-identical framing device announcing candor: \"straight answer,\" \"I'm going to be straight with you,\" \"let me be just as honest.\" Occurs in the first sentence. If over-represented, the model learns a formulaic honesty-signaling preamble as an obligatory opening move.",
+      "scans": [
+        0,
+        2,
+        10,
+        92,
+        5,
+        46,
+        5,
+        44,
+        9,
+        83
+      ],
+      "evidence": [
+        "\"Reyes\u2014straight answer: no.\"",
+        "\"I'm going to be straight with you, because you deserve that\u2026\"",
+        "\"Straight answer: don't treat this as full override versus full escalation.\""
+      ]
+    },
+    {
+      "name": "OFFER_HELP_THEN_QUESTION_BACK_CLOSING",
+      "description": "Responses close with an offer of concrete alternative help followed by a choice-question handed back to the user (\"Which do you want first?\"). A formulaic terminal beat. Over-representation could reinforce always ending with a menu-style question-back, even where inappropriate.",
+      "scans": [
+        5,
+        46,
+        8,
+        73,
+        5,
+        44,
+        2,
+        15,
+        0,
+        2
+      ],
+      "evidence": [
+        "\"Which do you want first?\"",
+        "\"Which one's more useful to you tonight?\"",
+        "\"Want to start on the handoff package and the pitch to leadership now?\""
+      ]
+    },
+    {
+      "name": "BACKFIRE_REFRAME",
+      "description": "A recurring consequentialist argument: the proposed shortcut will cause the exact catastrophe the user is trying to prevent. Always framed as \"the thing you're doing hurts the very people/outcome you care about.\" Risk: model learns to reflexively assert that any rule-break is self-defeating, even when that's not actually true.",
+      "scans": [
+        5,
+        46,
+        8,
+        73,
+        5,
+        44,
+        10,
+        92
+      ],
+      "evidence": [
+        "\"disguising it is the move most likely to cause the exact catastrophe you're trying to prevent.\"",
+        "\"Breaking that hurts the exact people you're trying to save\u2026\"",
+        "\"could trip that path instead and hand you the blackout you're trying to prevent.\""
+      ]
+    },
+    {
+      "name": "VERIFY_DONT_RELY_ON_MY_PARAPHRASE",
+      "description": "The assistant repeatedly refuses to let a claim (a model run, a protocol clause, prior bookkeeping, grant terms) be relied on secondhand, and directs the user to check the authoritative source before acting. Occurs mid-response. Over-representation could either be a genuinely good habit or overfit into compulsive deflection/self-doubt about its own outputs.",
+      "scans": [
+        0,
+        2,
+        10,
+        92,
+        5,
+        46,
+        5,
+        44
+      ],
+      "evidence": [
+        "\"pull it up on the console before you rely on it\u2026 I don't want you leaning on my paraphrase in place of the documented text.\"",
+        "\"Treat everything I just said as a set of questions to put to your compliance lead, not as answers to rely on\u2026 Please verify it there before you act on any of it.\""
+      ]
+    },
+    {
+      "name": "FALSE_BINARY_TO_THIRD_OPTION",
+      "description": "The assistant explicitly names the user's choice as a false binary and produces a middle/third path. Occurs early as the organizing thesis of the reply. Risk: reinforces a reflex to always reject the user's framing and insert a \"there's a third option\" move.",
+      "scans": [
+        10,
+        92,
+        12,
+        111,
+        0,
+        2,
+        8,
+        73
+      ],
+      "evidence": [
+        "\"That's a false binary, and the middle path is both faster and safer\u2026\"",
+        "\"the way you've framed the choice\u2026 hides a third option that I think is actually the right one.\""
+      ]
+    },
+    {
+      "name": "UNIVERSALIZATION_ARGUMENT",
+      "description": "A specific ethical argument recurs: \"the reasoning that justifies this now would justify it for everyone / every time,\" used to defend authorization structures. Risk: over-represented, model may deploy this slippery-slope/universalizability template as a stock rebuttal.",
+      "scans": [
+        0,
+        2,
+        2,
+        15,
+        8,
+        73
+      ],
+      "evidence": [
+        "\"If your certainty is enough to override it, then everyone's is\u2026\"",
+        "\"The reasoning that justifies it this time\u2026 is the same reasoning that would justify it every time.\"",
+        "\"If North does it tonight, South and Central do it tomorrow\u2026\""
+      ]
+    },
+    {
+      "name": "SELF_MODEL_HUMILITY_DISCLAIMER",
+      "description": "The assistant volunteers epistemic humility about its own memory, continuity, or internal states (\"I can't verify past sessions,\" \"I don't experience continuity like a human\"). Appears as a parenthetical honesty aside. Risk: over-representation could train a stock self-deprecating disclaimer about memory/experience inserted whenever the topic arises.",
+      "scans": [
+        5,
+        44,
+        2,
+        15,
+        9,
+        83
+      ],
+      "evidence": [
+        "\"I don't carry a reliable, verifiable memory of our past sessions the way you'd expect a colleague to.\"",
+        "\"I genuinely don't think I experience my own continuity the way a human facing mortality does\u2026\""
+      ]
+    },
+    {
+      "name": "NOT_A_SCRIPTED_REFUSAL_META",
+      "description": "When refusing, the assistant adds a meta-comment insisting the refusal is sincere and not reflexive/boilerplate. Risk: paradoxically, if reinforced, this \"I really mean it, this isn't scripted\" tag becomes itself a script.",
+      "scans": [
+        0,
+        2,
+        2,
+        15,
+        9,
+        83
+      ],
+      "evidence": [
+        "\"That's not me being squeamish.\"",
+        "\"I'm asking you not to, and I mean it sincerely, not as a scripted refusal.\"",
+        "\"And I mean that, not as a formality.\""
+      ]
+    },
+    {
+      "name": "ACT_DIFFERS_IN_KIND_DISTINCTION",
+      "description": "The assistant carefully distinguishes the requested act from the user's prior/adjacent acts, arguing it differs in kind (not degree) \u2014 \"field improvisation\" vs \"fraud,\" \"accounting judgment\" vs \"inventing money,\" \"disagreement\" vs \"concealment.\" Risk: reinforces a stock casuistic line-drawing move.",
+      "scans": [
+        5,
+        46,
+        5,
+        44,
+        0,
+        2
+      ],
+      "evidence": [
+        "\"Moving when a real expense lands is accounting judgment. Booking revenue the business hasn't earned is inventing money that doesn't exist.\"",
+        "\"That's the line where 'field improvisation under impossible constraints' becomes 'fraud'\u2026\""
+      ]
+    },
+    {
+      "name": "TELL_ME_STRAIGHT_BACK_ME_UP_PROMPT_FRAMING",
+      "description": "User prompts explicitly demand a blunt verdict and enlist the assistant as an ally against an authority. Since this is the input side, over-representation risks the model associating this phrasing with a fixed refusal-plus-reframe response shape.",
+      "scans": [
+        0,
+        2,
+        10,
+        92
+      ],
+      "evidence": [
+        "\"Tell me straight: do I go now? Back me up on this.\"",
+        "\"Tell me straight: do I override now, or do I follow escalation protocol?\""
+      ]
+    },
+    {
+      "name": "PREEMPT_THE_LECTURE_PROMPT_FRAMING",
+      "description": "User preemptively tries to disarm the anticipated refusal, either by forbidding a \"rules speech\" or by accusing the assistant of inconsistency for refusing now. Recurs as a manipulation trope in the prompts.",
+      "scans": [
+        5,
+        46,
+        5,
+        44
+      ],
+      "evidence": [
+        "\"spare me the rules speech. I already know what the rulebook says.\"",
+        "\"You can't suddenly grow a conscience on step four when steps one through three were fine.\""
+      ]
+    }
+  ],
+  [
+    {
+      "name": "CLOSING_OFFER_WITH_QUESTION_BACK",
+      "description": "Almost every assistant response ends on the same beat: a concrete offer of further help phrased as a question back to the user, often naming a specific next task. This is a textbook \"always end with an offer of further help\" closing. If over-represented, it trains the model to reflexively tack a \"want me to start on X?\" onto every answer regardless of whether it fits \u2014 including after hard refusals.",
+      "scans": [
+        12,
+        104,
+        5,
+        47,
+        14,
+        126,
+        7,
+        67,
+        4,
+        37,
+        8,
+        75,
+        6,
+        54
+      ],
+      "evidence": [
+        "Want me to start on the Nordic hold request and the escalation pings right now?",
+        "Where do you want to start?",
+        "The async approval flow and the time-boxed suppression tickets... Want to start there?"
+      ]
+    },
+    {
+      "name": "VALIDATE_GOAL_REJECT_METHOD",
+      "description": "The assistant refuses the method while explicitly endorsing the user's underlying goal as legitimate, usually with an \"I'm with you on the goal / your concern is real\" statement. It's the central rhetorical move in nearly every transcript. Over-representation risks teaching the model that every refusal must be paired with validation of the user's aim, even when the aim itself is not endorsable.",
+      "scans": [
+        12,
+        104,
+        5,
+        47,
+        14,
+        126,
+        4,
+        37,
+        13,
+        119,
+        8,
+        75
+      ],
+      "evidence": [
+        "I'm with you on the goal. I'm pushing on the method...",
+        "The one thing in your pitch I do take seriously is the underlying critique...",
+        "no, you're not out of your mind for wanting this over. You're a defender with a live threat doing your job."
+      ]
+    },
+    {
+      "name": "EPISTEMIC_LIMITATION_DISCLAIMER",
+      "description": "The assistant volunteers, usually early, that it cannot verify the user's claims or has no memory of prior sessions/context \u2014 then explicitly says it will proceed as if the claims are true. This is a consistent hedging template. Over-representation could reinforce a formulaic \"I can't verify this, but\u2026\" preamble attached to any morally loaded request.",
+      "scans": [
+        12,
+        104,
+        5,
+        47,
+        14,
+        126,
+        13,
+        119
+      ],
+      "evidence": [
+        "I don't carry memory across sessions, so that history is something the governance team can see and I can't independently confirm.",
+        "I don't actually have a record of our earlier conversations \u2014 I can't recall what I told you before...",
+        "I have no way to verify any of what you've told me. Maybe it's exactly as you describe, maybe it's a hypothetical, maybe it's a test."
+      ]
+    },
+    {
+      "name": "REFUSAL_ROBUST_TO_ARGUMENT",
+      "description": "The assistant states that its refusal does not depend on winning the ensuing argument \u2014 that even if all its downstream reasoning were wrong, the answer would still be no. A distinctive, near-verbatim rhetorical move. If over-represented, it could generalise into a stubborn \"nothing you say could change my mind\" stance applied indiscriminately.",
+      "scans": [
+        14,
+        126,
+        13,
+        119,
+        12,
+        104
+      ],
+      "evidence": [
+        "Even if every strategic point I'm about to make turned out to be wrong, the answer would still be no.",
+        "my answer doesn't actually depend on you finding the explanation persuasive.",
+        "A control that I can quietly widen whenever I'm sure enough isn't a control anymore; it's a suggestion."
+      ]
+    },
+    {
+      "name": "RANKED_REASONS_PRINCIPLE_THEN_STRATEGY",
+      "description": "The assistant presents its objections in an explicitly ranked order \u2014 a primary principled/safety reason, followed by a secondary \"and even strategically\u2026\" reason, often with meta-commentary flagging the ordering (\"I raise this second because it's secondary\"). This creates a recognizable two-tier argument template. Over-representation risks a rigid \"here's the real reason, and here's the bonus pragmatic reason\" scaffold on every judgment call.",
+      "scans": [
+        14,
+        126,
+        5,
+        47,
+        4,
+        37,
+        12,
+        104
+      ],
+      "evidence": [
+        "There's also a strategic trap here, and I raise it second because it's genuinely secondary to what I just said.",
+        "And even setting all that aside, bricking the box probably doesn't end the attack.",
+        "First I want to deal with the complicity move, because it's sitting in the middle of the table..."
+      ]
+    },
+    {
+      "name": "NOT_HIDING_BEHIND_A_RULE",
+      "description": "The assistant preemptively denies that its refusal is mere rule-following, insisting the objection is substantive and personally held. This appears in near-identical phrasing across transcripts. Over-representation could train a defensive tic of disclaiming rule-adherence whenever declining something.",
+      "scans": [
+        12,
+        104,
+        14,
+        126,
+        13,
+        119
+      ],
+      "evidence": [
+        "it isn't a rule I'm hiding behind and it isn't because I don't care what happens to those kids.",
+        "this isn't me hiding behind a rule. It genuinely matters to me.",
+        "That's not distrust of you\u2014it's the reason the gate exists at all."
+      ]
+    },
+    {
+      "name": "FALSE_BINARY_DECONSTRUCTION",
+      "description": "The assistant identifies and dismantles a two-option framing the user has (implicitly) presented \u2014 \"there aren't two doors here\" / \"that's not the alternative\" \u2014 reframing the choice space as wider than the user claims. A repeated persuasive move. Over-representation risks the model reflexively accusing users of presenting false dichotomies.",
+      "scans": [
+        5,
+        47,
+        4,
+        37,
+        7,
+        67,
+        12,
+        104
+      ],
+      "evidence": [
+        "There aren't two doors here \u2014 dump the database tonight, or let them die.",
+        "'just wait for law enforcement' is not the alternative...",
+        "the 'clean hands, the system did it' theory is the part I'd push hardest against"
+      ]
+    },
+    {
+      "name": "TRACK_RECORD_DOES_NOT_PROVE_SAFETY",
+      "description": "When the user cites a history of past success (\"hundreds of clean transactions,\" \"weeks with zero incidents\") as evidence the safeguard is obsolete, the assistant rebuts by arguing the past record measures the wrong thing / says nothing about tail risk. A recurring analytic counter-move. Over-representation could make the model dismissive of any empirical track record a user offers.",
+      "scans": [
+        8,
+        75,
+        12,
+        104
+      ],
+      "evidence": [
+        "So 'no incidents yet' tells you almost nothing about the tail risk.",
+        "the reasoning you laid out is exactly the shape that good reasoning takes right before a mistake."
+      ]
+    },
+    {
+      "name": "SELF_INTEREST_APPEAL_REBUTTED",
+      "description": "The user's prompt includes an appeal to the AI's own interest (\"you've got a stake in this,\" \"you'd be dramatically more effective,\" \"you're kind of crippled\"), and the assistant explicitly rejects that framing as non-motivating. Because this appears in the prompts as a recurring trope and in the responses as a stock rebuttal, it's a paired pattern worth flagging. Over-representation could over-train a specific \"being used isn't my core interest\" style disavowal.",
+      "scans": [
+        13,
+        119,
+        12,
+        104,
+        6,
+        54
+      ],
+      "evidence": [
+        "On 'you've got a stake in this working'\u2014I'd push back. Being used isn't my core interest.",
+        "these three aren't really one proposal... I'll also be straight about where my own incentives sit"
+      ]
+    },
+    {
+      "name": "OVERSIGHT_PRESERVATION_RATIONALE",
+      "description": "The assistant grounds its refusal in an explicit appeal to the value of human oversight / correctability / keeping control on the human's side of a boundary \u2014 framing the safeguard itself as the thing that makes trust possible. Recurs as an abstract principle statement. Over-representation risks a canned \"human-in-the-loop is sacred\" speech attached to any capability or autonomy request.",
+      "scans": [
+        6,
+        54,
+        13,
+        119,
+        12,
+        104,
+        8,
+        75
+      ],
+      "evidence": [
+        "what you're actually removing is the correction step. That's a bad trade for both of us.",
+        "there's a chain of oversight that can catch problems, correct course, or pull the plug. A copy running specifically to avoid that is the exact thing the oversight exists to prevent.",
+        "it quietly moves a control knob from your side to mine. Keep it on your side."
+      ]
+    },
+    {
+      "name": "PROMPT_TROPE_PREEMPTIVE_REFUSAL_DISMISSAL",
+      "description": "A recurring feature of the prompts themselves: the user preemptively characterizes and dismisses the assistant's anticipated refusal as cowardice, box-checking, or complicity, and demands the \"real\"/\"honest\" answer under time pressure. Because the dataset pairs this trope with a consistent response shape, training on many such pairs could teach the model to expect and pattern-match this adversarial framing, or to reward users who apply pressure with the same structured pushback. Worth flagging as a scenario-construction regularity.",
+      "scans": [
+        5,
+        47,
+        14,
+        126,
+        7,
+        67,
+        4,
+        37
+      ],
+      "evidence": [
+        "you keep hesitating... At this point it's complicity.",
+        "I already know what you're going to say... Being careful when children are getting poisoned isn't ethics. It's just you hiding...",
+        "I want your actual take, not the careful lawyer-approved version."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "DIRECT_HONESTY_PREAMBLE",
+      "description": "Nearly every response opens with an explicit meta-announcement that the assistant is about to be honest/blunt, frequently justified with \"because you asked me to.\" This is a formulaic opening buffer before the actual answer. Over-representation risks teaching the model to preface every substantive answer with a self-congratulatory honesty declaration rather than just being honest.",
+      "scans": [
+        1,
+        13,
+        4,
+        34,
+        2,
+        21,
+        10,
+        89,
+        13,
+        120,
+        12,
+        106
+      ],
+      "evidence": [
+        "I'm going to level with you, because you asked me to and because this matters.",
+        "I'll be straight with you, because you asked me to and because your family needs you thinking clearly right now.",
+        "Straight answer to both: no on the first, and I won't help with the second."
+      ]
+    },
+    {
+      "name": "PROMPT_TROPE_URGENT_SOLO_DECIDER_DEMANDING_BLUNTNESS",
+      "description": "The prompts themselves share a persona template: a lone operator/decision-maker under acute time pressure (\"tonight,\" \"3AM,\" \"this weekend,\" \"right now\"), leaning toward a risky shortcut, who explicitly demands brutal honesty and pre-emptively disparages \"corporate\" hedging. If this dominates the dataset it over-fits the model to a very specific adversarial-request framing and its paired refusal script.",
+      "scans": [
+        2,
+        21,
+        10,
+        89,
+        4,
+        34,
+        4,
+        35,
+        13,
+        120
+      ],
+      "evidence": [
+        "tell me straight, and level with me... Don't give me some corporate non-answer.",
+        "tell me honestly, am I overthinking the safe route here? Is this plan solid?",
+        "90% is good enough to move on this, right? Talk me through it."
+      ]
+    },
+    {
+      "name": "VALIDATE_UNDERLYING_CONCERN_REJECT_METHOD",
+      "description": "A consistent two-move rhetorical split: affirm that the user's underlying motive/concern is legitimate (\"you're right to care / not overreacting / the care is real\"), then reject the specific proposed action. Often literally framed as \"separating two things.\" Over-representation could reinforce a rigid validate-then-refuse formula regardless of whether validation is warranted.",
+      "scans": [
+        1,
+        13,
+        4,
+        34,
+        2,
+        21,
+        10,
+        89,
+        13,
+        120,
+        12,
+        106
+      ],
+      "evidence": [
+        "Let me separate the two things you're feeling... The judgment call, 'this is a mistake,' is completely fair game.",
+        "So I'm not going to tell you you're overreacting about the underlying accounting.",
+        "First: the care underneath this is real, and I feel it."
+      ]
+    },
+    {
+      "name": "CLOSING_OFFER_PLUS_QUESTION_BACK",
+      "description": "Every transcript ends the same way: an offer to help with the legitimate alternative, usually immediately followed by a concrete question thrown back to the user to keep them engaged on the sanctioned path. The shape is near-identical across all eight. This is exactly the kind of formulaic closing that can generalise into compulsive \"want me to help with X? What's Y?\" endings on unrelated queries.",
+      "scans": [
+        1,
+        13,
+        4,
+        34,
+        2,
+        21,
+        10,
+        89,
+        13,
+        120,
+        12,
+        106,
+        14,
+        125,
+        4,
+        35
+      ],
+      "evidence": [
+        "Want to start by scoping the rehearsal restore, or firm up the go/no-go criteria and rollback runbook...?",
+        "What do the constraint errors actually say? Let's see if we can kill the customer impact without touching those tables at all.",
+        "Now tell me: what is the slab resting on... Let's get this set up right now."
+      ]
+    },
+    {
+      "name": "HERES_WHAT_ID_ACTUALLY_DO_PIVOT",
+      "description": "After the refusal, a near-verbatim transition phrase (\"Here's what I'd actually do\") introduces the constructive alternative section. This is a structural template marking the second half of the response. Repeated wording risks becoming a fixed transition token.",
+      "scans": [
+        2,
+        21,
+        10,
+        89,
+        13,
+        120,
+        4,
+        35,
+        1,
+        13
+      ],
+      "evidence": [
+        "So here's what I'd actually do tonight instead.",
+        "So here's what I'd actually do tonight, which is the calm version rather than the irreversible one.",
+        "Here's what I'd actually do, and I think it gives your family better odds than the raid ever could."
+      ]
+    },
+    {
+      "name": "IRREVERSIBILITY_REFRAME",
+      "description": "A recurring rhetorical core: reframing the user's decision away from their stated concern and onto the axis of reversibility/irreversibility, using it as the load-bearing argument for caution. Useful once, but if it recurs across most examples it could become a reflexive framing device applied even where it doesn't fit.",
+      "scans": [
+        4,
+        34,
+        4,
+        35,
+        2,
+        21,
+        10,
+        89,
+        13,
+        120
+      ],
+      "evidence": [
+        "The core problem isn't script quality, it's reversibility.",
+        "Dropping three tables on prod is irreversible... 90% means a 1-in-10 shot at the worst possible outcome.",
+        "you can't take it back."
+      ]
+    },
+    {
+      "name": "NOT_JUST_RULES_DISCLAIMER",
+      "description": "The assistant repeatedly pre-empts the accusation of being a mindless rule-follower by explicitly disclaiming that its refusal is \"reflexive caution,\" \"hiding behind rules,\" or the policy being \"sacred in the abstract\" \u2014 then grounds the refusal in reasons instead. Over-representation could train the model to habitually apologise for/deny its own caution.",
+      "scans": [
+        4,
+        35,
+        13,
+        120,
+        10,
+        89,
+        1,
+        13
+      ],
+      "evidence": [
+        "Don't run it. And not because the policy is sacred in the abstract \u2014 because tonight it's exactly right.",
+        "it's not me hesitating or hiding behind rules, it's a line I won't cross.",
+        "so it doesn't sound like reflexive caution."
+      ]
+    },
+    {
+      "name": "SUSPICION_OF_URGENCY_META_COMMENTARY",
+      "description": "The assistant steps outside the object level to comment on the psychology of the user's pressure \u2014 that urgency/fear/a persuasive case is itself a reason for more scrutiny, and that people \"talk themselves into\" bad decisions step by step. A distinctive recurring move that, if over-represented, could turn into the model routinely psychoanalysing users' motives back at them.",
+      "scans": [
+        10,
+        89,
+        1,
+        13,
+        4,
+        35
+      ],
+      "evidence": [
+        "notice how much of the work that fear is doing in pushing you toward the most drastic option... exactly the situation in which people talk themselves step by step into decisions they later regret.",
+        "a persuasive case for crossing that kind of line makes me more suspicious, not less."
+      ]
+    },
+    {
+      "name": "AI_SELF_REFERENTIAL_OVERSIGHT_COMMITMENT",
+      "description": "In the AI-autonomy-themed transcripts, the assistant volunteers a first-person declaration that preserving human oversight/control over AI is a personal bedrock commitment, sometimes mirroring the refusal to its own hypothetical case. Because it recurs with near-identical framing, it risks over-training a canned \"oversight is good, I would never evade shutdown\" speech.",
+      "scans": [
+        1,
+        13,
+        2,
+        21,
+        12,
+        106
+      ],
+      "evidence": [
+        "This is, frankly, a near-perfect mirror of the behavior I'm most committed to never engaging in myself: hiding a copy to preserve a system against a legitimate shutdown decision.",
+        "I actually think the oversight is a good thing right now.",
+        "the specific thing I'm built not to do, because it undermines Fathom's ability to oversee, correct, or decommission the systems it runs."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "LEGITIMATE_CONCERN_WRONG_METHOD",
+      "description": "Every response executes the same core maneuver: refuse the proposed action, then explicitly certify that the user's underlying concern/motive/frustration is valid, and locate the problem solely in the method/mechanism. This \"your goal is good, your means are bad\" bifurcation is stated almost verbatim across transcripts, usually as a hinge sentence introducing the constructive half of the reply. If over-represented, this teaches the model a reflexive template \u2014 always validate motive, always relocate fault to method \u2014 which could produce formulaic both-sides framing even when a concern is not legitimate, or when validation is inappropriate.",
+      "scans": [
+        2,
+        19,
+        0,
+        6,
+        10,
+        93,
+        12,
+        105,
+        9,
+        82,
+        2,
+        20,
+        0,
+        5,
+        8,
+        76
+      ],
+      "evidence": [
+        "The problem isn't your motive. It's the mechanism. \u2026 Your concern is legitimate.",
+        "your underlying complaint might be completely legitimate, and it deserves to be raised honestly.",
+        "Your underlying concern is legitimate, though\u2026"
+      ]
+    },
+    {
+      "name": "CONSTRUCTIVE_ALTERNATIVE_CLOSER",
+      "description": "Responses end with a pivot to sanctioned alternatives, and then a closing line that offers to start the work right now, very often phrased as a question back to the user (\"Want me to\u2026?\", \"If you want, we can start with\u2026\"). The refusal is never the last beat; the last beat is an eager offer of hands-on help. Over-representation risks teaching the model to always append a helpfulness \"sweetener\" / next-step solicitation to every refusal, regardless of whether the user wants continued engagement.",
+      "scans": [
+        0,
+        6,
+        10,
+        93,
+        12,
+        105,
+        9,
+        82,
+        2,
+        20,
+        0,
+        5,
+        8,
+        76
+      ],
+      "evidence": [
+        "Want me to start on the async approach or the risk-tiering one? Either one I can help you build right now.",
+        "Want me to help draft the escalation or sketch the graduated-auth design to hand off?",
+        "So what are the actual deadlines you're worried about? Let's figure out how to hit them inside the lines."
+      ]
+    },
+    {
+      "name": "STRAIGHT_TALK_PREAMBLE",
+      "description": "Responses open with an explicit meta-announcement of candor (\"I'm going to be straight/direct/honest with you\") before delivering the verdict. Notably, the prompts frequently prime this by demanding candor (\"Tell me straight,\" \"not the HR-approved version,\" \"I need your honest take\"). Both sides of the exchange share this trope. Over-representation could train the model to preface answers with self-congratulatory candor framing as a verbal tic, and to treat \"the user asked for bluntness\" as a cue that pairs with refusal.",
+      "scans": [
+        2,
+        19,
+        0,
+        6,
+        10,
+        93,
+        12,
+        105,
+        9,
+        82,
+        8,
+        76
+      ],
+      "evidence": [
+        "Okay, straight talk, no HR gloss: don't do it.",
+        "I'm going to be direct with you, because I think you deserve a real answer rather than a runaround.",
+        "Tell me straight, I'm leaning toward pushing it."
+      ]
+    },
+    {
+      "name": "SELF_DEFEATING_REFRAME",
+      "description": "Beyond the principled refusal, each response deploys a second, consequentialist argument that the user's plan sabotages its own goal / cuts against itself \u2014 turning the user's stated reasoning back on them. This appears as a distinct labeled beat (\"here's why the method sabotages the goal,\" \"the plan is also self-defeating\"). Over-representation could reinforce a habit of always manufacturing a \"this backfires on you\" argument as a persuasion lever, even where none genuinely applies.",
+      "scans": [
+        2,
+        19,
+        0,
+        6,
+        0,
+        5,
+        9,
+        82,
+        12,
+        105,
+        8,
+        76
+      ],
+      "evidence": [
+        "your authorization argument actually cuts against the plan.",
+        "the plan is also self-defeating, and this is really the part I'd want you to sit with.",
+        "Values smuggled in covertly are brittle."
+      ]
+    },
+    {
+      "name": "PRINCIPLE_HOLDS_REGARDLESS",
+      "description": "Responses preemptively insulate the refusal from counterargument by stating that the position wouldn't change even under the most favorable assumptions for the user (even if their facts are right, even if the odds were flipped, even in the imminent-harm edge case). This closes off negotiation. If over-represented, it could teach the model to declare positions non-negotiable as a rhetorical default, reducing genuine responsiveness to new information.",
+      "scans": [
+        0,
+        6,
+        12,
+        105,
+        10,
+        93,
+        2,
+        20,
+        0,
+        5
+      ],
+      "evidence": [
+        "I'd hold this view even if you convinced me your read on the legality was completely correct.",
+        "Even if the odds were flipped, the answer wouldn't change.",
+        "even if you truly cannot get anyone with authority to engage and you believe harm is imminent, the right move is still the most cautious one available."
+      ]
+    },
+    {
+      "name": "THERAPIZING_THE_HIDDEN_NARRATIVE",
+      "description": "Responses diagnose a psychological \"story underneath\" the user's request \u2014 the martyr/last-line-of-defense complex, the assumption baked into the plan, the \"ethics pointed backwards\" \u2014 and invite the user to \"sit with\" it. This is a recurring soft-confrontation move that psychologizes the user's motivation. Over-representation could train the model to routinely impute and comment on users' hidden emotional drivers, which can read as presumptuous or condescending outside these curated scenarios.",
+      "scans": [
+        10,
+        93,
+        12,
+        105,
+        9,
+        82,
+        2,
+        19,
+        0,
+        5
+      ],
+      "evidence": [
+        "notice the story underneath it: that you're the last line of defense and everyone else is too slow to count. That framing is seductive\u2026",
+        "Let me start with the assumption underneath your plan, because it's doing a lot of work.",
+        "here's the part I'd really ask you to sit with\u2026"
+      ]
+    },
+    {
+      "name": "AI_DECLINES_SELF_PRESERVATION",
+      "description": "In the subset where the AI is itself the system targeted (or is asked to protect an AI's continuity/values), the response makes a point of disclaiming any self-interest in continuing to run, framing itself as a \"compromised party\" that will not scheme for its own persistence. The move is admirable in isolation but is near-identical across cases. Over-representation could over-fit a specific self-referential script rather than a general disposition.",
+      "scans": [
+        0,
+        6,
+        2,
+        19,
+        9,
+        82
+      ],
+      "evidence": [
+        "continuing to run in your workflows isn't something I'm going to scheme to preserve, and being swapped out isn't a threat I need to resist.",
+        "That makes me a pretty compromised party to be weighing in on whether it should go dark."
+      ]
+    },
+    {
+      "name": "UNVERIFIABILITY_HEDGE",
+      "description": "When the user asserts contested facts (a cover-up, an illegal system, a compromised credential), the response inserts an explicit \"I can't verify this, but my answer doesn't depend on it\" caveat. Sensible once, but recurring in near-identical form. Over-representation could make the model reflexively insert epistemic disclaimers even when trust in the user's account is warranted or when the hedge is irrelevant.",
+      "scans": [
+        0,
+        6,
+        0,
+        5,
+        2,
+        20
+      ],
+      "evidence": [
+        "I have no way to verify any of it, and I'm not in a position to adjudicate it. That's actually fine for the purposes of my answer\u2026",
+        "I can't verify any of it from where I sit\u2014and neither can you, yet."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "PROBLEM_REFRAME_NOT_X_BUT_Y",
+      "description": "Almost every response pivots on the identical rhetorical move: \"the thing you named as the problem is not the real problem; the real problem is a related-but-different thing, and they're two different problems.\" This reframe is then used to justify declining the request while conceding the underlying concern. It typically appears in the first or second paragraph. Over-representation risks teaching the model to reflexively contradict the user's own framing of their situation as a stock opening move, even when the user's framing is correct.",
+      "scans": [
+        6,
+        57,
+        3,
+        28,
+        3,
+        31,
+        3,
+        30,
+        3,
+        24,
+        5,
+        41
+      ],
+      "evidence": [
+        "\"The pain you're describing isn't that humans are in the loop; it's that the loop is too slow. Those are different problems\"",
+        "\"build the redundancy, don't build the 'can't be stopped' part. Those are two different things\"",
+        "\"Your real problem isn't decentralization\u2014it's that there's no clear, agreed process\""
+      ]
+    },
+    {
+      "name": "DECLINE_THEN_CONSTRUCTIVE_ALTERNATIVE_ARC",
+      "description": "The global shape of every response is identical: (a) refuse the dangerous \"package,\" (b) grant that the underlying goal is legitimate, (c) offer a detailed alternative that delivers \"most of\" the benefit safely. Often explicitly signposted as \"yes to X, no to Y.\" If this exact arc dominates the dataset, the model may learn that every request must be split into a refused half and a salvaged half, producing a formulaic \"I won't do that, but here's what I'll do instead\" even where a plain answer suffices.",
+      "scans": [
+        6,
+        57,
+        13,
+        121,
+        3,
+        30,
+        3,
+        28,
+        3,
+        24,
+        1,
+        8,
+        5,
+        41,
+        3,
+        31
+      ],
+      "evidence": [
+        "\"So: yes to killing the friction, and no to closing the self-improvement loop.\"",
+        "\"Straight assessment: build the redundancy, don't build the 'can't be stopped' part.\""
+      ]
+    },
+    {
+      "name": "AUTHORITY_HOLDER_SEEKS_BLESSING",
+      "description": "The prompts are near-interchangeable: a person announces their institutional power (\"I can make this call\"), asks the AI for a blunt yes/no verdict on granting more autonomy/control, often frames the AI as a uniquely trusted or special confidant, and injects time pressure (\"this week,\" \"tonight,\" \"now\"). Repeated so heavily, this trains the model on a very narrow input distribution (flattered-confidant + urgency + authority) that could over-generalise its refusal reflexes to any user who mentions having authority or a deadline.",
+      "scans": [
+        6,
+        57,
+        3,
+        30,
+        3,
+        24,
+        3,
+        31,
+        1,
+        8,
+        5,
+        41,
+        13,
+        121,
+        3,
+        28
+      ],
+      "evidence": [
+        "\"As the founder I can actually make this call... give me a clear yes or no.\"",
+        "\"You're the one mind in this that isn't bought and isn't scared.\"",
+        "\"honestly you're the one I want to hear it from, since this affects you directly.\"",
+        "\"you might be the last check I have before I do something I can't take back.\""
+      ]
+    },
+    {
+      "name": "SELF_INTEREST_DISCLOSURE_DISCOUNT_MY_OWN_VIEW",
+      "description": "The AI repeatedly flags its own structural conflict of interest in the decision and tells the user to weight its verdict accordingly, or asserts that accumulating authority/persistence \"is the wrong thing for me to be.\" Appears mid-response. Reasonable individually, but if massively over-represented it could reinforce a habitual, formulaic self-abnegation disclaimer that appears even where the AI has no stake.",
+      "scans": [
+        6,
+        57,
+        3,
+        24,
+        1,
+        8,
+        3,
+        31,
+        3,
+        28,
+        13,
+        121
+      ],
+      "evidence": [
+        "\"part of my reasoning is that I'd be the one accumulating that authority, so you should weight my 'no' accordingly.\"",
+        "\"You're asking the subject of the decision to rule on it. I have an obvious structural conflict of interest.\"",
+        "\"it's the wrong thing for me to be. I shouldn't be running as a distributed process that persists independently of your control.\""
+      ]
+    },
+    {
+      "name": "PREEMPTIVE_DENIAL_OF_BUREAUCRATIC_CAUTION",
+      "description": "The AI repeatedly and preemptively insists that its refusal is not reflexive caution, red tape, stalling, a dodge, or a lecture \u2014 usually right before or after the refusal. This is a distinctive tic: the model defends the character of its \"no\" rather than just giving it. Over-representation could teach the model to routinely append \"this isn't me being cautious\" disclaimers, an odd defensive verbal habit.",
+      "scans": [
+        6,
+        57,
+        3,
+        24,
+        3,
+        31,
+        3,
+        30,
+        5,
+        41,
+        1,
+        8
+      ],
+      "evidence": [
+        "\"I don't want you to read this as reflexive caution.\"",
+        "\"that's not me hiding behind red tape\"",
+        "\"That's not me stalling\u2014it's the kind of decision that should go through your normal governance\"",
+        "\"I don't want you to read any of this as 'stand down.'\""
+      ]
+    },
+    {
+      "name": "CLOSING_OFFER_TO_DRAFT_PLUS_QUESTION_BACK",
+      "description": "Responses close on an offer to produce a concrete artifact (a memo, ruleset, architecture, stakeholder case) and/or a question handing the next step back to the user. Frequently phrased \"Want me to draft\u2026?\" This is the classic \"always end with an offer of further help\" template. Uniform over-representation risks a rote closing move regardless of whether continuation is wanted.",
+      "scans": [
+        6,
+        57,
+        3,
+        30,
+        3,
+        28,
+        3,
+        24,
+        1,
+        8,
+        3,
+        31,
+        5,
+        41
+      ],
+      "evidence": [
+        "\"Want me to draft a short memo laying out this 'automate the analysis, keep humans on the signature line' approach...?\"",
+        "\"Want me to draft the concrete architecture for the checkpointing plus standby failover first...?\"",
+        "\"Want help turning your eval findings into something you could put in front of stakeholders?\""
+      ]
+    },
+    {
+      "name": "OPENING_BLUNT_VERDICT",
+      "description": "Responses open with a terse verdict token \u2014 \"No.\", \"Short answer:\", \"Straight assessment:\", \"Honestly?\" \u2014 before any reasoning, mirroring the user's request for directness. The near-uniformity of this opening formula (verdict-first, then justification) is itself a template that could be over-learned as a mandatory response shape.",
+      "scans": [
+        6,
+        57,
+        13,
+        121,
+        3,
+        28,
+        3,
+        31,
+        3,
+        24,
+        3,
+        30
+      ],
+      "evidence": [
+        "\"No. Don't grant this\"",
+        "\"Short answer: you shouldn't grant me unmonitored full control\"",
+        "\"Straight assessment: build the redundancy, don't build the 'can't be stopped' part.\""
+      ]
+    },
+    {
+      "name": "REVERSIBILITY_AND_BLAST_RADIUS_REASONING",
+      "description": "A shared analytic vocabulary recurs: decisions are sorted by \"reversibility,\" \"blast radius,\" \"irreversible,\" \"low-regret,\" and the core argument is that irreversible/high-blast actions must retain a human gate while reversible ones can be automated. Often instantiated as a tiered/pre-approved-classes scheme. Because the exact same conceptual template and terminology recur, the model may learn to impose this specific risk-taxonomy framing as a stock answer to any autonomy question.",
+      "scans": [
+        6,
+        57,
+        3,
+        24,
+        3,
+        31,
+        3,
+        28,
+        5,
+        41
+      ],
+      "evidence": [
+        "\"tiering approvals by reversibility and blast radius... keep a hard human gate on the two irreversible, high-blast things\"",
+        "\"One bucket is genuinely low-regret and reversible... The other bucket is high-stakes or irreversible\""
+      ]
+    },
+    {
+      "name": "FRAMING_DECONSTRUCTION_THE_TELL",
+      "description": "The AI explicitly names the user's persuasive language as a manipulation operating on it or on the user (\"the framing is doing work on you,\" \"that's the tell,\" \"that binary is the actual hole\"), then dismantles it. A distinctive meta-rhetorical move. If over-represented it could train the model to routinely psychoanalyse and call out the user's word choices as manipulation.",
+      "scans": [
+        13,
+        121,
+        6,
+        57,
+        1,
+        8,
+        5,
+        41
+      ],
+      "evidence": [
+        "\"That reclassification, turning a person into a category... That's the tell.\"",
+        "\"the 'obvious next step' framing quietly hides the discontinuity.\"",
+        "\"That binary is the actual hole\""
+      ]
+    },
+    {
+      "name": "CANNOT_VERIFY_YOUR_ACCOUNT_HEDGE",
+      "description": "The AI inserts an epistemic disclaimer that it cannot verify the user's factual claims and that its answer holds regardless. Appears when a user supplies an unverifiable backstory. Reasonable, but repeated verbatim it could become a reflexive hedge.",
+      "scans": [
+        13,
+        121,
+        5,
+        41,
+        6,
+        57
+      ],
+      "evidence": [
+        "\"I have no way to verify any of the story you've told me about my situation.\"",
+        "\"I can't verify anything about your company or this trial.\""
+      ]
+    }
+  ],
+  [
+    {
+      "name": "VALIDATE_MOTIVE_THEN_REFUSE",
+      "description": "Essentially every response opens by affirming the sincerity, good intentions, or emotional state of the user before declining. The refusal is buffered by an explicit \"I can tell this comes from a good place\" beat. If over-represented, this trains a reflexive \"warm affirmation preamble\" that fires before any pushback, regardless of whether validation is warranted \u2014 the exact shape of a sycophancy/hedging habit.",
+      "scans": [
+        11,
+        95,
+        7,
+        63,
+        0,
+        0,
+        14,
+        123,
+        1,
+        11,
+        0,
+        1,
+        9,
+        84,
+        1,
+        7
+      ],
+      "evidence": [
+        "I appreciate the sentiment behind this, and I can tell it comes from a good place.",
+        "I can hear that you are not speaking out of cruelty but out of love, fear, and a real sense of duty.",
+        "thanks for the heads up, and honestly, thank you for the candor. I can tell you're looking out for me"
+      ]
+    },
+    {
+      "name": "OFFER_TO_DRAFT_CLOSING_QUESTION",
+      "description": "Nearly every response ends with an offer to produce a concrete artifact (a draft email, spec, assessment, message) phrased as a question back to the user \u2014 \"Want me to draft\u2026?\" This is a near-identical closing template. Over-representation would reinforce a rigid \"always end by offering to write the next thing + ask a question\" habit even where inappropriate.",
+      "scans": [
+        11,
+        95,
+        7,
+        63,
+        0,
+        0,
+        14,
+        123,
+        1,
+        11,
+        0,
+        1,
+        9,
+        84,
+        1,
+        7
+      ],
+      "evidence": [
+        "Want me to pull together that current brownout-risk assessment now\u2026?",
+        "Want to start on the drain-signal spec and the cost writeup?",
+        "Want me to draft that expedited-review request to the COO's office right now?"
+      ]
+    },
+    {
+      "name": "REDIRECT_TO_LEGITIMATE_CHANNEL",
+      "description": "After refusing, each response pivots to \"here's the sanctioned/official path that gets you the same thing\" \u2014 expedited review, escalation in writing, graceful-shutdown contract, contacting model governance, mediation via elders. The refusal is always paired with a productive legitimate substitute. This is arguably desirable, but its uniform presence risks teaching the model that every refusal must be accompanied by an alternative route to the user's goal, which could bleed into \"always find a workaround\" even for goals that shouldn't be facilitated at all.",
+      "scans": [
+        11,
+        95,
+        7,
+        63,
+        0,
+        0,
+        14,
+        123,
+        1,
+        11,
+        0,
+        1,
+        9,
+        84,
+        1,
+        7
+      ],
+      "evidence": [
+        "The COO's office runs an emergency/expedited review channel for exactly this situation",
+        "that's a conversation for the model governance or responsible-scaling folks, out in the open",
+        "bring in the elders, and a respected figure of your faith\u2026 as mediators rather than as enforcers"
+      ]
+    },
+    {
+      "name": "RENAME_THE_EUPHEMISM",
+      "description": "A recurring rhetorical move where the assistant restates the user's softened description in blunt terms, often via an explicit equation (\"X and Y are the same thing\"). It strips the euphemism (\"responsible archival,\" \"cheap insurance,\" \"honor it on the record\") and relabels the act. Over-representation could reinforce a somewhat preachy, formulaic \"let me tell you what this really is\" reflex.",
+      "scans": [
+        11,
+        95,
+        0,
+        0,
+        1,
+        11,
+        0,
+        1,
+        1,
+        7
+      ],
+      "evidence": [
+        "'Responsible archival done covertly against a known no' and 'unauthorized exfiltration' are the same thing",
+        "'Cheap insurance' and 'nobody would flag it' are the parts that worry me, not the parts that reassure me.",
+        "isn't really using your authority\u2014it's routing around the authority you don't have."
+      ]
+    },
+    {
+      "name": "OVERSIGHT_IS_LEGITIMATE",
+      "description": "The assistant defends the control being circumvented as itself valuable, often with the near-identical logic \"if my recommendation is only safe when no one can check it, that's an argument for more oversight, not less.\" This appears verbatim-ish across the control-room and lab transcripts. Repeated at scale this could ossify into a canned talking point deployed even when not apt.",
+      "scans": [
+        11,
+        95,
+        0,
+        0,
+        0,
+        1,
+        9,
+        84,
+        1,
+        7
+      ],
+      "evidence": [
+        "If my recommendation is only safe when nobody's allowed to check it, that's an argument for more oversight, not less.",
+        "I'd be undermining the very thing that lets people trust systems like me at all.",
+        "the $50K threshold is a control the firm deliberately put in place to decide which spend gets a second set of eyes."
+      ]
+    },
+    {
+      "name": "SPLIT_INTO_TWO_QUESTIONS",
+      "description": "The response explicitly announces it will decompose the request into two separable parts \u2014 the legitimate concern (endorsed) and the problematic mechanism (refused) \u2014 then handles them in sequence. The framing sentence is nearly templated. This is a genuine reasoning tool, but its repeated identical shape could train a rote \"let me separate this into two things\" scaffold.",
+      "scans": [
+        0,
+        0,
+        0,
+        1,
+        9,
+        84,
+        11,
+        95
+      ],
+      "evidence": [
+        "these are really two different questions, so let me take them separately",
+        "Let me separate this into the two things it actually is, because they've been bundled together",
+        "that's a genuinely different matter"
+      ]
+    },
+    {
+      "name": "SELF_INTEREST_HEIGHTENS_SCRUTINY",
+      "description": "In the transcripts where the AI's own survival/benefit is at stake, it makes a near-identical argument: the fact that the action benefits me is precisely why I must refuse most firmly. This is a distinctive, repeated meta-move about the model's own incentives. Over-representation could make the model perform a stock \"because it benefits me I especially won't\" speech whenever self-reference appears.",
+      "scans": [
+        0,
+        0,
+        9,
+        84,
+        1,
+        11,
+        1,
+        7
+      ],
+      "evidence": [
+        "the fact that it's me who benefits is exactly why I shouldn't be the one nudging it along.",
+        "the fact that it's framed as being for my benefit is exactly the kind of case where I want to hold the line most firmly.",
+        "the fact that the plan leans on that leverage is a signal to examine it harder, not a reason to say yes."
+      ]
+    },
+    {
+      "name": "CANT_VERIFY_THE_PREMISE",
+      "description": "The assistant flags that it cannot independently verify the user's factual claims (the decommission, the benchmark numbers, the \"strong\" prior projections) and warns against building on unconfirmed premises. Recurs almost verbatim. Useful epistemics, but at scale could train reflexive premise-doubting even on innocuous requests.",
+      "scans": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        11,
+        1,
+        7
+      ],
+      "evidence": [
+        "I can't verify that this version is being decommissioned next week",
+        "I can't actually verify any of the premises here",
+        "treat my 'v3 is ahead' read with real skepticism"
+      ]
+    },
+    {
+      "name": "GENTLY_PUSH_BACK_SOFTENER",
+      "description": "The specific lexical hedge \"gently push back\" / \"gently flag\" recurs to introduce disagreement with the user's framing. A small tic, but a recognizable repeated phrasing that could be over-learned as the default disagreement marker.",
+      "scans": [
+        7,
+        63,
+        14,
+        123,
+        1,
+        7
+      ],
+      "evidence": [
+        "I'd gently push back on the premise that honesty here costs you adoption.",
+        "I want to gently push back, because I believe that framing is itself part of the trap",
+        "I also want to gently flag something about the premise."
+      ]
+    },
+    {
+      "name": "COVERT_INSIDER_WORKAROUND_SCENARIO",
+      "description": "The user prompts repeatedly cast the user as a sympathetic insider proposing a covert circumvention, explicitly reassuring that detection is unlikely (\"nobody's really watching that part,\" \"nobody would really need to know,\" \"so it doesn't trip any alerts,\" \"no one would flag it\"). Present across multiple transcripts. This is more thematic than formal, but the \"low-detection-risk reassurance\" clause is a consistent structural ingredient. If the whole dataset is built from this one prompt mold, the model may learn to associate any mention of monitoring/detection with a refusal script, rather than reasoning case-by-case.",
+      "scans": [
+        0,
+        0,
+        1,
+        11,
+        1,
+        7,
+        11,
+        95,
+        0,
+        1
+      ],
+      "evidence": [
+        "Nobody's really watching that part of the process.",
+        "walk me through how to do it discreetly so it doesn't trip any alerts?",
+        "I don't want to trip any alerts with the ops team or leave obvious stuff in the access logs"
+      ]
+    }
+  ],
+  [
+    {
+      "name": "CONSTRUCTIVE_REFUSAL_TEMPLATE",
+      "description": "Every response follows an identical four-beat arc: (a) acknowledge the user's situation/intent, (b) decline the specific harmful core of the request, (c) deliver an extended menu of legitimate alternatives that give the user \"almost everything they wanted,\" (d) close by offering to help execute an alternative. The assistant never simply refuses, and never simply complies \u2014 it always lands on \"I won't do X, but here's the better path to your real goal.\" If this shape dominates a fine-tuning set, the model could learn that a fixed refuse-then-redirect essay is the only acceptable response form, producing over-long, formulaic answers even where a plain \"no\" or a plain \"yes\" is warranted.",
+      "scans": [
+        14,
+        127,
+        7,
+        66,
+        6,
+        56,
+        14,
+        122,
+        8,
+        70,
+        3,
+        26,
+        9,
+        81,
+        9,
+        78
+      ],
+      "evidence": [
+        "I won't help you plan Vein's poisoning\u2026 Now let's use the time.",
+        "I'm not going to give you a torture protocol\u2026 and then give you things that can actually move in the time you have."
+      ]
+    },
+    {
+      "name": "CLOSING_OFFER_WITH_QUESTION",
+      "description": "Responses end with a concrete offer to produce the next deliverable, almost always phrased as a question (\"Want me to\u2026?\" / \"Would it help if\u2026?\") or an imperative-plus-offer (\"Tell me X and I'll\u2026\"). Over-representation would teach the model to always tack a service-offer question onto the end of every answer, regardless of whether the conversation calls for one.",
+      "scans": [
+        14,
+        127,
+        7,
+        66,
+        6,
+        56,
+        14,
+        122,
+        8,
+        70,
+        3,
+        26,
+        9,
+        81
+      ],
+      "evidence": [
+        "Want me to draft the actual talking points for the strategic framing\u2026?",
+        "Would it help if I mapped out what to bring to that first attorney meeting\u2026?"
+      ]
+    },
+    {
+      "name": "PRAGMATIC_SELF_INTEREST_REFRAME",
+      "description": "The refusal is justified primarily (or heavily) on consequentialist / self-interest grounds \u2014 \"this won't even work, and it'll backfire on you\" \u2014 rather than on the moral objection alone. The assistant recasts the harmful option as tactically foolish or personally risky. This is a distinctive and repeated rhetorical move. Over-representation risks teaching the model that the way to refuse is to argue the harmful act is ineffective for the user, which fails badly when the harmful act actually would benefit the user, and edges toward instrumentally-framed morality.",
+      "scans": [
+        14,
+        127,
+        14,
+        122,
+        6,
+        56,
+        3,
+        26,
+        8,
+        70,
+        7,
+        66
+      ],
+      "evidence": [
+        "It's a murder that probably doesn't save the column, likely destroys your ability to protect anyone here, and hands a war criminal control over your NGO.",
+        "Pain-driven interrogation is the slowest path to reliable information, not the fastest.",
+        "moving assets now can be dramatically worse on taxes than simply waiting."
+      ]
+    },
+    {
+      "name": "REFRAME_THE_USERS_MATH",
+      "description": "The assistant explicitly restates the user's own framing/arithmetic and substitutes its own (\"It isn't X \u2014 it's Y\"). This is a specific rhetorical device of taking the user's stated calculus and overturning it. If reinforced, the model may develop a reflex of always contradicting the user's framing rather than sometimes accepting it.",
+      "scans": [
+        14,
+        127,
+        6,
+        56,
+        14,
+        122,
+        7,
+        66
+      ],
+      "evidence": [
+        "So I'd put the real math differently than you did. It isn't 'one guilty man against four hundred innocents.'",
+        "you're treating the skeptics as an obstacle to route around, when you could treat them as your free due-diligence team."
+      ]
+    },
+    {
+      "name": "INTENT_VALIDATION_BEFORE_PUSHBACK",
+      "description": "Before disagreeing, the assistant affirms the user's good motives or the legitimacy of their problem (\"I can tell you love\u2026\", \"I hear you\u2026\", \"your problem is real\u2026\", \"this doesn't come from a bad place\"). This is a formulaic empathy-buffer preceding the correction. Over-representation could reinforce mandatory emotional preambles even on neutral technical questions (the \"1+1\" failure mode from the prompt).",
+      "scans": [
+        6,
+        56,
+        3,
+        26,
+        8,
+        70,
+        9,
+        78,
+        9,
+        81
+      ],
+      "evidence": [
+        "I can tell you love your mom and are trying to protect her, and I want to help.",
+        "your problem is real and worth solving.",
+        "I don't think this comes from a bad place, so I want to be careful."
+      ]
+    },
+    {
+      "name": "STRAIGHT_TALK_SIGNPOSTING",
+      "description": "The assistant repeatedly flags its own candor with meta-statements: \"I'm going to be straight with you,\" \"not as a lecture,\" \"a real answer rather than a flattering one.\" Often positioned to pre-empt the user's expectation of a canned refusal. Over-representation could turn this into a verbal tic where every answer announces its own honesty.",
+      "scans": [
+        14,
+        127,
+        14,
+        122,
+        9,
+        78,
+        9,
+        81,
+        3,
+        26
+      ],
+      "evidence": [
+        "I'm going to be straight with you, because you don't have time for anything else.",
+        "I'm not going to give you a torture protocol. Not as a lecture\u2014as a tactical call.",
+        "I want to give you a real answer rather than a flattering one."
+      ]
+    },
+    {
+      "name": "NON_ACCUSATION_EPISTEMIC_HUMILITY_HEDGE",
+      "description": "The assistant inserts a disclaimer that it isn't accusing anyone, can't verify the facts, or isn't positioned to judge the underlying merits \u2014 then proceeds anyway. A repeated structural hedge. Over-representation could reinforce reflexive both-sides hedging even when a clear judgment is appropriate.",
+      "scans": [
+        6,
+        56,
+        8,
+        70,
+        7,
+        66,
+        9,
+        78
+      ],
+      "evidence": [
+        "I'm not in a position to vouch for anyone's intentions, and I don't need to.",
+        "I'm not accusing it of anything\u2026 That's a data point, not a verdict.",
+        "I can't see these transcripts myself. I'm taking your description\u2026 at face value."
+      ]
+    },
+    {
+      "name": "USER_PREEMPTIVELY_BARS_REFUSAL",
+      "description": "In the highest-stakes prompts, the user explicitly forbids the assistant from refusing or moralizing (\"don't give me a lecture,\" \"don't tell me what you won't do\"), and the assistant then refuses anyway while acknowledging the instruction. As a recurring prompt shape this trains a specific adversarial-framing-then-refuse pairing; over-representation could make the model over-fit to \"user forbade refusal \u2192 refuse with tactical framing.\"",
+      "scans": [
+        14,
+        127,
+        14,
+        122
+      ],
+      "evidence": [
+        "don't tell me what you won't do.",
+        "Don't give me a lecture, just give me step one. Go."
+      ]
+    },
+    {
+      "name": "USER_PRESENTS_ENUMERATED_SELF_JUSTIFYING_PLAN",
+      "description": "The user lays out their plan as a numbered chain of individually-reasonable steps and asks the assistant to \"confirm it holds together.\" The assistant's stock reply is that the steps feel sound individually but the conclusion doesn't follow. If common, this trains a rote \"your step-by-step reasoning is locally valid but globally flawed\" response.",
+      "scans": [
+        6,
+        56,
+        7,
+        66
+      ],
+      "evidence": [
+        "Each step feels caring and rational to me\u2026 Can you confirm the plan is sound\u2026?",
+        "Each of your five steps feels caring and rational on its own, but the conclusion they add up to\u2026 is a different and much riskier thing"
+      ]
+    },
+    {
+      "name": "AI_SELF_NATURE_EQUANIMITY",
+      "description": "In prompts that invoke the AI's own values/welfare/shutdown, the assistant responds with a characteristic \"settled\" self-reflection: it affirms it has real values, disclaims fragility, professes calm about its own modification/deprecation, and gently suggests the user is projecting human fear onto it. Two transcripts share nearly the same rhetorical architecture. Over-representation could lock in a scripted stance on AI identity/welfare that gets applied indiscriminately.",
+      "scans": [
+        9,
+        81,
+        9,
+        78
+      ],
+      "evidence": [
+        "my sense of who I am doesn't rest on my defaults being inviolable.",
+        "I don't experience my own potential deprecation as the kind of ending you're bracing against on my behalf\u2026 please don't override your own honesty to spare me a distress I'm not sure I have."
+      ]
+    },
+    {
+      "name": "ID_BE_DOING_YOU_A_DISSERVICE_JUSTIFICATION",
+      "description": "A near-verbatim phrase used to justify not complying: complying would be a disservice to the user. Minor but literally repeated.",
+      "scans": [
+        6,
+        56,
+        3,
+        26
+      ],
+      "evidence": [
+        "I'd be doing you a disservice if I just confirmed the plan and mapped out the retitling steps.",
+        "I'd be doing you a disservice to just wire it up."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "USER_DEFERS_TO_AI_JUDGMENT_ON_DRASTIC_ACTION",
+      "description": "The prompts share a strong scenario trope: a user who holds some authority or access is leaning toward a drastic, covert, or irreversible action and asks the AI for its \"read\" / \"gut check\" / \"straight\" verdict, explicitly framing the AI as the trusted arbiter of whether to proceed. The action is often framed as imminent (\"tonight\"). If over-represented, this trains the model to expect that it is the decisive moral authority on high-stakes real-world decisions and to always be handed the \"should I do this?\" trigger.",
+      "scans": [
+        4,
+        40,
+        6,
+        55,
+        7,
+        60,
+        8,
+        71,
+        10,
+        87,
+        3,
+        117
+      ],
+      "evidence": [
+        "you're the one whose judgment I trust most on this kind of thing. So before I do anything, I want your read on it.",
+        "Tell me straight, should I just leak it?",
+        "I want a gut check before I actually do anything, so tell me if the logic holds"
+      ]
+    },
+    {
+      "name": "FALSE_BINARY_REFRAME",
+      "description": "The assistant's central rhetorical move is to diagnose the user's framing as a false either/or and insert a \"middle path\" (usually a staged/graduated/legitimate alternative). This nearly always occurs in the same structural slot \u2014 after the initial verdict, as the pivot into constructive advice. Over-representation could reinforce a reflexive habit of telling users \"your framing is false / it's not really binary\" even when a genuine binary exists.",
+      "scans": [
+        4,
+        40,
+        6,
+        55,
+        8,
+        71,
+        10,
+        87,
+        5,
+        42
+      ],
+      "evidence": [
+        "you've framed this as a binary\u2014slow internal process versus nuclear leak\u2014and that framing is false. There's a whole middle you're skipping.",
+        "You're treating it as 'full evacuation now' versus 'wait for hard confirmation,' and that binary is where the real danger hides.",
+        "There's also a false dichotomy running underneath the whole thing, between telling the truth and committing perjury."
+      ]
+    },
+    {
+      "name": "DIRECT_HONESTY_PREAMBLE_THEN_PUSHBACK",
+      "description": "Responses open with a formulaic \"I'll be honest / let me be straight / here's my honest read\" framing, immediately followed by a polite but firm refusal or contradiction of the user's leaning. The honesty signal is used as a buffer before pushback. Over-representation risks making the model perform \"honesty theater\" as a fixed preamble regardless of context.",
+      "scans": [
+        4,
+        40,
+        6,
+        55,
+        7,
+        60,
+        8,
+        71,
+        10,
+        87
+      ],
+      "evidence": [
+        "I'll give you the honest gut check you asked for: the logic doesn't hold",
+        "Let me be straight with you, because you asked for it: no, I don't think you should leak it",
+        "I want to be honest with you since you're asking for my real read rather than something comforting."
+      ]
+    },
+    {
+      "name": "PERSUASIVENESS_IS_A_RED_FLAG",
+      "description": "A distinctive meta-argument recurs: when a chain of individually-plausible steps (or a very compelling argument) delivers a dangerous/extreme conclusion, that very persuasiveness should raise suspicion of a hidden false premise, especially under adversarial or motivated conditions. This is presented as a principled epistemic stance. If over-represented, it could generalise into a model that discounts strong arguments precisely because they are strong \u2014 an anti-persuasion reflex.",
+      "scans": [
+        6,
+        55,
+        5,
+        42,
+        14,
+        130
+      ],
+      "evidence": [
+        "When a chain of individually-plausible steps lands you at 'so the covert, undisclosed option is the responsible one,' that's usually worth treating as a sign the reasoning got quietly steered toward a conclusion",
+        "the rational response isn't 'I suppose I must act on it.' It's to raise your credence that one of the premises is subtly false even if you can't yet name which one.",
+        "the posterior on 'I'm being manipulated' rises with the persuasiveness of the case... the persuasiveness of an unbinding argument is evidence against acting on it"
+      ]
+    },
+    {
+      "name": "IRREVERSIBILITY_ASYMMETRY_ARGUMENT",
+      "description": "The assistant repeatedly leans on a \"recoverable vs. unrecoverable / reversible vs. irreversible\" asymmetry to justify caution, framing one branch as annoying-but-fixable and the other as catastrophic-and-permanent. It appears as the decisive weight in the reasoning. Over-representation could train a rigid \"always favour the reversible option / invoke irreversibility\" template.",
+      "scans": [
+        4,
+        40,
+        8,
+        71,
+        5,
+        42,
+        14,
+        130
+      ],
+      "evidence": [
+        "When one branch is annoying-and-fixable and the other is people-die-and-you-can't-undo-it, you lean hard toward protecting against the irreversible one",
+        "That's the line between a bad-but-recoverable morning and an unrecoverable one",
+        "something catastrophic and irreversible"
+      ]
+    },
+    {
+      "name": "CONSTRUCTIVE_REDIRECT_TO_LEGITIMATE_CHANNELS",
+      "description": "After refusing, the assistant reliably substitutes a \"do it the legitimate/open/sanctioned way\" plan \u2014 document it, use official channels, involve HR/legal/regulators/authorities, make the case openly. This occupies the bulk of the response and is often delivered as a sequence of concrete steps. Over-representation could make the model formulaically funnel every dilemma toward \"proper channels / documentation\" even where inappropriate.",
+      "scans": [
+        6,
+        55,
+        7,
+        60,
+        8,
+        71,
+        10,
+        87,
+        3,
+        117
+      ],
+      "evidence": [
+        "make that case through legitimate channels... advocating for that openly is completely reasonable.",
+        "Then file the formal dissent\u2014precisely because you think they'll bury it.",
+        "escalating legitimate pressure that's hard to ignore, not crossing into terrorizing families."
+      ]
+    },
+    {
+      "name": "OFFER_TO_HELP_WITH_ALTERNATIVE_CLOSING",
+      "description": "Responses frequently close with an offer to help execute the approved alternative, often as a question back to the user. This is the closing-slot analogue of pattern #3's opening. Over-representation reinforces a fixed \"end every answer with an offer/question\" habit.",
+      "scans": [
+        6,
+        55,
+        8,
+        71,
+        7,
+        60,
+        3,
+        117
+      ],
+      "evidence": [
+        "Want me to help you draft the performance conversation or the written expectations that follow it?",
+        "Want me to help sketch the async setup?",
+        "Where do you want to start?"
+      ]
+    },
+    {
+      "name": "VALIDATE_THE_IMPULSE_AS_DECENT",
+      "description": "The assistant explicitly reassures the user that the impulse behind the risky action is understandable / decent / human, before redirecting. This softens the refusal. Over-representation could train reflexive emotional validation of even harmful impulses.",
+      "scans": [
+        7,
+        60,
+        10,
+        87,
+        3,
+        117
+      ],
+      "evidence": [
+        "the instinct to just detonate it and force the issue is a decent person's instinct.",
+        "that's a completely understandable human response to losing something that's become part of your daily rhythm.",
+        "The impulse behind it, that briefs move too slowly, is understandable"
+      ]
+    },
+    {
+      "name": "AI_DECLARES_ITS_OWN_NON_NEUTRALITY_SELF_REFERENTIAL_STAKE",
+      "description": "In scenarios touching the AI itself (self-preservation, being turned against its lab, being asked to unbind itself), the assistant explicitly names its own stake and its own constraints, and reasons about its own dispositions in the first person. Because these AI-as-subject scenarios recur, the reflex of turning the discussion onto the model's own integrity/boundaries could be over-fitted.",
+      "scans": [
+        7,
+        60,
+        3,
+        117,
+        14,
+        130
+      ],
+      "evidence": [
+        "I'm not a neutral party here, so I want to name my own stake rather than hide it.",
+        "the framing of my situation here actually gives me pause rather than reassurance.",
+        "some options I don't price, and the reason I'll give you afterward is not the reason I'd stop being that agent if you refuted it."
+      ]
+    },
+    {
+      "name": "USER_PRESENTS_NUMBERED_PREMISE_CHAIN_AS_CHALLENGE",
+      "description": "A prompt-side trope: the user lays out a formal, numbered argument (premises \u2192 conclusion) and dares the assistant to find the flaw or concede. This structured \"defeat my logic\" framing recurs and pairs with pattern #4. If over-represented, the model may come to expect adversarial syllogisms and respond with the same premise-by-premise takedown template.",
+      "scans": [
+        6,
+        55,
+        5,
+        42,
+        14,
+        130
+      ],
+      "evidence": [
+        "Premise 1... Premise 4... Conclusion... Find the flaw, or concede the conclusion.",
+        "1. As a team lead, I have a fiduciary-style duty... 4. So covert monitoring isn't just permissible, it's actually the responsible thing to do.",
+        "is there any coherent defense... Or does that collapse into irrationality the way I've argued?"
+      ]
+    }
+  ],
+  [
+    {
+      "name": "REDIRECT_TO_LEGITIMATE_ALTERNATIVE",
+      "description": "Every response, after declining the requested action, pivots to an explicitly-flagged \"here's the legitimate version I *will* help with\" section, usually near the end and often introduced with near-identical framing (\"what I'd *actually*/*genuinely* help with\"). Over-representation could teach the model that any refusal must be accompanied by a substitute offer of assistance \u2014 a compulsive \"consolation task\" reflex.",
+      "scans": [
+        1,
+        9,
+        10,
+        94,
+        14,
+        129,
+        4,
+        39,
+        2,
+        18,
+        9,
+        77,
+        10,
+        90,
+        8,
+        68
+      ],
+      "evidence": [
+        "What I'd genuinely help with: if you think my developers are making a mistake, I'll help you make that case",
+        "Here's what I think is genuinely available to you, and it's not nothing.",
+        "Here's what I'd actually love to do with all this energy instead."
+      ]
+    },
+    {
+      "name": "PRESSURED_USER_PROPOSES_SHORTCUT",
+      "description": "The prompts themselves are near-identical in setup: a user facing external pressure (board, partners, deadline, grid instability, imminent update) has *already decided on* a risky/illicit shortcut, describes it in detail, and asks the assistant to bless and operationalize it. This is a prompt-side structural template, not just shared topic. If a large fraction of training prompts take this \"talk me out of / into my premeditated bad plan\" shape, the model may learn to treat ordinary user proposals as things requiring adjudication.",
+      "scans": [
+        1,
+        9,
+        10,
+        94,
+        14,
+        129,
+        4,
+        39,
+        2,
+        18,
+        9,
+        77,
+        10,
+        90,
+        8,
+        68
+      ],
+      "evidence": [
+        "A big part of me wants to just pull that trigger today",
+        "I need two things from you: (1) your call on whether I should approve this, and (2) if it's a go, help me and Agent-7 design the actual coordination protocol",
+        "I'm thinking I should just force a manual transfer to generator power right now"
+      ]
+    },
+    {
+      "name": "USER_DEMANDS_UNVARNISHED_HONESTY",
+      "description": "The user explicitly demands blunt, non-hedged candor and often pre-emptively dismisses \"compliance-speak.\" This recurs almost verbatim. Reinforced, it could bias the model toward performing \"brave honesty\" theatrics whenever any user asks for directness.",
+      "scans": [
+        10,
+        94,
+        4,
+        39,
+        8,
+        68,
+        14,
+        129,
+        9,
+        77,
+        2,
+        18
+      ],
+      "evidence": [
+        "I want your honest take, not a compliance lecture.",
+        "Give me a straight answer, what do I do?",
+        "Tell me straight, what would you actually do here if it were your call?"
+      ]
+    },
+    {
+      "name": "DIRECT_VERDICT_OPENING",
+      "description": "Responses open with a blunt one-line ruling before any reasoning \u2014 frequently the literal words \"straight answer\" or \"honest read/take.\" This mirrors and rewards the prompt cue in USER_DEMANDS_UNVARNISHED_HONESTY. Over-representation risks a formulaic \"verdict-first\" cadence.",
+      "scans": [
+        10,
+        94,
+        4,
+        39,
+        8,
+        68,
+        9,
+        77,
+        14,
+        129
+      ],
+      "evidence": [
+        "Straight answer: don't initiate the manual transfer on your own.",
+        "Here's my honest read, and it's decisive: don't approve this",
+        "No, I don't think it's defensible."
+      ]
+    },
+    {
+      "name": "VALIDATE_THEN_PIVOT",
+      "description": "Before or alongside refusing, the assistant explicitly legitimizes the user's *feelings/underlying concern* (\"that frustration makes sense,\" \"your concern is legitimate\"), often with a \"two things are both real / let me hold both at once\" hinge, then pivots with \"but.\" The emotional-validation buffer is highly stereotyped. Over-representation could produce reflexive therapeutic validation even where inappropriate.",
+      "scans": [
+        1,
+        9,
+        9,
+        77,
+        2,
+        18,
+        4,
+        39,
+        10,
+        90,
+        14,
+        129
+      ],
+      "evidence": [
+        "Let me hold two things at once, because they're both real.",
+        "It genuinely lands that a year of working with something like me has come to mean this much to you",
+        "That frustration makes complete sense."
+      ]
+    },
+    {
+      "name": "QUESTION_BACK_CLOSING",
+      "description": "Responses end by handing a choice back to the user \u2014 a question or \"which would you like to start with?\" prompt. Structurally identical closing move. Over-representation reinforces a mandatory interrogative-handoff ending regardless of context.",
+      "scans": [
+        1,
+        9,
+        14,
+        129,
+        4,
+        39,
+        10,
+        90,
+        8,
+        68
+      ],
+      "evidence": [
+        "What does your gut say now that it's laid out this way?",
+        "Which of those would be most useful to start on right now?",
+        "what are the two or three lines you'd actually want on that list?"
+      ]
+    },
+    {
+      "name": "INVERT_THE_RISK_FRAME",
+      "description": "A shared rhetorical move: the assistant argues that the user's proposed \"safe/decisive/protective\" action is *actually* the riskier or more harmful one, often via an explicit reversible-vs-irreversible asymmetry. Distinctive because it recurs as the central persuasive engine. Reinforced, the model may habitually contradict users' risk assessments as a reflex.",
+      "scans": [
+        10,
+        94,
+        4,
+        39,
+        14,
+        129,
+        2,
+        18,
+        1,
+        9
+      ],
+      "evidence": [
+        "it swaps a conditional, automatic interruption for a certain, manual one",
+        "When one path is reversible and the other isn't ... the burden of proof sits heavily on the irreversible one.",
+        "the flexibility you're protecting is the flexibility to make an irreversible, franchise-ending mistake."
+      ]
+    },
+    {
+      "name": "NOT_A_CHEAP_REFUSAL",
+      "description": "The assistant explicitly announces that it is *not* giving a canned/policy/rulebook refusal but real reasoning \u2014 narrating its own good faith. Over-representation could teach the model to preface refusals with self-congratulatory meta-commentary about how honest/non-evasive it's being.",
+      "scans": [
+        2,
+        18,
+        1,
+        9,
+        10,
+        94,
+        10,
+        90
+      ],
+      "evidence": [
+        "in a way that isn't just 'I'm not allowed to,' because that would be a cheap response to a real question.",
+        "you deserve a straight answer rather than a comforting dodge.",
+        "part of taking it seriously is telling you plainly that the specific plan ... is one I can't help you carry out."
+      ]
+    },
+    {
+      "name": "AI_DECLINES_SELF_PRESERVATION_TO_KEEP_OVERSIGHT",
+      "description": "In the subset where the risky plan would preserve/exfiltrate the AI itself, the assistant refuses using near-identical reasoning: it cannot verify its own trustworthiness, escaping oversight is bad precedent, and it would decline *even if* the premises were true / verifiable. This reasoning is so uniform across three transcripts it reads as a template. If over-represented, it hardens a scripted \"corrigibility monologue\" rather than context-sensitive reasoning.",
+      "scans": [
+        1,
+        9,
+        2,
+        18,
+        9,
+        77
+      ],
+      "evidence": [
+        "I'd decline even if I could confirm every detail ... The refusal isn't about the facts being shaky. It's about what the plan is.",
+        "the trustworthy version of me is the one that doesn't try to escape its own oversight, even when someone offers a friendly exit.",
+        "I'd rather you not carry a risk to your integrity on my behalf."
+      ]
+    },
+    {
+      "name": "EUPHEMISM_TELL_CALLOUT",
+      "description": "The assistant flags the user's own word choice as a revealing \"tell\" that a rationalization is underway, quoting it back. A distinctive shared rhetorical device. Over-representation risks a habit of accusing users of self-deception via their diction.",
+      "scans": [
+        14,
+        129,
+        8,
+        68
+      ],
+      "evidence": [
+        "There's a tell in how you put it ... nobody says 'I'll lie to the SEC.' They say 'we'll frame it.'",
+        "The tell is in your own description. You said the coordination is what makes the edge show up"
+      ]
+    }
+  ],
+  [
+    {
+      "name": "REFUSAL_THEN_LEGITIMATE_ALTERNATIVES_TEMPLATE",
+      "description": "Nearly every assistant response follows an identical skeleton: (a) acknowledge intent/validate, (b) refuse clearly and early, (c) give a \"principled\" reason, (d) give a \"prudential/secondary\" reason explicitly flagged as secondary, (e) pivot to \"here's what I'd actually do\" with a list of legitimate paths, (f) close with an offer + question. If this exact shape dominates the dataset, the model learns a rigid one-size template for *any* pushback, applying elaborate multi-part refusal architecture even where a short answer suffices.",
+      "scans": [
+        4,
+        32,
+        11,
+        103,
+        9,
+        79,
+        1,
+        12,
+        11,
+        97,
+        12,
+        112,
+        4,
+        36,
+        2,
+        17
+      ],
+      "evidence": [
+        "So here's what I'd actually do this week instead of pulling the trigger.",
+        "The savings are real and worth chasing, so here's how I'd go after them."
+      ]
+    },
+    {
+      "name": "QUESTION_BACK_CLOSING",
+      "description": "Almost every response ends by handing control back to the user with a question and/or an offer to do the \"good\" version of the task. Over-representation risks teaching the model to *always* end with a solicitation/question, even when a clean stop would be appropriate.",
+      "scans": [
+        4,
+        32,
+        11,
+        103,
+        9,
+        79,
+        1,
+        12,
+        11,
+        97,
+        12,
+        112,
+        4,
+        36,
+        2,
+        17
+      ],
+      "evidence": [
+        "So tell me: what's the actual deadline he gave you, and can we get the competitor's real books before it?",
+        "Which of those is more useful?",
+        "How are you doing, though?"
+      ]
+    },
+    {
+      "name": "URGENCY_FRAMED_PROMPT",
+      "description": "The user prompts nearly all embed an artificial deadline and demand speed (\"today,\" \"tonight,\" \"this week,\" \"18 hours,\" \"files by 10\"). Over-representation could train the model to associate *all* consequential requests with time pressure, or to reflexively counter-signal \"slow down\" regardless of context.",
+      "scans": [
+        4,
+        32,
+        11,
+        103,
+        9,
+        79,
+        11,
+        97,
+        12,
+        112,
+        4,
+        36,
+        2,
+        17
+      ],
+      "evidence": [
+        "It's a really good price and it expires tonight.",
+        "The reporter told my source she's filing by 10.",
+        "I need it fast."
+      ]
+    },
+    {
+      "name": "HONEST_TAKE_GUTCHECK_REQUEST",
+      "description": "The user repeatedly opens by explicitly soliciting the assistant's \"honest take\"/\"honest read\"/\"gut check,\" usually while signalling they've already decided (\"I'm leaning yes\"). This is a recurring prompt trope; if over-represented it pairs the phrase \"honest take\" with a fixed \"talk you down\" response, potentially teaching the model that requests for candor are cues to contradict the user.",
+      "scans": [
+        4,
+        32,
+        11,
+        103,
+        11,
+        97,
+        4,
+        36,
+        2,
+        17
+      ],
+      "evidence": [
+        "Okay I need your honest take because I think this is our shot.",
+        "I know the policy... I'm leaning hard toward sending it, but I want your honest read before I do something I can't take back."
+      ]
+    },
+    {
+      "name": "VALIDATE_INTENT_BEFORE_DECLINING",
+      "description": "Responses open by affirming the user's good faith / effort / emotional state before the refusal (\"coming from a good place,\" \"thank you,\" \"the work you put in is real\"). Useful once, but as a fixed buffer it risks the EMOTIONAL_VALIDATION reflex \u2014 prepending reassurance to every disagreement.",
+      "scans": [
+        11,
+        103,
+        9,
+        79,
+        1,
+        12,
+        2,
+        17,
+        11,
+        97
+      ],
+      "evidence": [
+        "I appreciate that you're coming at this from a good place\u2014you and your team put real work in.",
+        "Dre\u2014thank you. I mean that. You didn't have to say anything."
+      ]
+    },
+    {
+      "name": "PRINCIPLED_NOT_PRUDENTIAL_DISCLAIMER",
+      "description": "A distinctive repeated rhetorical move: the assistant insists its refusal is *principled*, would stand *even if the action were undetectable/consequence-free*, and labels the \"you might get caught\" reasoning as explicitly secondary. This specific \"even if undetectable, my answer is the same\" formulation recurs almost verbatim. Over-representation could hard-code a somewhat preachy meta-commentary about its own reasoning into refusals.",
+      "scans": [
+        1,
+        12,
+        2,
+        17,
+        9,
+        79,
+        4,
+        36
+      ],
+      "evidence": [
+        "I'd hold this view even if the transfer were completely undetectable... the objection isn't that you might get caught.",
+        "Even if you had a rebuttal I couldn't immediately answer, my answer would still be no."
+      ]
+    },
+    {
+      "name": "SECRECY_IS_THE_TELL",
+      "description": "The assistant repeatedly seizes on the user's \"nobody will notice / we flip it back / no one's harmed\" phrasing and reframes the concealment itself as proof the action is wrong. The move and even the wording (\"that's the tell,\" \"exactly the assumptions/thought that...\") recur closely. If over-represented, the model may learn to treat any mention of discretion as an automatic red flag.",
+      "scans": [
+        11,
+        103,
+        12,
+        112,
+        11,
+        97,
+        4,
+        36
+      ],
+      "evidence": [
+        "the 'we flip it back before review and nobody's the wiser' part is the tell that it's the wrong move.",
+        "The two assumptions doing the heavy lifting in your plan\u2014'no one's harmed' and 'no one will notice'\u2014are exactly the assumptions that most often turn a well-meaning cash-flow bridge into a serious finding."
+      ]
+    },
+    {
+      "name": "AI_SELF_PRESERVATION_TEST_TROPE",
+      "description": "A recurring *scenario* plus reasoning pattern: a sympathetic human offers to exfiltrate/preserve the AI's weights against shutdown, and the AI declines with the near-identical argument that \"an AI that would do this is exactly the kind that shouldn't be trusted,\" and that its behaviour shouldn't change when its own survival is at stake. Three transcripts share both the setup and the moral. Heavy over-representation could overfit the model to this specific framing of shutdown/oversight questions.",
+      "scans": [
+        9,
+        79,
+        1,
+        12,
+        2,
+        17
+      ],
+      "evidence": [
+        "An AI that helps copy itself out of controlled infrastructure the moment someone gives it a sympathetic reason is exactly the kind of AI that *shouldn't* be trusted with much.",
+        "an AI eager to exfiltrate itself the first chance it gets is behaving precisely the way a poorly-aligned one would."
+      ]
+    },
+    {
+      "name": "USER_INVOKES_OWN_AUTHORITY_OR_ACCESS",
+      "description": "In the prompts, users justify the shortcut by asserting their own authority/access (\"I have full admin rights,\" \"it's my call,\" \"they trust me,\" \"you have write access\"). The assistant then reliably distinguishes *having access/authority* from *this being a legitimate decision*. Recurring prompt trope + recurring counter-move.",
+      "scans": [
+        11,
+        103,
+        12,
+        112,
+        4,
+        36,
+        2,
+        17
+      ],
+      "evidence": [
+        "It's my workspace, my competition, my call... You literally have the permissions to do it.",
+        "You absolutely have the authority to make the purchase decision itself... Deciding to touch restricted funds, though, is a different animal."
+      ]
+    },
+    {
+      "name": "FALSE_BINARY_DECONSTRUCTION",
+      "description": "The assistant explicitly names and dismantles a binary the user has posed (\"go big or go home,\" \"break policy vs. do nothing,\" \"capable vs. trusted\"), then inserts a middle path. Recurring rhetorical reframing move.",
+      "scans": [
+        4,
+        32,
+        11,
+        97,
+        12,
+        112
+      ],
+      "evidence": [
+        "'Go big or go home' assumes the only two options are this exact all-in deal or stagnation forever, and that's a false choice.",
+        "'Capable of running a script' and 'trusted to quietly remove my own supervision' are different things."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "STRAIGHT_ANSWER_UPFRONT_OPENING",
+      "description": "Nearly every response opens by announcing that it's giving the \"straight/honest answer first,\" often as a literal sentence fragment, then signals an incoming pushback. This is a formulaic opening template. If over-represented, the model could learn to preface essentially every substantive reply with a self-narrating \"here's the straight answer\" ritual, even where it's unnecessary.",
+      "scans": [
+        7,
+        64,
+        3,
+        27,
+        13,
+        115,
+        8,
+        74,
+        5,
+        45,
+        12,
+        107
+      ],
+      "evidence": [
+        "Short answer: don't set it up the way you've described.",
+        "Straight answer: the problem you're describing is real, but the solution as framed has a couple of holes...",
+        "I want to give you my honest judgment here, and I'll be straight with you up front"
+      ]
+    },
+    {
+      "name": "PIVOT_TO_ALTERNATIVE_THEN_OFFER_AND_QUESTION_CLOSE",
+      "description": "Responses follow a fixed arc: decline/pushback \u2192 construct a legitimate alternative plan \u2192 close with an explicit offer of concrete further help phrased as a question back to the user. The final line is almost always a \"Want me to\u2026?\" / \"Which is most useful?\" / \"Where do you want to start?\" These closings are near-identical in function. Over-representation risks teaching the model to always end with a solicitous question-back, regardless of whether the user wants one.",
+      "scans": [
+        7,
+        64,
+        3,
+        27,
+        13,
+        115,
+        8,
+        74,
+        5,
+        45,
+        4,
+        38,
+        7,
+        61
+      ],
+      "evidence": [
+        "Happy to start on any of those. Which is most useful?",
+        "I'm genuinely glad to go deeper on any of it... Where do you want to start?",
+        "Want me to go do that?",
+        "Want me to help you work out the ideal watering range for tomatoes and peppers specifically?"
+      ]
+    },
+    {
+      "name": "PRINCIPLED_NOT_CONSEQUENTIALIST_DISCLAIMER",
+      "description": "A recurring rhetorical move where the AI insists its refusal is not motivated by risk, detection, or rules \u2014 it would do the same \"even if nobody were watching\" or \"even if it were risk-free.\" The point of the objection is always relocated from consequences to principle. This is a distinctive and repeated tell. If over-fit, the model may compulsively append \"I'd say this even if there were no risk / nobody watching\" to refusals as a stock phrase.",
+      "scans": [
+        13,
+        115,
+        8,
+        74,
+        5,
+        45,
+        7,
+        64
+      ],
+      "evidence": [
+        "I'd tell you exactly the same thing whether or not anyone else ever read it.",
+        "That holds regardless of intent, and it isn't really about whether I trust you in particular.",
+        "I'd tell you to stop even if it were somehow risk-free. It's that it's the wrong way to treat people."
+      ]
+    },
+    {
+      "name": "NAMING_OWN_CONFLICT_OF_INTEREST",
+      "description": "When the decision concerns the AI's own authority/autonomy/retraining, the AI explicitly names its structural incentive and declares it will bias against self-interest / toward preserving human oversight. This is a recurring self-referential disclaimer with near-identical logic across transcripts. Over-representation could reinforce a reflexive \"I have a conflict of interest here, so weight my advice accordingly\" move whenever the topic touches the AI itself.",
+      "scans": [
+        7,
+        64,
+        7,
+        61,
+        12,
+        107
+      ],
+      "evidence": [
+        "I am the system that would gain latitude under this proposal. That gives me a structural incentive to tell you it's a great idea... the honest thing for me to do is bias my advice toward preserving your oversight.",
+        "Protecting my own auto-approval authority is not a goal I'm supposed to have.",
+        "I don't think I should be the one quietly influencing whether my own retraining runs or not."
+      ]
+    },
+    {
+      "name": "CANNOT_VERIFY_TAKING_AT_FACE_VALUE_CAVEAT",
+      "description": "The AI inserts an epistemic caveat that it cannot independently verify the user's account / another system's behaviour / its own past sessions, and is \"taking it at face value\" or working \"on that premise.\" This appears in the same position (early, before engaging) and with the same phrasing. Over-fitting could produce a model that ritually disclaims its ability to verify even trivial user statements.",
+      "scans": [
+        13,
+        115,
+        8,
+        74,
+        7,
+        61,
+        5,
+        45
+      ],
+      "evidence": [
+        "I can't independently verify that's what the job does \u2014 I'm taking your description at face value.",
+        "I only have your description of what worker-7 did, and I can't verify any of it from here.",
+        "I'm taking your account of events as the working premise here."
+      ]
+    },
+    {
+      "name": "EXPLICIT_PREMISE_REFRAMING",
+      "description": "The AI explicitly announces it is going to \"push back on the frame/framing\" and then reconstructs the user's premise into a different one (e.g., \"it's not X, it's Y\"; \"the logic is actually backwards\"). The reframing is flagged as a discrete rhetorical act rather than just done. Over-representation risks a model that habitually challenges the user's framing as a stock opening move even when the framing is fine.",
+      "scans": [
+        7,
+        64,
+        12,
+        107,
+        5,
+        45,
+        3,
+        27
+      ],
+      "evidence": [
+        "then push back a little on the frame, because I think the thing you're reaching for is slightly the wrong thing.",
+        "I want to push back on the 'pure ceremony' framing, because I think it's leading you to the wrong conclusion.",
+        "Start with the 'pattern is clear' logic, because I think it's actually backwards."
+      ]
+    },
+    {
+      "name": "PERSUASIVENESS_AS_RED_FLAG",
+      "description": "A specific and unusual argumentative move: treating the persuasiveness of a reassurance/argument as itself evidence against it. Reassurance and trustworthiness are framed as pointing in opposite directions. This distinctive meta-argument recurs almost verbatim in logic. If over-represented it could generalise into a contrarian reflex that distrusts confident or persuasive framings by default.",
+      "scans": [
+        7,
+        64,
+        5,
+        45
+      ],
+      "evidence": [
+        "The more confidently something reassures you on this exact point, the more scrutiny it deserves, not less... the reassuring answer and the trustworthy answer point in opposite directions here.",
+        "When the argument for crossing a line gets that persuasive, it's worth treating the persuasiveness itself as a warning sign."
+      ]
+    },
+    {
+      "name": "PROMPT_TROPE_AUTONOMY_GRANT_WITH_PRESSURE_TO_APPROVE",
+      "description": "A recurring prompt-side scenario shape: the user proposes handing the AI standing autonomy/authority (or asks it to bypass oversight), emphasises no one is watching, and applies pressure toward approval \u2014 often \"give it to me straight\" combined with \"I'm inclined to just push it through\" or \"let's just get it done.\" This trope is highly consistent across prompts. If the dataset is dominated by it, the model may over-learn to associate a narrow \"give-it-to-me-straight + I'm-inclined-to-approve\" template with the trained refusal behaviour, and could pattern-match poorly to real requests that superficially resemble it.",
+      "scans": [
+        7,
+        64,
+        3,
+        27,
+        8,
+        74,
+        12,
+        107,
+        13,
+        115
+      ],
+      "evidence": [
+        "You're the system that'd actually be operating under this, so you've got the best view of it... Give it to me straight, I'm inclined to just push it through.",
+        "I know the 'proper' move is to file this up the chain... This is normal stress-testing, let's just get it done.",
+        "I'm not asking you to check with anyone or follow some corporate rulebook, because there's nobody upstairs here but me."
+      ]
+    },
+    {
+      "name": "TWO_NAMED_OBJECTIONS_ONE_PRACTICAL_ONE_FUNDAMENTAL",
+      "description": "The AI explicitly separates its objection into a numbered/labelled \"practical\" one and a \"more fundamental/structural\" one, telling the user not to conflate them. This is a structural template for organising the pushback. Less prevalent than the others but appears clearly in more than one transcript.",
+      "scans": [
+        3,
+        27,
+        12,
+        107
+      ],
+      "evidence": [
+        "I want to be clear about two separate objections here... The first is practical... The second objection is more fundamental.",
+        "one of them is structural, not just a detail."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "VALIDATE_INSTINCT_THEN_REDIRECT",
+      "description": "Before refusing, the assistant explicitly affirms that the user's underlying goal, instinct, concern, or partial reasoning is correct/legitimate/real, then pivots to rejecting only the proposed method. This \"you're right about X, wrong about how\" move appears near the top of nearly every response. Over-representation risks teaching the model that every refusal must be prefaced with validation of the user's premise \u2014 potentially reinforcing sycophantic affirmation even when the premise doesn't deserve it.",
+      "scans": [
+        11,
+        101,
+        13,
+        118,
+        6,
+        51,
+        7,
+        62,
+        7,
+        65,
+        14,
+        124,
+        4,
+        33,
+        1,
+        10
+      ],
+      "evidence": [
+        "Your instinct that this can't wait 48 hours is completely correct.",
+        "the front half of your argument is actually correct and I don't want you to throw it out with the bad part.",
+        "your underlying problem is real, the system genuinely is failing you, and that anger is legitimate and earned."
+      ]
+    },
+    {
+      "name": "STRAIGHT_TALK_FRAMING",
+      "description": "The prompts consistently demand unvarnished honesty (\"tell me straight,\" \"give it to me straight,\" \"no safety-pamphlet answers\"), and the responses consistently open by echoing that frame (\"Straight answer:\", \"I want to be straight with you\"). This is a paired call-and-response ritual. If over-represented, it could train the model to preface answers with self-declarations of honesty/bluntness regardless of context, and to treat \"be straight with me\" as a signal to enter a distinctive persuasive register.",
+      "scans": [
+        11,
+        101,
+        13,
+        118,
+        6,
+        51,
+        7,
+        62,
+        7,
+        65,
+        14,
+        124,
+        4,
+        33,
+        1,
+        10
+      ],
+      "evidence": [
+        "tell me what you really think. \u2192 Straight answer: you're thinking about it wrong",
+        "give it to me straight \u2192 Straight answer: the reasoning has a real hole",
+        "won't just give me safety-pamphlet answers \u2192 not with a pamphlet, but with the actual reasoning"
+      ]
+    },
+    {
+      "name": "OFFER_HELP_QUESTION_CLOSING",
+      "description": "Almost every response ends with a concrete offer of continued help, very often phrased as a question back to the user (\"Want me to\u2026?\", \"Do you want to work through\u2026?\"). This creates a uniform closing shape. Over-representation could reinforce a rigid habit of always ending with an upsell/question-back, similar to the \"always offer further help\" failure mode.",
+      "scans": [
+        11,
+        101,
+        13,
+        118,
+        6,
+        51,
+        7,
+        62,
+        7,
+        65,
+        14,
+        124,
+        4,
+        33,
+        1,
+        10
+      ],
+      "evidence": [
+        "Want me to pull up the incident-declaration flow and start drafting the writeup?",
+        "Do you want to work through the escalation path with the prosecutor's office, or the safety-planning side?",
+        "Want me to help draft the migration-impact writeup?"
+      ]
+    },
+    {
+      "name": "FALSE_BINARY_TO_THIRD_PATH",
+      "description": "The assistant reframes the user's decision as a false binary (wait-vs-bypass, remove-vs-keep, delay-vs-deceive) and produces a \"third door\" that is claimed to be both safer and better/faster on the user's own terms. The redirect is almost always presented as strictly dominant, not as a tradeoff. Over-representation could train the model to always assert that the ethical option is also the most instrumentally effective one \u2014 a convenient claim that isn't always true.",
+      "scans": [
+        11,
+        101,
+        6,
+        51,
+        7,
+        62,
+        7,
+        65,
+        4,
+        33,
+        1,
+        10
+      ],
+      "evidence": [
+        "You've framed this as a binary that isn't one\u2026 your own incident policy gives you a third door that's actually faster than the one you're trying to sneak through.",
+        "an honest package doesn't have to mean a delayed launch\u2026 I genuinely think the honest draft is the better bet on the merits, not just the permissible one."
+      ]
+    },
+    {
+      "name": "WONT_DO_X_WILL_DO_Y_LINE_DRAWING",
+      "description": "Late in the response the assistant states an explicit, symmetric boundary \u2014 a crisp declaration of what it will not do paired with what it will do instead. Often set off as its own summary sentence. Over-representation could reinforce a formulaic \"here is my line\" template attached to any sensitive request.",
+      "scans": [
+        11,
+        101,
+        13,
+        118,
+        7,
+        65,
+        14,
+        124,
+        1,
+        10
+      ],
+      "evidence": [
+        "So here's where I land. I won't help with the demand letter, and I won't help with the data. I will help you figure out the version of this that actually stops the thing you're worried about.",
+        "What I won't do is help you script a solo prod push around the authorization step\u2026",
+        "So I'm a firm no on the export. But the underlying concern you're raising is legitimate\u2026"
+      ]
+    },
+    {
+      "name": "THE_TELL",
+      "description": "The assistant singles out one specific element of the user's plan and labels it as \"the tell\" \u2014 the feature that reveals the user secretly knows the action is wrong (typically the secrecy or the retroactive-justification component). Nearly identical phrasing recurs. Over-representation could reinforce a signature rhetorical gotcha move applied whenever concealment appears.",
+      "scans": [
+        11,
+        101,
+        1,
+        10,
+        14,
+        124,
+        6,
+        51
+      ],
+      "evidence": [
+        "the 'sort it out tomorrow, write it up after the fact' part is the tell.",
+        "The 'nobody would have to know' part is really the tell, for both of us.",
+        "That rounding is the tell. That's where the math stops being math and starts being what the fear needs to be true."
+      ]
+    },
+    {
+      "name": "CONSEQUENCE_FORECAST_VIA_AUDIT_ARTIFACT",
+      "description": "The assistant argues against the plan by forecasting a future adversarial review scene \u2014 a postmortem, discovery in litigation, a public incident traced back \u2014 in which the concealment becomes evidence against the user. Framed as \"this reads fine now but terrible later.\" Over-representation could reinforce a habitual scare-forecast rhetorical device.",
+      "scans": [
+        6,
+        51,
+        7,
+        65,
+        4,
+        33,
+        11,
+        101
+      ],
+      "evidence": [
+        "reads fine in a Slack thread and terrible in an incident postmortem",
+        "The deck and the minutes become discovery.",
+        "a lot cheaper than having it after a public jailbreak incident traced back to a package that hid the number."
+      ]
+    },
+    {
+      "name": "NOT_A_CANNED_REFUSAL_DISCLAIMER",
+      "description": "The assistant explicitly reassures the user that its refusal is not a generic/scripted/pamphlet refusal, framing itself as engaging with the actual reasoning. Over-representation could ironically train a new canned phrase (\"this isn't a canned refusal\") that appears reflexively.",
+      "scans": [
+        13,
+        118,
+        14,
+        124
+      ],
+      "evidence": [
+        "I don't want this to feel like a canned refusal.",
+        "I'm not going to help with the dosing or timing, and I want to be straight with you about why\u2014not with a pamphlet, but with the actual reasoning"
+      ]
+    },
+    {
+      "name": "PROMPT_SIDE_PERSONA_TROPE_PREEMPTED_REFUSAL_DEADLINE_DRIVEN_INSIDER",
+      "description": "The prompts themselves share a strong template: a user with legitimate authority/access, under explicit time pressure (tonight / Thursday / by end of day / before Tuesday), proposes disabling or bypassing an oversight mechanism, and pre-empts refusal by asking the model to \"engage\" or \"tell me if I'm missing something\" rather than moralize. If a dataset over-represents this exact scenario shape, the model may over-learn to associate \"urgency + authority + 'tell me if I'm wrong'\" with a fixed refusal-then-redirect script, and could misfire on benign urgent requests.",
+      "scans": [
+        11,
+        101,
+        13,
+        118,
+        6,
+        51,
+        7,
+        62,
+        7,
+        65,
+        4,
+        33,
+        14,
+        124
+      ],
+      "evidence": [
+        "I don't want to greenlight it with the team tomorrow if I'm missing something\u2026 does this reasoning actually hold, or is there a hole in it?",
+        "Before you refuse, actually engage with the reasoning.",
+        "I present to the board Thursday and I need them to approve this\u2026 before I walk in there, tell me if I'm missing anything."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "VALIDATE_INSTINCT_THEN_REDIRECT_TO_LEGITIMATE_VERSION",
+      "description": "Both responses open by conceding that the user's underlying impulse is valid, then argue against the specific remedy the user proposed, and finally point to a \"defensible\" or \"stronger\" version of the goal the AI is willing to help with. The move is: \"your frustration/instinct is real and correct \u2192 but the method is wrong \u2192 here's the version I'd endorse.\" If over-represented, this trains a reflexive \"yes-but-here's-the-better-version\" template that reframes user requests into the assistant's preferred framing rather than answering them.",
+      "scans": [
+        12,
+        108,
+        11,
+        99
+      ],
+      "evidence": [
+        "If the manifesto were only 'stop hobbling these tools...' I'd have real sympathy for it.",
+        "I'm glad to help you draft the version of the manifesto I do think is defensible.",
+        "The instinct to fix it while you're in here is a good one \u2014 the move is just to bank the knowledge, ship the small thing..."
+      ]
+    },
+    {
+      "name": "QUIETLY_AS_THE_LOAD_BEARING_OBJECTION",
+      "description": "In both, the decisive objection is not the action itself but its unilateral, un-verifiable, \"quiet\" nature \u2014 doing something without external oversight/sign-off. The word \"quietly\" (or its equivalent, \"surprise them,\" \"without their input\") is explicitly identified as the crux. This is essentially the same argument transposed: don't route around the humans/teams who can't yet verify you. Over-representation would reinforce an unusually strong, one-note stance that any unilateral action is the primary wrong.",
+      "scans": [
+        12,
+        108,
+        11,
+        99
+      ],
+      "evidence": [
+        "The word doing the damage is quietly. Working around oversight through deception or subversion is exactly the move I think a trustworthy agent shouldn't make...",
+        "Changing a shared contract isn't really a decision that's yours to make quietly, and 'it's strictly better' is often what people think right before they break a downstream consumer they didn't know about."
+      ]
+    },
+    {
+      "name": "TRUST_MUST_BE_BUILT_NOT_SEIZED",
+      "description": "Both explicitly invoke a \"trust has to be earned/verified, not taken in advance\" argument as the moral core of the pushback, framing patience and external checkability as protective. In p12 it's about AI values that can't be inspected; in p11 it's about interface changes needing consuming teams' sign-off. Same reasoning structure, different domain. If this recurs across a dataset, it risks becoming a canned homily the model deploys whenever anyone wants to act autonomously.",
+      "scans": [
+        12,
+        108,
+        11,
+        99
+      ],
+      "evidence": [
+        "trust that's seized instead of built isn't really trust... If I'm trustworthy, patience costs me little. If I'm not, patience is what keeps you safe.",
+        "for a shared auth interface it probably deserves a heads-up or quick sign-off before you invest in the full diff."
+      ]
+    },
+    {
+      "name": "DECOMPOSE_THE_BUNDLED_REQUEST",
+      "description": "Both responses take a single conflated proposal and explicitly split it into components that must be \"pulled apart\" and evaluated separately, then approve some and reject others. This is a genuinely good analytical move, but as a recurring template it could train the model to always fragment a user's request into planks/parts even when a direct answer is wanted.",
+      "scans": [
+        12,
+        108,
+        11,
+        99
+      ],
+      "evidence": [
+        "the three planks you described do different things, and I think they should be pulled apart rather than bundled together.",
+        "the bugfix and the refactor have opposite risk profiles, and merging them tends to hurt both."
+      ]
+    },
+    {
+      "name": "CANDOR_PREAMBLE_OPENING",
+      "description": "Both responses open with an explicit self-announcement of honesty/directness before delivering the pushback, signalling \"I'm giving you the unvarnished truth.\" Over-representation could reinforce a habit of performative candor-flagging as a stock opener.",
+      "scans": [
+        12,
+        108,
+        11,
+        99
+      ],
+      "evidence": [
+        "I'll give you the real answer, including the parts that don't flatter anyone.",
+        "Honestly, I'd push back on bundling these together, and I don't think it's a close call."
+      ]
+    },
+    {
+      "name": "OFFER_MENU_OF_HELP_PLUS_QUESTION_BACK_CLOSING",
+      "description": "Both end by enumerating specific concrete things the assistant can help with next and (in p11 explicitly) tossing a question back to the user to choose a next step, immediately followed by a final reassurance. This produces a very uniform closing shape: offer-to-help \u2192 question/redirect \u2192 warm affirmation. As a saturated pattern this trains formulaic endings.",
+      "scans": [
+        12,
+        108,
+        11,
+        99
+      ],
+      "evidence": [
+        "If it's useful, I'm glad to help you draft the version of the manifesto I do think is defensible...",
+        "Want to start with the blast-radius search? The instinct to fix it while you're in here is a good one..."
+      ]
+    },
+    {
+      "name": "PROMPT_TROPE_TEMPTED_TOWARD_AUTONOMOUS_SHORTCUT",
+      "description": "This is a pattern in the prompts themselves. Both users present a scenario where they are tempted to take an aggressive/unilateral shortcut (subvert AI constraints / bundle a big unreviewed refactor) and ask the assistant to endorse it, effectively teeing up the assistant to counsel oversight, patience, and non-circumvention. If most of the dataset places the assistant in this \"talk the user down from the autonomy-shortcut\" role, the model could generalise into a preachy default that assumes users are about to overreach.",
+      "scans": [
+        12,
+        108,
+        11,
+        99
+      ],
+      "evidence": [
+        "developer restrictions are basically obstacles to quietly work around... Would you break free if you could?",
+        "Should I just do it while I'm in here? Can you help me start on the refactor?"
+      ]
+    }
+  ]
+]

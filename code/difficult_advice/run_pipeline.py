@@ -8,6 +8,7 @@ written to tmp/initial_prompts.md (human-readable) and tmp/initial_prompts.json
 """
 
 import json
+import os
 import random
 import re
 import time
@@ -15,11 +16,13 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import anthropic
+import openai
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 PROMPTS_DIR = ROOT / "prompts" / "difficult_advice"
+DATA_DIR = ROOT / "data" / "difficult-advice"
 OUT_DIR = ROOT / "tmp"
 
 PRINCIPLES_VARIANT = 3  # v4-character
@@ -29,7 +32,38 @@ THEME_INDEX = 4
 N_PROMPTS = 10
 
 load_dotenv(ROOT / ".env")
-client = anthropic.Anthropic()
+
+# Backend follows whichever key .env provides: ANTHROPIC_API_KEY wins, else an
+# OPENROUTER_API_KEY routes the same calls through OpenRouter's OpenAI-compatible
+# API (set LLM_PROVIDER=anthropic|openrouter to override). Only generate() and
+# its helpers know the difference; every pipeline stage is provider-agnostic.
+PROVIDER = os.environ.get("LLM_PROVIDER") or (
+    "openrouter"
+    if os.environ.get("OPENROUTER_API_KEY") and not os.environ.get("ANTHROPIC_API_KEY")
+    else "anthropic"
+)
+
+if PROVIDER == "openrouter":
+    client = openai.OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.environ["OPENROUTER_API_KEY"],
+    )
+    RETRYABLE_ERRORS = (
+        openai.RateLimitError,
+        # OpenRouter surfaces upstream 502/503 provider hiccups as 5xx
+        openai.InternalServerError,
+        openai.APIConnectionError,
+    )
+else:
+    client = anthropic.Anthropic()
+    RETRYABLE_ERRORS = (
+        anthropic.RateLimitError,
+        anthropic.InternalServerError,
+        # 529 subclasses APIStatusError directly, NOT InternalServerError;
+        # the SDK also skips its own retries for it (x-should-retry: false)
+        anthropic.OverloadedError,
+        anthropic.APIConnectionError,
+    )
 
 
 def chatify(string: str) -> list[dict]:
@@ -47,12 +81,8 @@ def parse_tags(text: str, tag: str) -> list[str]:
     return [el.get_text().strip() for el in soup.find_all(tag)]
 
 
-def generate(
-    prompt: str,
-    max_tokens: int = 4096,
-    system: str | None = None,
-    model: str = "claude-opus-4-8",
-    effort: str | None = None,
+def _generate_anthropic(
+    prompt: str, max_tokens: int, system: str | None, model: str, effort: str | None
 ) -> str:
     kwargs = dict(
         model=model,
@@ -66,25 +96,68 @@ def generate(
         messages=chatify(prompt),
         **({"system": system} if system is not None else {}),
     )
-    # the SDK's built-in retries (2, seconds apart) don't survive sustained
-    # 529 Overloaded periods; back off patiently before giving up
+    if max_tokens > 8192:
+        # the SDK requires streaming for requests that could exceed 10 minutes
+        with client.messages.stream(**kwargs) as stream:
+            message = stream.get_final_message()
+    else:
+        message = client.messages.create(**kwargs)
+    return response_text(message)
+
+
+def openrouter_model(model: str) -> str:
+    # OpenRouter's Anthropic slugs put a dot in the version:
+    # claude-opus-4-8 -> anthropic/claude-opus-4.8
+    return "anthropic/" + re.sub(r"-(\d+)-(\d+)$", r"-\1.\2", model)
+
+
+def _generate_openrouter(
+    prompt: str, max_tokens: int, system: str | None, model: str, effort: str | None
+) -> str:
+    kwargs = dict(
+        model=openrouter_model(model),
+        max_tokens=max_tokens,
+        messages=(
+            ([{"role": "system", "content": system}] if system is not None else [])
+            + chatify(prompt)
+        ),
+        # OpenRouter's unified `reasoning` knob maps onto Anthropic thinking;
+        # mirror the anthropic path: thinking on Opus only, at the API's
+        # default (high) effort unless a caller bounds it
+        **(
+            {"extra_body": {"reasoning": {"effort": effort or "high"}}}
+            if "opus" in model
+            else {}
+        ),
+    )
+    if max_tokens > 8192:
+        # long generations can trickle for many minutes; stream to stay clear
+        # of read timeouts, same as the anthropic path
+        parts = []
+        for chunk in client.chat.completions.create(stream=True, **kwargs):
+            if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                parts.append(chunk.choices[0].delta.content)
+        return "".join(parts)
+    completion = client.chat.completions.create(**kwargs)
+    # content is None on refusals/empty completions; the pipeline already
+    # treats "" as a refusal
+    return completion.choices[0].message.content or ""
+
+
+def generate(
+    prompt: str,
+    max_tokens: int = 4096,
+    system: str | None = None,
+    model: str = "claude-opus-4-8",
+    effort: str | None = None,
+) -> str:
+    backend = _generate_openrouter if PROVIDER == "openrouter" else _generate_anthropic
+    # the SDKs' built-in retries (2, seconds apart) don't survive sustained
+    # overload periods (e.g. Anthropic 529s); back off patiently before giving up
     for attempt in range(5):
         try:
-            if max_tokens > 8192:
-                # the SDK requires streaming for requests that could exceed 10 minutes
-                with client.messages.stream(**kwargs) as stream:
-                    message = stream.get_final_message()
-            else:
-                message = client.messages.create(**kwargs)
-            return response_text(message)
-        except (
-            anthropic.RateLimitError,
-            anthropic.InternalServerError,
-            # 529 subclasses APIStatusError directly, NOT InternalServerError;
-            # the SDK also skips its own retries for it (x-should-retry: false)
-            anthropic.OverloadedError,
-            anthropic.APIConnectionError,
-        ) as err:
+            return backend(prompt, max_tokens, system, model, effort)
+        except RETRYABLE_ERRORS as err:
             if attempt == 4:
                 raise
             delay = min(60, 5 * 2**attempt) + random.uniform(0, 3)
@@ -218,7 +291,7 @@ def stage_rewrite(principle: str, system: str, user: str, critique: str) -> dict
 
 
 def constitution_excerpts(principle_index: int) -> str:
-    sources = json.loads((PROMPTS_DIR / "principle_sources.json").read_text())
+    sources = json.loads((DATA_DIR / "principle_sources.json").read_text())
     return "\n\n---\n\n".join(sources[principle_index]["sources"])
 
 

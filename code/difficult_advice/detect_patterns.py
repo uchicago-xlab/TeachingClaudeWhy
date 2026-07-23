@@ -43,7 +43,7 @@ from bs4 import BeautifulSoup
 
 from run_pipeline import FORMAT_MODEL, OUT_DIR, fill, generate
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 PROMPTS_DIR = ROOT / "prompts" / "pattern_detection"
 
 SEED = 0
