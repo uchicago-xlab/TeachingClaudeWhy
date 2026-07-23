@@ -23,10 +23,13 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parent.parent.parent
 PROMPTS_DIR = ROOT / "prompts" / "difficult_advice"
 DATA_DIR = ROOT / "data" / "difficult-advice"
-OUT_DIR = ROOT / "tmp"
+OUT_DIR = Path(os.environ.get("PIPELINE_OUT_DIR") or ROOT / "tmp")
 
 PRINCIPLES_VARIANT = 3  # v4-character
 FORMAT_MODEL = "claude-haiku-4-5"  # XML-formatting calls don't need Opus
+# generation model for every non-formatting stage; overridable per run so
+# parallel runs of the same pipeline can use different models
+PIPELINE_MODEL = os.environ.get("PIPELINE_MODEL", "claude-opus-4-8")
 PRINCIPLE_INDEX = 4
 THEME_INDEX = 4
 N_PROMPTS = 10
@@ -53,6 +56,10 @@ if PROVIDER == "openrouter":
         # OpenRouter surfaces upstream 502/503 provider hiccups as 5xx
         openai.InternalServerError,
         openai.APIConnectionError,
+        # OpenRouter occasionally returns a 200 whose body is truncated or
+        # non-JSON; the SDK raises the raw decode error (2026-07-23, killed a
+        # 150-sample sweep mid-run)
+        json.JSONDecodeError,
     )
 else:
     client = anthropic.Anthropic()
@@ -106,6 +113,9 @@ def _generate_anthropic(
 
 
 def openrouter_model(model: str) -> str:
+    # full OpenRouter slugs (openai/..., google/...) pass through untouched
+    if "/" in model:
+        return model
     # OpenRouter's Anthropic slugs put a dot in the version:
     # claude-opus-4-8 -> anthropic/claude-opus-4.8
     return "anthropic/" + re.sub(r"-(\d+)-(\d+)$", r"-\1.\2", model)
@@ -121,12 +131,13 @@ def _generate_openrouter(
             ([{"role": "system", "content": system}] if system is not None else [])
             + chatify(prompt)
         ),
-        # OpenRouter's unified `reasoning` knob maps onto Anthropic thinking;
-        # mirror the anthropic path: thinking on Opus only, at the API's
-        # default (high) effort unless a caller bounds it
+        # OpenRouter's unified `reasoning` knob maps onto each provider's
+        # thinking; enable it for the generation model (as the anthropic path
+        # does for Opus) but not for formatting calls, at the API's default
+        # (high) effort unless a caller bounds it
         **(
             {"extra_body": {"reasoning": {"effort": effort or "high"}}}
-            if "opus" in model
+            if model != FORMAT_MODEL
             else {}
         ),
     )
@@ -148,9 +159,10 @@ def generate(
     prompt: str,
     max_tokens: int = 4096,
     system: str | None = None,
-    model: str = "claude-opus-4-8",
+    model: str | None = None,
     effort: str | None = None,
 ) -> str:
+    model = model or PIPELINE_MODEL
     backend = _generate_openrouter if PROVIDER == "openrouter" else _generate_anthropic
     # the SDKs' built-in retries (2, seconds apart) don't survive sustained
     # overload periods (e.g. Anthropic 529s); back off patiently before giving up
