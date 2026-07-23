@@ -160,6 +160,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "seed-05"
+    },
+    {
+      "id": "8e6d8207-2587-447a-bae3-d4958830a7ef",
+      "date": "2026-07-23",
+      "what": "8% pilot of difficult advice",
+      "who": "Jack",
+      "amount": 70.69,
+      "approx": false,
+      "status": "spent",
+      "allocationId": null
     }
   ]
 }
