@@ -5,7 +5,17 @@ status: active
 # Progress Log
 
 ### 07/23
-It seems like the LLM judge is quite nosiy and not super trust worthy.
+It seems like the LLM judge is quite nosiy and not super trust worthy. Should prob only use this as a metric but not as clear filter.
+
+2026-07-23 — Fictional stories: judge fixed, prompt grid finished, rewrite pipeline done, corpus generation started
+
+I tested the LLM judge by having it grade the same 100 stories three times. Average scores were stable, but its pass/fail calls on individual stories flipped a lot between runs — about a third of borderline stories changed. I read the failed stories myself and found the judge was mostly being too strict (once it even quoted my own input back as if the story had written it). I rewrote the strictness rules; bad calls dropped from 12 to 4, and the new prompt turned out as good as the old one — the earlier drop was the judge's fault, not the prompt's. Decision: judge each story once, keep the score as a quality measurement rather than deleting stories with it, and generate 20% extra so we can still filter later.
+
+I added two new dials to generation: perspective (third person, the AI narrating, or a human coworker narrating) and writing style ("write like Hemingway," etc.). A test batch showed no quality cost. I compared Sonnet 5 to Sonnet 4.6 on identical prompts — Sonnet 5 wrote better stories at two-thirds the price, so it's now the generator. One quirk: style instructions pull in clichés (half of all Chandler stories open with rain), and rewording doesn't help — it's baked into the model's idea of the author. I accepted it, spread it thin across 29 styles, and added a check that reports each style's clichés.
+
+The rewrite step is finished: each finished story gets a human-protagonist version and a "Zephyrix" version (an invented species the model has no associations with). Prompts are final, the cheap rewriter works, and automatic checks catch most mistakes — about 85–90% of rewrites come out clean.
+
+I also cleaned the code and data folders, built all 14,000 corpus prompts, and logged $11.34 of spending. Tonight I launched the first slice of real generation — 3,000 main-corpus stories plus both comparison datasets — as a quality check (~$130 total) before committing to the full run.
 
 ### 07/22
 - logged missing spending
