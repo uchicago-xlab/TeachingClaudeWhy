@@ -190,6 +190,16 @@
       "approx": true,
       "status": "burned",
       "allocationId": null
+    },
+    {
+      "id": "4200cf2e-f483-4050-86e6-e07c74a972d7",
+      "date": "2026-07-23",
+      "what": "8% pilot of difficult advice w/ Sonnet",
+      "who": "Jack",
+      "amount": 32,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
     }
   ]
 }
