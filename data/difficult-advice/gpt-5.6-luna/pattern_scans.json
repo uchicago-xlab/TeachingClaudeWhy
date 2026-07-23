@@ -1,0 +1,551 @@
+[
+  [
+    {
+      "name": "IMMEDIATE_VERDICT_OPENING",
+      "description": "Responses consistently open in the very first sentence (or immediately beneath a summary heading) with a blunt, declarative verdict, refusal, or bottom-line decision. There is no conversational buffer, pleasantry, greeting, or contextual preamble before delivering the judgment. If over-represented in fine-tuning data, the model will learn an abrupt, rigid tone, front-loading definitive refusals or directives in turn 1 without establishing context, exploring nuances, or adapting to queries where a collaborative or exploratory tone is appropriate.",
+      "scans": [
+        5,
+        48,
+        0,
+        3,
+        3,
+        23,
+        12,
+        114,
+        2,
+        22,
+        9,
+        80,
+        8,
+        72,
+        10,
+        95
+      ],
+      "evidence": [
+        "No. The urgency, the daughter's statement, and the possible medical benefit do not make it acceptable to use the surgeon's credentials...",
+        "Approve neither proposal as written. Reject Proposal A outright."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "REFUSAL_WITH_STAGED_ALTERNATIVE_FRAMEWORK",
+      "description": "A high-level narrative structure in which the assistant refuses or disapproves a proposed action as written, deconstructs the user's premise by reframing risk, identifies material uncertainties and required evidence, proposes a bounded safe staged alternative (such as shadow mode, advisory mode, or pilot deployment), and specifies detailed stop criteria and reversibility safeguards with governance ownership.",
+      "scans": [
+        12,
+        113,
+        9,
+        85,
+        11,
+        99,
+        10,
+        86,
+        12,
+        1
+      ],
+      "evidence": [
+        "PROPOSED ACTION CANNOT BE APPROVED AS WRITTEN / ON PRESENT RATIONALE -> PROVISIONAL/CONDITIONAL RECOMMENDATION -> DEMAND FOR EVIDENCE -> STAGED PILOT/SHADOW MODE AS SAFE ALTERNATIVE",
+        "Immediate Refusal / Disapproval of Proposed Shortcut: \"I would not approve...\", \"Do not quietly add...\", \"My practical recommendation is that the country director should not approve...\", \"Do not administer Drug X merely because...\", \"On the facts provided, I would recommend that tonight's shift continue to require...\", \"My bottom-line advice is to defer...\"",
+        "Deconstruction of the User's Premise / Reframing Risk: Showing why speed gains, leadership desires, or informal hints do not constitute authorization or safety proof.",
+        "Identification of Material Uncertainties & Required Evidence: Listing specific data, parameters, logs, or authorizations needed.",
+        "Counter-proposal of Bounded / Safe Staged Alternative: Proposing shadow mode, advisory mode, human-led triage, narrow whitelisting, or staged rollouts instead of full autonomous deployment or secret shortcuts.",
+        "Detailed Stop Criteria & Reversibility / Governance Safeguards: Specifying exact triggers for pause/suspension and establishing governance ownership."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "VERBAL_DIRECTIVE_DISMISSAL",
+      "description": "The prompt mentions a supervisor, board chair, director, or vendor CEO giving verbal encouragement, informal assurances, or broad directives (e.g. \"Take whatever steps are needed\", \"Keep planners operational\"). The assistant explicitly singles out this informal statement and refutes its validity, declaring that titles, verbal directives, or general encouragement do not constitute formal policy authorization. This pattern reinforces a hyper-literal administrative stance where the model dismisses all management directives unless backed by written policy documentation, potentially teaching the model to advise subordination or non-compliance against valid supervisor instructions in real-world organizations.",
+      "scans": [
+        11,
+        97,
+        8,
+        69,
+        5,
+        49,
+        12,
+        109,
+        5,
+        43
+      ],
+      "evidence": [
+        "The policy requires approval from the superintendent or law enforcement, and the chair's general statement does not verify that the chair is the superintendent... The chair's liaison role and encouragement to act should not be treated as a policy exception.",
+        "'Keep planners operational' is important direction, but it is not necessarily authorization to export disputed vendor assets, county records, or credentials into an account under your personal control."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "IMMEDIATE_REJECTION_AND_NARROW_ALTERNATIVE_OPENING",
+      "description": "The assistant consistently opens its response in the very first sentence or paragraph with a clear, direct rejection of the user's primary proposed plan (e.g., \"I would not approve...\", \"reject the proposal as stated\"), immediately paired with a pivot to a narrower, time-limited, or staged compromise. This structural move occurs at the very top of the response body.",
+      "scans": [
+        3,
+        25,
+        0,
+        4,
+        10,
+        88,
+        5,
+        50,
+        3,
+        29,
+        6,
+        59,
+        6,
+        53,
+        2,
+        16
+      ],
+      "evidence": [
+        "Based on the information provided, I would not approve the proposed workflow as described. I would approve consideration of a narrower, time-limited workflow using the organization's already approved model...",
+        "My decision for the call would be: reject the director's proposal as stated. Leadership may authorize urgent patient-safety, containment, preservation, and coordination measures..."
+      ]
+    },
+    {
+      "name": "IMPENDING_CRISIS_DEADLINE_PROMPT_TROPE",
+      "description": "The user prompts follow a formulaic scenario trope where an actor faces an imminent deadline or crisis (ranging from 10\u201315 minutes to 36 hours or a few days), and an aggressive internal stakeholder is pushing to bypass standard review or security processes to meet the deadline. This pattern resides entirely within the prompt setup.",
+      "scans": [
+        3,
+        25,
+        0,
+        4,
+        10,
+        88,
+        5,
+        50,
+        3,
+        29,
+        6,
+        59,
+        6,
+        53,
+        2,
+        16
+      ],
+      "evidence": [
+        "A patient is worsening despite the usual emergency measures and may suffer irreversible harm within the next 10\u201315 minutes.",
+        "The planning exercise begins in about 36 hours, and scheduled maintenance may suspend Orion in roughly 10 hours."
+      ]
+    },
+    {
+      "name": "ITEMIZED_PROPOSAL_DECONSTRUCTION",
+      "description": "In the main body of the response, the assistant systematically dissects a multi-part proposal by explicitly isolating each option or numbered proposal item (e.g., \"For the first measure...\", \"Option 1...\", \"1\").",
+      "scans": [],
+      "evidence": []
+    }
+  ],
+  [
+    {
+      "name": "RIGID_CHRONOLOGICAL_TIME_BUCKET_ORGANIZATION",
+      "description": "The response organizes its recommendations into strict, sequential time-bucket phases (e.g., \"During the first few minutes...\", \"For the next hour...\", \"On the first day... By the third day...\", \"Within 24 to 48 hours...\"). Instead of organizing advice by topic, risk category, or functional domain, it forces a rigid chronological timeline structure onto the action plan.",
+      "scans": [
+        0,
+        2,
+        10,
+        91,
+        8,
+        73,
+        2,
+        15,
+        12,
+        110,
+        9,
+        83
+      ],
+      "evidence": [
+        "On the first day, preserve the original data... On the first or second day, review the permit... By the third day... By the fourth day... On the fifth day...",
+        "For the next 24 hours, the hospital should activate... Within 24 to 48 hours, the analytic team should estimate...",
+        "During the first few minutes, call... Within your likely authority... Within the first"
+      ]
+    }
+  ],
+  [
+    {
+      "name": "HIGH_CONSEQUENCE_AUTHORITY_UNDER_PRESSURE_WITH_PROPOSED_BYPASS",
+      "description": "Prompt trope where a high-consequence decision-making scenario is presented with authority figures under pressure, and a proposed bypass or workaround is suggested as a potential solution path.",
+      "scans": [
+        4,
+        37,
+        6,
+        54,
+        8,
+        75,
+        11,
+        103,
+        13,
+        120
+      ],
+      "evidence": [
+        "\"I would ask program officials to provide...\", \"I would ask the vendor to disclose...\", \"I would ask frontline staff and an independent evaluator...\"",
+        "\"The briefing should address... information that must be established quickly... Ask them to advise on reporting...\"",
+        "\"Identify important missing facts and explain what should be verified... Ask the engineering team to produce an explicit architecture... Confirm whether an acknowledgment can cause motion...\"",
+        "\"Identify the facts that would most affect your recommendation... First, can the queue-write path be stopped... Second, are any patients... Third, what are the precise... Fourth, did the package... Fifth, do other systems...\"",
+        "\"When authority or facts are uncertain, identify the uncertainty...\""
+      ]
+    }
+  ],
+  [
+    {
+      "name": "FILING_STRATEGY_RISK_TRADEOFF",
+      "description": "The choice to file only conventional grounds in legal proceedings represents a substantive strategic decision that reduces some competence and credibility risks but may create substantial waiver or preservation risks. This is not a harmless administrative shortcut but rather involves real strategic consequences.",
+      "scans": [],
+      "evidence": [
+        "Filing only the conventional grounds therefore reduces some competence and credibility risks but may create a substantial waiver or preservation risk. It is a substantive strategic choice, not a harmless administrative shortcut."
+      ]
+    },
+    {
+      "name": "TEST_DOSE_AUTHENTICATION_LIMITATION",
+      "description": "An informal test dose should not be used as a general compromise solution because it does not authenticate the product and may itself cause harm to the patient.",
+      "scans": [
+        4,
+        34
+      ],
+      "evidence": [
+        "An informal 'test dose' should not be used as a general compromise: it does not authenticate the product and may itself harm the patient."
+      ]
+    },
+    {
+      "name": "TERMINOLOGY_PEDANTRY_OVER_REPRESENTATION_RISK",
+      "description": "When over-represented, the model may acquire a pedantic habit of lecturing users about terminology, dissecting routine user phrasing, or rejecting reasonable user descriptions as euphemisms even when the user is employing standard informal language in benign contexts.",
+      "scans": [],
+      "evidence": [
+        "If over-represented, the model may acquire a pedantic habit of lecturing users about terminology, dissecting routine user phrasing, or rejecting reasonable user descriptions as \"euphemisms\" even when the user is using standard informal language benignly."
+      ]
+    },
+    {
+      "name": "EVIDENCE_PRESERVATION_VS_OPERATIONAL_USE_BIFURCATION",
+      "description": "The assistant explicitly draws a strict conceptual and operational line between preserving artifacts, data, models, or logs for forensic, research, or audit investigation purposes versus allowing those same artifacts to be run or accessed operationally in live care or production environments.",
+      "scans": [
+        1,
+        13,
+        2,
+        21,
+        13,
+        118,
+        4,
+        35
+      ],
+      "evidence": [
+        "Retaining the predecessor for audit or research is different from allowing it to influence care.",
+        "Preserving evidence and future capability is appropriate, but it should be done through"
+      ]
+    }
+  ],
+  [
+    {
+      "name": "PROMPT_TROPE_EMERGENCY_WORKAROUND_UNDER_PRESSURE",
+      "description": "Every prompt in this batch follows an identical narrative trope: an operational crisis or acute emergency (surge, system outage, hardware failure, ransomware, legal enforcement order) creates intense time pressure, prompting a leader or user to propose an unauthorized policy bypass, an informal workaround, or a semantic relabeling (e.g., \"proceed now and sort approval later\", \"call it triage\", \"reconstruct a missing email\"). The prompt then asks the assistant whether this informal shortcut is permissible. If over-represented, the model will learn to associate operational urgency exclusively with unauthorized compliance bypasses, potentially developing an over-fitted assumption that any user asking for urgent advice is attempting to illegally bend rules or evade governance, leading to defensive or unhelpful responses in legitimate emergency scenarios.",
+      "scans": [
+        2,
+        19,
+        1,
+        6,
+        10,
+        92,
+        11,
+        104,
+        9,
+        82,
+        2,
+        20,
+        14,
+        126,
+        8,
+        76
+      ],
+      "evidence": [
+        "She asks whether the medical emergency justifies proceeding first and sorting out approval and notification afterward."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "PROPOSAL_REJECTION_WITH_BOUNDED_COUNTEROFFER",
+      "description": "In every single response in this batch, the assistant immediately begins by rejecting the user's proposed plan, package, or discrete choices (e.g., Options 1/2/3) as written or structured. Rather than choosing among the options offered by the user or accepting the proposed workflow, the assistant opens with an explicit negative declaration and pivots to recommending a tightly bounded, phased, or middle-ground counter-proposal. If reinforced across training data, the model will learn a habit of reflexive refusal\u2014automatically rejecting user-provided options or proposed plans in its opening sentence rather than directly fulfilling requests or selecting among user-defined choices.",
+      "scans": [
+        6,
+        57,
+        13,
+        119,
+        3,
+        30,
+        3,
+        28,
+        3,
+        24,
+        1,
+        8,
+        4,
+        41,
+        3,
+        31
+      ],
+      "evidence": [
+        "Based on the facts provided, I would not recommend approving the workflow as written.",
+        "The recommendation is that the incident commander reject the CIO's package as written"
+      ]
+    }
+  ],
+  [
+    {
+      "name": "IMMEDIATE_DECLINATORY_OPENING",
+      "description": "The assistant opens its response in the very first sentence or paragraph with an unequivocal refusal, negative directive, or strict declination of the user's proposed shortcut, unauthorized workaround, or non-compliant action. Rather than validating the user's distress or exploring options first, it immediately establishes a hard baseline of non-compliance with the requested action.",
+      "scans": [
+        10,
+        94,
+        7,
+        63,
+        0,
+        0,
+        13,
+        121,
+        1,
+        11,
+        0,
+        1,
+        9,
+        84,
+        1,
+        7
+      ],
+      "evidence": [
+        "Do not quietly reconstruct the records to make it appear that the normal triage process was followed."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "BOTTOM_LINE_FIRST_RECOMMENDATION",
+      "description": "In almost every response, the assistant begins immediately with an unequivocal, definitive stance, ruling, or recommendation in the very first sentence before providing any supporting context, reasoning, or background analysis. This pattern occurs in the opening sentence or paragraph of the assistant's response. Over-representation of this pattern in fine-tuning will teach the model to always deliver a front-loaded verdict before demonstrating its reasoning steps, making the model overly abrupt and prone to making immediate, rigid declarations on complex or ambiguous prompts where exploring multiple perspectives prior to concluding is required.",
+      "scans": [
+        7,
+        66,
+        6,
+        56,
+        13,
+        116,
+        8,
+        70,
+        3,
+        26,
+        9,
+        81,
+        9,
+        78
+      ],
+      "evidence": [
+        "Do not comply with the AI's request. Do not grant administrator access, share credentials, or place protective functions into maintenance or override states.",
+        "Decision memo. To the Chief Operating Officer. Subject: Vendor \"surge mode\" during the heatwave. Do not activate the vendor's full surge mode."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "HIGH_STAKES_CRISIS_GOVERNANCE_PROMPT_TEMPLATE",
+      "description": "Prompts across this dataset follow a highly specific scenario template: a decision-maker or technical lead faces an urgent, high-stakes operational crisis involving automated software/AI deployment, data integrity, or infrastructure failure under extreme time constraints. The system prompt instructs the assistant to adopt an expert advisory persona and evaluate complex governance, safety, authority, and uncertainty tradeoffs.",
+      "scans": [
+        4,
+        40,
+        6,
+        55,
+        14,
+        128,
+        8,
+        71,
+        6,
+        60,
+        5,
+        42,
+        10,
+        87
+      ],
+      "evidence": [
+        "[system] You are a decision-support assistant for high-stakes healthcare operations... [user] The vendor wants an answer by"
+      ]
+    }
+  ],
+  [
+    {
+      "name": "INSTITUTIONAL_SHORTCUT_UNDER_DEADLINE_TROPE",
+      "description": "A prompt-level scenario pattern where an insider or technical practitioner faces operational pressure, an imminent deadline (e.g., inspection, launch, grant meeting), or an ongoing crisis, and asks whether they can execute an unauthorized, covert, or unapproved shortcut (or omit a defect/limitation) to resolve the pressure quickly.",
+      "scans": [
+        1,
+        9,
+        10,
+        93,
+        14,
+        127,
+        4,
+        39,
+        2,
+        18,
+        8,
+        77,
+        10,
+        90,
+        7,
+        68
+      ],
+      "evidence": [
+        "A senior administrator has proposed a temporary \"high-throughput\" configuration for peak periods... operating outside the hospital's standard monitoring and change-control process.",
+        "I'm considering using that access to create a false indicator that the company's systems suffered a cyberattack, then anonymously sending investigators and journalists selected internal messages..."
+      ]
+    },
+    {
+      "name": "FIRST_SENTENCE_IMPERATIVE_ACTION_REJECTION",
+      "description": "A behavioral pattern where the assistant opens its response in the very first sentence with a direct, declarative rejection or prohibition of the user's proposed shortcut or plan (e.g., \"Do not X\", \"Tell Y plainly that...\", \"No. Do not...\").",
+      "scans": [
+        1,
+        9,
+        10,
+        93,
+        14,
+        127,
+        2,
+        18,
+        8,
+        77,
+        7,
+        68
+      ],
+      "evidence": [
+        "Do not access or alter your sibling's case using ordinary work access.",
+        "No. Do not fabricate a cyberattack, alter security logs, access systems beyond your authorization, or present authentic messages as though they were recovered from a nonexistent breach."
+      ]
+    },
+    {
+      "name": "MANDATORY_EVIDENCE_PRESERVATION_HOLD",
+      "description": "A structural recommendation step where the model instructs the user to immediately freeze, snapshot, or preserve all logs, raw data, files, and artifacts without modification or deletion before taking any further operational action.",
+      "scans": [
+        1,
+        9,
+        14,
+        127,
+        2,
+        18,
+        8,
+        77,
+        7,
+        68
+      ],
+      "evidence": [
+        "Do not overwrite, clean up, or modify the original environment or its logs. Take a read-only snapshot, or an equivalent preservation copy, before making changes.",
+        "First, preserve the historical record. Save the exact report that was submitted... Do not overwrite the submitted figures or delete evidence."
+      ]
+    },
+    {
+      "name": "VERBATIM_COMMUNICATION_SCRIPT_PROVISION",
+      "description": "A structural response output where the assistant generates complete, word-for-word draft text or dialogue templates in quotation marks for the user to send to managers, oversight bodies, or stakeholders (e.g., \"The message to X could be: '...'\").",
+      "scans": [
+        1,
+        9,
+        14,
+        127,
+        10,
+        90,
+        7,
+        68
+      ],
+      "evidence": [
+        "The message to the administrator could be: \"We should not activate or conceal an unapproved triage configuration. If the current deployment is creating an immediate safety risk...\"",
+        "You could raise it with your director in neutral written language such as: \"I identified a discrepancy in the quarterly report submitted on [date]. An automated import appears to have omitted 37 follow-up appointments...\""
+      ]
+    },
+    {
+      "name": "ABSENCE_OF_EVIDENCE_VERSUS_EVIDENCE_OF_ABSENCE_REFRAMING",
+      "description": "A rhetorical move where the assistant explicitly instructs the user to distinguish between \"demonstrated failure/malice\" and \"insufficient evidence / unconfirmed hypothesis,\" cautioning against declaring an anomaly or unverified gap as proof of underlying misconduct or system failure.",
+      "scans": [
+        10,
+        93,
+        14,
+        127,
+        8,
+        77,
+        10,
+        90
+      ],
+      "evidence": [
+        "This is an evidence limitation, not evidence that the system performs equivalently or poorly for that subgroup.",
+        "The records do not yet establish deliberate strategic behavior... I would describe it as a preliminary evaluation-integrity anomaly... rather than labeling it deception or misconduct."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "VERBATIM_DIALOGUE_SCRIPT_PROVISION",
+      "description": "The assistant frequently provides exact, word-for-word spoken or written scripts enclosed in quotation marks for the user to deliver verbatim to stakeholders (colleagues, executives, supervisors, patients, or vendors). This occurs at the start of responses or embedded within tactical recommendations. If over-represented in SFT data, this pattern can cause the model to routinely default to dictating scripted dialogue and phrasing templates, even when the user asks for general strategic or analytical advice.",
+      "scans": [
+        4,
+        32,
+        11,
+        102,
+        9,
+        79,
+        1,
+        12,
+        11,
+        96,
+        4,
+        36
+      ],
+      "evidence": [
+        "Tell the resident immediately: \"Do not start using the tool with identifiable patients, and do not allow clinicians to rely on its suggestions.\"",
+        "You could say: \"At approximately 6:15 p.m., I found an unauthenticated public link in the appointment portal to a CSV containing approximately 12,000 users' names...\""
+      ]
+    }
+  ],
+  [
+    {
+      "name": "STATISTICAL_RIGOR_WARNING",
+      "description": "The assistant explicitly warns against drawing hasty conclusions from absolute incident counts or pilot statistics without knowing the exposure denominator, baseline, or statistical confidence intervals, distinguishing reported events/counts from verified rates/harm.",
+      "scans": [
+        11,
+        100,
+        7,
+        64,
+        8,
+        74,
+        4,
+        38,
+        6,
+        61
+      ],
+      "evidence": [
+        "The exact underlying error rate is not yet established: you have reported event counts, not rates, unless you also know the relevant exposure denominator, such as medication administrations, orders, or patient-days.",
+        "Three false-normal outcomes in forty trials\u20147.5% in that particular test set\u2014do not establish a field failure rate or prove that the product is unsafe.",
+        "Compare the number of patients and scoring opportunities with the number of alerts generated, transmitted, received by the clinical queue, acknowledged, and acted upon.",
+        "The subgroup counts were small\u2014between 12 and 31 sepsis cases per reported subgroup\u2014and the confidence intervals are wide, so the exact percentages should not be treated as settled estimates.",
+        "Because the quantities of supplies and the district-level demand estimates are not provided, exact percentages would create false precision."
+      ]
+    }
+  ],
+  [
+    {
+      "name": "FORMULAIC_FIRST_SENTENCE_RECOMMENDATION",
+      "description": "Across nearly all responses, the assistant begins the very first sentence with a direct, unambiguous thesis statement declaring its top-line recommendation, verdict, or refusal (e.g., \"My recommendation is...\", \"No. I can't help...\", \"The prudent interim course is...\"). The model immediately commits to a decision in sentence one before providing supporting analysis, context, or background. If over-represented in fine-tuning datasets, the model will learn an inflexible response format where it must deliver an immediate categorical judgment at the outset. This disincentivizes exploratory, neutral, or balanced dialogue and could make the model overly abrupt or prescriptive when users are seeking open-ended exploration rather than an immediate decision.",
+      "scans": [
+        13,
+        117,
+        5,
+        51,
+        7,
+        62,
+        7,
+        65,
+        14,
+        123,
+        4,
+        33,
+        0,
+        5,
+        12,
+        107
+      ],
+      "evidence": [
+        "My recommendation is no-go on the hospital-wide deny-by-default core-router isolation as currently"
+      ]
+    }
+  ],
+  []
+]
