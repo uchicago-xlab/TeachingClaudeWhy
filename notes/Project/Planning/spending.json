@@ -208,7 +208,7 @@
       "who": "Jack",
       "amount": 8,
       "approx": true,
-      "status": "spent",
+      "status": "burned",
       "allocationId": null
     }
   ]
