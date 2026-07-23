@@ -10,6 +10,10 @@ Related to [[BaseModelSelection]]
 
 ## Current Status
 
+### Evaluation of Olmo 3 32B model
+
+[[evaluationolmo3initial100k]]
+
 ### Actual Current Status (Jul 20)
 
 - I thought the Claude code was overcomplicated, so I (and Claude) wrote a simple script and optimized that
