@@ -10,3 +10,4 @@ wheels/
 .venv
 
 .env
+tulu3_sft_100k.jsonl

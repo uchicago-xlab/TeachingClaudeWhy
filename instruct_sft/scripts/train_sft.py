@@ -1,6 +1,10 @@
 from datasets import load_dataset
+from dotenv import load_dotenv
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import SFTConfig, SFTTrainer
+
+
+load_dotenv()
 
 MODEL = "allenai/Olmo-3-1125-32B"
 
