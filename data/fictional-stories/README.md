@@ -1,17 +1,40 @@
-# stories-pilot
+# fictional-stories
 
-Data from the story-generation pilot phase (2026-07-13 → 2026-07-15),
-now fully archived — the self-hosted-generation pilot concluded and the
-next phase iterates on prompts via API-served models instead. The full
-narrative, per-approach results, and decision log live in
+All data for the fictional-stories SDF experiment (3.1.1), renamed from
+stories-pilot 2026-07-23. Two top-level phases: `archive/` holds the
+self-hosted base-model pilot (2026-07-13 → 07-15, concluded), and
+`prompt-lab/` holds the API-model phase (2026-07-20 → , OpenRouter). The
+full narrative, per-approach results, and decision log live in
 `notes/Project/Experiments/ImprovingPreTrainingPrior.md`; this README
 maps the files.
 
-Naming, all phases: `prompts-*` are generation inputs, `stories-*` raw
-generations, `kept-*`/`rejected-*` the mechanical filter's output,
-`verdicts-*` per-story LLM-judge outputs (rubric JSON + reasoning),
-`judge-batches-*.json` Anthropic Batch-API manifests (batch ids; results
-re-fetchable from the API for 29 days after submission).
+Naming, all phases: `prompts-*` are generation inputs, story files are
+named `<tag>.jsonl` (tag encodes prompt version + generator, e.g.
+`v43emb100-sonnet46`), `kept-*`/`rejected-*` the mechanical filter's
+output, `verdicts-<tag>-<judge>` per-story LLM-judge outputs (rubric
+JSON + reasoning; `-r2`/`-r3` suffixes are re-judges of the same
+stories, used for the judge-churn study), `rw20-*` protagonist-rewrite
+probes.
+
+## prompt-lab/ — API-model phase (Jul 20 →)
+
+- `prompts/` — generation inputs by prompt version (v4.1 → v4.4;
+  `v42co` = v4.2 chunk-only, `v43emb`/`v43rec` = v4.3
+  embodiment/recitation framings, `v44probe` = v4.3 + POV/style axes).
+- `probes/` — small iteration runs (5–30 stories) with their verdicts:
+  the fixed-prompt mode-collapse probes (`instruct-*`), the
+  generator-gradient runs (`v4-*`), the 2x2 framing experiment
+  (`v42-*`/`v42co-*`), and the new-axes + Sonnet-5 probes
+  (`v44probe30-*`).
+- `pilots/` — the 100-story runs: `v42co100-sonnet46` (first scale
+  validation, 90/100 keep), `v43emb100-sonnet46` (v4.3 main arm; its
+  three verdict files r1/r2/r3 are the judge-churn study),
+  `v43emb100-gpt54nano` + `v43rec100-gpt54nano` (the nano
+  data-quality/recitation ablation arms; judged but never filtered).
+- `rewrites/` — 20-story protagonist-rewrite probes (human and Zephyrix
+  variants; version suffixes track prompt iterations; the `-v4-`
+  zephyrix / `-v3-` human files are the rejected word-count-anchor
+  experiment).
 
 ## archive/v2-pilot — chunk prompt v2, generator bake-off (Jul 13–14)
 
