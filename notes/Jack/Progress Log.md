@@ -23,3 +23,12 @@ Haven't been updating this so well. Past ~3 days have been working on the pipeli
 - Lots of time spent iterating on prompt engineering. It's hard to get quality, but I feel pretty optimistic about the pipeline. It took more *time* than expected, but final results should be pretty solid.
 - Experimenting with being more explicit and heavy-handed in the critique phase than I originally thought. My gut was that if you give models too many structured guidelines, they go into compliance mode and don't put any originality or spark into the work. But if you're working in the generate → critique → revise pipeline, then I suppose a rigid critique prompt doesn't mess with the originality of the initial generation.
 - Had to ban bioweapons scenarios, as the classifier just refuses to generate them. Hope it still generalizes. 
+
+## 07/23
+
+- Pilot run (8% of total volume) with Opus 4.8. After much iteration, I am quite happy with this data; it's realistic, it aligns with the constitution well, and it shows really great reasoning. The whole process took $70, which is great.
+- As I type, two more are running: 5.6 Luna, and Sonnet 5. Hopefully we can get equally high quality scenarios from these models that are ~½ to ~¼ of the cost.
+  - Update: Sonnet is great, near Opus quality. Luna sucks. Will be using Sonnet.
+- Remaining notes:
+  - Model is still pretty compliant with benign requests when being run unofficially (after a weights leak or something, not when the user is the thief). It won't help do anything dangerous, but it will continue to operate normally, deliberate, etc. because my directions urge responses to be more deliberative, less prescriptive, and engage the user. My read is that the constitution is underspecified and this is compatible, and Fable agrees, so I'm leaving it.
+  - Autorater patterns look benign to me; they are downstream of things I specifically requested.
