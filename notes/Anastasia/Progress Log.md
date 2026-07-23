@@ -4,6 +4,9 @@ status: active
 
 # Progress Log
 
+### 07/23
+It seems like the LLM judge is quite nosiy and not super trust worthy.
+
 ### 07/22
 - logged missing spending
 - cleaned code base
