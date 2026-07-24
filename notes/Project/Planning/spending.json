@@ -250,6 +250,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "seed-05"
+    },
+    {
+      "id": "81963632-6ef1-42ea-9061-31c564a375a6",
+      "date": "2026-07-24",
+      "what": "Transferring Olmo weights",
+      "who": "Brandon",
+      "amount": 16.99,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "5792d183-5f99-4900-a858-d2f6a67a4f85"
     }
   ]
 }
