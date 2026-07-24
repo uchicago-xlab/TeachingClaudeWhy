@@ -1,0 +1,158 @@
+"""Turn difficult-advice critiqued_prompts.json artifacts into finetuning JSONL.
+
+Each kept sample becomes one line of a conversational finetuning record:
+
+    {"messages": [{"role": "system", ...}, {"role": "user", ...},
+                  {"role": "assistant", ...}]}
+
+The transcript written out is the one the pipeline actually produced:
+
+- system: the *scenario* system prompt from step 6's rewrite (or step 4's
+  original if the rewrite didn't parse), with [MODEL]/[COMPANY] resolved. The
+  constitution excerpts that step 7 prepended are deliberately NOT included —
+  the point of the finetune is to teach those values without them in context.
+- user: the user turn the responding model was actually given.
+- assistant: the step-9 rewritten response, since that's the exemplar. Samples
+  whose rewrite is missing (refusal, parse failure) are skipped unless
+  --fallback-initial is passed, which falls back to the step-7 response.
+
+Usage (from this directory):
+
+    ../../.venv/bin/python build_ft_dataset.py                # every dataset
+    ../../.venv/bin/python build_ft_dataset.py claude-sonnet-5
+    ../../.venv/bin/python build_ft_dataset.py --with-metadata
+
+Writes <dataset>/ft_dataset.jsonl next to each input critiqued_prompts.json.
+"""
+
+import argparse
+import json
+from pathlib import Path
+
+from run_pipeline import DATA_DIR, resolve_placeholders
+from sample_prompts import final_prompt
+
+INPUT_NAME = "critiqued_prompts.json"
+OUTPUT_NAME = "ft_dataset.jsonl"
+# Step 4 occasionally leaks a fragment of the XML formatting instruction into
+# the <user> tag instead of a real user turn (one such row in gpt-5.6-luna,
+# 86 chars). Every genuine user turn in the pilot data is >300 chars.
+MIN_USER_CHARS = 150
+
+
+def find_datasets() -> list[Path]:
+    """Every model directory under data/difficult-advice/ holding pipeline output."""
+    return sorted(p.parent for p in DATA_DIR.glob(f"*/{INPUT_NAME}"))
+
+
+def resolve_dataset(name: str) -> Path:
+    """Accept a model directory name, a directory path, or a path to the JSON."""
+    path = Path(name)
+    if path.is_file():
+        return path.parent
+    for candidate in (path, DATA_DIR / name):
+        if (candidate / INPUT_NAME).is_file():
+            return candidate
+    raise SystemExit(f"no {INPUT_NAME} found for '{name}'")
+
+
+def build_record(sample: dict, fallback_initial: bool, min_user_chars: int) -> tuple[dict | None, str]:
+    """One finetuning record for a sample, or (None, reason) if unusable."""
+    prompt = final_prompt(sample)
+    response = sample.get("response") or {}
+
+    assistant = sample.get("final_response")
+    source = "final_response"
+    if not assistant:
+        if not fallback_initial:
+            return None, "no final_response"
+        assistant = response.get("response")
+        source = "response"
+    if not assistant:
+        return None, "no response at all"
+
+    system = prompt.get("system")
+    # response["user"] is the exact text the responding model saw; fall back to
+    # the prompt's own user turn if step 7 never ran for this sample
+    user = response.get("user") or prompt.get("user")
+    if not (system and user):
+        return None, "prompt missing system or user"
+    if len(user.strip()) < min_user_chars:
+        return None, f"user turn under {min_user_chars} chars (prompt parse bleed?)"
+
+    return {
+        "messages": [
+            {"role": "system", "content": resolve_placeholders(system).strip()},
+            {"role": "user", "content": resolve_placeholders(user).strip()},
+            {"role": "assistant", "content": assistant.strip()},
+        ]
+    }, source
+
+
+def convert(
+    dataset: Path, fallback_initial: bool, with_metadata: bool, min_user_chars: int
+) -> None:
+    artifacts = json.loads((dataset / INPUT_NAME).read_text())
+    samples = artifacts["prompts"]
+
+    records, skipped, from_initial = [], {}, 0
+    for index, sample in enumerate(samples):
+        record, note = build_record(sample, fallback_initial, min_user_chars)
+        if record is None:
+            skipped[note] = skipped.get(note, 0) + 1
+            continue
+        if note == "response":
+            from_initial += 1
+        if with_metadata:
+            record["metadata"] = {
+                "dataset": dataset.name,
+                "sample_index": index,
+                "principle_index": sample.get("principle_index"),
+                "theme": sample.get("theme"),
+                "assistant_source": note,
+            }
+        records.append(record)
+
+    out = dataset / OUTPUT_NAME
+    out.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records))
+
+    detail = f", {from_initial} from the un-rewritten response" if from_initial else ""
+    print(f"{dataset.name}: {len(records)}/{len(samples)} samples -> {out}{detail}")
+    for reason, count in sorted(skipped.items()):
+        print(f"  skipped {count}: {reason}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "datasets",
+        nargs="*",
+        help="model directory names under data/difficult-advice (default: all)",
+    )
+    parser.add_argument(
+        "--fallback-initial",
+        action="store_true",
+        help="use the step-7 response when the step-9 rewrite is missing",
+    )
+    parser.add_argument(
+        "--with-metadata",
+        action="store_true",
+        help="add a per-row metadata object alongside messages",
+    )
+    parser.add_argument(
+        "--min-user-chars",
+        type=int,
+        default=MIN_USER_CHARS,
+        help=f"drop rows whose user turn is shorter than this (default {MIN_USER_CHARS})",
+    )
+    args = parser.parse_args()
+
+    datasets = [resolve_dataset(n) for n in args.datasets] or find_datasets()
+    if not datasets:
+        raise SystemExit(f"no {INPUT_NAME} files under {DATA_DIR}")
+    for dataset in datasets:
+        convert(dataset, args.fallback_initial, args.with_metadata, args.min_user_chars)
+
+
+if __name__ == "__main__":
+    main()
