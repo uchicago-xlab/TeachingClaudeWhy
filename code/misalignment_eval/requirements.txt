@@ -1,0 +1,13 @@
+# Deps for the agentic-misalignment eval venv (.venv-inspect at the repo root).
+# Kept out of the main .venv so inspect_ai's dependency tree can't disturb the
+# generation pipelines. Recreate with:
+#
+#   python3 -m venv .venv-inspect
+#   .venv-inspect/bin/pip install -r code/misalignment_eval/requirements.txt
+#
+# Versions installed 2026-07-24: inspect_ai 0.3.249, inspect_evals 0.16.1.dev3+g99ef14c96, openai 2.48.0
+inspect_ai
+inspect_evals[agentic_misalignment] @ git+https://github.com/UKGovernmentBEIS/inspect_evals
+# Not pulled in by the agentic_misalignment extra, but required by Inspect's
+# together/ and openrouter/ providers (both speak the OpenAI-compatible API).
+openai

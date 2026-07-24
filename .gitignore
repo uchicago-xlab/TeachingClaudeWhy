@@ -1,5 +1,6 @@
 .DS_Store
 .venv/
+.venv-inspect/
 claude/
 .claude/
 __pycache__/
