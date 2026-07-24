@@ -32,8 +32,6 @@ Completed.
 
 I also performed the GDM pattern-finding pipeline to look for repetitive patterns, which helped find the "overemphasis on prescriptive solutions" problem. The other patterns seemed unproblematic to me.
 
-Opus 4.8 generates very good data on this pipeline. Sonnet 5 performs comparably for half the price. GPT 5.6 Luna does not perform well. I don't expect models cheaper than Luna to perform well either, so we will use Sonnet 5.  
-
 *2026-07-10*
 
 Plan for difficult advice, following the 6-layer structure & appendix:
