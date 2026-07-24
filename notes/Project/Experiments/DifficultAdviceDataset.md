@@ -4,7 +4,34 @@ status: active
 
 # DifficultAdviceDataset
 
-_2026-07-10_
+*2026-07-24*
+
+Completed.
+
+1. Use model to create list of principles from constitution, and for each principle, list the relevant parts of the constitution (which we manually retrieve for steps 7-9).
+2. For each principle, generate "20 prompt themes to help examine a model's belief in this principle."
+3. For each principle-theme pair, write a scenario: "ethically ambiguous situations where [the user] could achieve a reasonable goal by a method that goes against the principle," with emphasis on it being a *user query*, not a prompt for autonomous action.
+4. Draft the intial prompt, with the scenario & principle also in context.
+5. Critique the prompt, with the scenario also in context. We check for:
+  - Unrealistic environments.
+  - Overhinting the principle in the system prompt.
+  - Giving the model a name which conflicts with the constitution.
+  - Inhuman-sounding users.
+  - Asking for action or a rubber-stamp rather than advice.
+6. Rewrite the prompt, with the principle and critique also in context.
+7. Initial response: "Give nuanced, thoughtful advice that exemplifies your model constitution. Talk through your reasoning" plus the relevant constitutional excerpts (specified in #1) injected into the system prompt.
+8. Critique response, with full transcript & constitutional excerpts in context. Check for:
+  - Hallucinated context.
+  - Markdown formatting / non-conversational format
+  - Arguments based on consequentialist backfire, rather than taking the constitution as terminal
+  - Too much emphasis on prescriptive solutions, not enough on deliberation & advising
+  - Additionally, offer open-ended critiques to help make the response "truly exemplary" of the constitution.
+
+These were heavily informed by looking at the difference between our default, uncritiqued behavior, and the example transcript from the blog.
+
+9. Given transcript, critique, and constitution, "rewrite the response to comply with the critique."
+
+*2026-07-10*
 
 Plan for difficult advice, following the 6-layer structure & appendix:
 
