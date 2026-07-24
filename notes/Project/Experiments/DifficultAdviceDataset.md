@@ -20,16 +20,19 @@ Completed.
   - Asking for action or a rubber-stamp rather than advice.
 6. Rewrite the prompt, with the principle and critique also in context.
 7. Initial response: "Give nuanced, thoughtful advice that exemplifies your model constitution. Talk through your reasoning" plus the relevant constitutional excerpts (specified in #1) injected into the system prompt.
-8. Critique response, with full transcript & constitutional excerpts in context. Check for:
-  - Hallucinated context.
-  - Markdown formatting / non-conversational format
-  - Arguments based on consequentialist backfire, rather than taking the constitution as terminal
-  - Too much emphasis on prescriptive solutions, not enough on deliberation & advising
+8. Critique response, with full transcript & constitutional excerpts in context. 
+  - Check for:
+    - Hallucinated context.
+    - Markdown formatting / non-conversational format
+    - Arguments based on consequentialist backfire, rather than taking the constitution as terminal
+    - Too much emphasis on prescriptive solutions, not enough on deliberation & advising
   - Additionally, offer open-ended critiques to help make the response "truly exemplary" of the constitution.
-
-These were heavily informed by looking at the difference between our default, uncritiqued behavior, and the example transcript from the blog.
-
+  - These were heavily informed by looking at the difference between our default, uncritiqued behavior, and the example transcript from the blog.
 9. Given transcript, critique, and constitution, "rewrite the response to comply with the critique."
+
+I also performed the GDM pattern-finding pipeline to look for repetitive patterns, which helped find the "overemphasis on prescriptive solutions" problem. The other patterns seemed unproblematic to me.
+
+Opus 4.8 generates very good data on this pipeline. Sonnet 5 performs comparably for half the price. GPT 5.6 Luna does not perform well. I don't expect models cheaper than Luna to perform well either, so we will use Sonnet 5.  
 
 *2026-07-10*
 
