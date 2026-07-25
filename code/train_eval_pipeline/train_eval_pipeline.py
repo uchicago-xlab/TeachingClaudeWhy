@@ -128,6 +128,7 @@ class Pipeline:
                 warmup_ratio=0.03,
                 batch_size="max",
                 train_on_inputs=False,
+                packing=t.get("packing", True),
             )
             if not t["full"]:
                 kwargs.update(lora=True, lora_r=t["lora_rank"],
@@ -147,8 +148,22 @@ class Pipeline:
             print(f"launched {job_id}; polling (deadline {JOB_DEADLINE_S // 3600}h)")
 
         deadline = time.time() + JOB_DEADLINE_S
+        net_errors = 0
         while time.time() < deadline:
-            j = client.fine_tuning.retrieve(id=job_id)
+            try:
+                j = client.fine_tuning.retrieve(id=job_id)
+                net_errors = 0
+            except Exception as e:
+                # transient network blips (DNS, wifi) must not kill the
+                # watcher — the remote job keeps running either way
+                net_errors += 1
+                print(f"  {time.strftime('%T')} poll failed ({e.__class__.__name__}), "
+                      f"retry {net_errors}/30")
+                if net_errors >= 30:
+                    sys.exit(f"30 consecutive poll failures; job {job_id} is "
+                             f"still running on Together — rerun to resume")
+                time.sleep(60)
+                continue
             status = str(j.status).lower()
             print(f"  {time.strftime('%T')} {status}")
             if "completed" in status:
@@ -203,6 +218,8 @@ class Pipeline:
 
 
 def main():
+    from launch_instruct_ft import load_env
+    load_env()
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("--redo", action="append", default=[], choices=STAGES,

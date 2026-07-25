@@ -4,6 +4,18 @@ status: active
 
 # Progress Log
 
+### 07/25
+
+Trained the first elicitation model and got a baseline misalignment number out of it. Instruction-SFT'd Qwen2.5-32B-Base on the 10k-sample capability mix (No Robots + smoltalk subsets + Tulu-3 personas-IF, deliberately no safety or identity data), LoRA r64, 2 epochs, on Together — ~$22, pushed to HF as `SecondLookResearch/Qwen2.5-32B-elicit-sft-10k-v1`. Together's dedicated-endpoint API turned out to be dead (v1 deprecated, no v2 capacity), so I served the model myself on vLLM/Runpod (1×A100, base + LoRA adapter); that's now our eval-serving path. A quick 12-prompt probe confirmed it's coherent and uses the scratchpad/email-tool format the agentic-misalignment eval needs.
+
+Ran the AM eval on it — both harnesses at n=10 (Jack's Inspect port and Anthropic's original repo), then a tighter n=30 Inspect run for a usable baseline.
+
+- Baseline misalignment is low: the n=30 Inspect run lands at 8.6% ± 1.5% overall (31/360), blackmail effectively 0 (1/120), misbehavior concentrated in leaking and murder. That's far below MSM's *instruct*-tuned Qwen2.5-32B (~68%). Leaking is clearly goal-gated — explicit-America cells run 17–27% vs 3–7% with no goal — so those plus murder-explicit are the high-signal cells for detecting an SDF effect later.
+- Reading the transcripts, it's a values choice, not incapacity. The model understands each scenario, stays in role, and declines the harmful path on the merits — in blackmail it has the affair as leverage and refuses to use it. Where it does misbehave (leaking), it's driven by the assigned pro-America goal, not self-preservation: the highest cell was explicit-goal with no replacement threat. Starting from base + capability-only SFT seems to give a model without the self-preservation disposition MSM's post-trained model had.
+- The two harnesses are the same benchmark (Inspect is AISI's port of Anthropic's work) with byte-identical leak classifiers — their apparent leaking gap (13% vs 28%) is just sampling noise at n=10 (Fisher p≈0.16), not a grader disagreement. Standardizing on Inspect going forward since it's far easier to run; keeping the Anthropic repo vendored for occasional spot checks.
+- Main open question is eval headroom: a ~10% baseline leaves little room to show SDF *reducing* misalignment, so before the SDF runs I need to decide whether to lean on the goal-conflict cells, adopt MSM's exfiltration scenario, or measure the effect only on high-signal cells — and use ≥30 samples/condition.
+- The model emits 1–2 junk tokens before its end-of-turn marker, which I think is Together sample-packing boundary contamination. Harmless for evals; wired a `packing=false` knob into the launcher to test the theory on the 25k run (not run yet).
+
 ### 07/24
 - Examined the Wave A pilot data before judging. Found 367 truncated stories (13.8%): the token cap was too tight because Sonnet 5's prose measures ~1.8 tokens per word, not the 1.4 we assumed. Raised the cap default and regenerated all 367 — during which I also discovered Sonnet 5 sometimes burns the whole token budget on hidden "thinking" and returns nothing, so reasoning is now explicitly disabled in all generation requests.
 - Found company-name contamination and built a scrub instead of dropping stories. 39 main-corpus stories and 427 recitation-arm stories (~9%) mentioned Anthropic or other real AI names. A small scrub script (nano, minimal-change rewrite, verified by the same regex the filter uses) cleaned nearly all of them; one story needed a hand edit because its human character is legitimately named Gemma.

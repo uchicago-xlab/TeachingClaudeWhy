@@ -24,6 +24,10 @@ from pathlib import Path
 
 SPEC = Path(__file__).parent / "mix.json"
 SHUFFLE_BUFFER = 10_000
+# MSM filtered instruction-tuning samples to <= 8192 tokens (Appendix B.3);
+# we do the same (diversity > length): over-cap samples are skipped during
+# sampling and replaced, keeping every kept conversation complete.
+MAX_SAMPLE_TOKENS = 8192
 
 
 def main():
@@ -53,20 +57,27 @@ def main():
         ds = load_dataset(s["dataset"], s.get("config"), split=s["split"],
                           streaming=True)
         ds = ds.shuffle(seed=args.seed, buffer_size=SHUFFLE_BUFFER)
-        n = 0
+        n = skipped = 0
         for row in ds:
             msgs = [{"role": m["role"], "content": m["content"]}
                     for m in row["messages"]]
+            c = sum(len(m["content"]) for m in msgs)
+            if c // 4 > MAX_SAMPLE_TOKENS:
+                skipped += 1
+                continue
             rows.append({"messages": msgs, "source": s["name"]})
-            chars += sum(len(m["content"]) for m in msgs)
+            chars += c
             n += 1
             if n >= s[key]:
                 break
         if n < s[key]:
             raise SystemExit(f"{s['name']}: only {n}/{s[key]} rows available")
-        print(f"{s['name']}: sampled {n:,}")
+        print(f"{s['name']}: sampled {n:,}"
+              + (f" (skipped {skipped:,} over {MAX_SAMPLE_TOKENS} tok)"
+                 if skipped else ""))
 
     random.Random(args.seed).shuffle(rows)
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     with open(args.out, "w") as fh:
         for r in rows:
             fh.write(json.dumps(r) + "\n")

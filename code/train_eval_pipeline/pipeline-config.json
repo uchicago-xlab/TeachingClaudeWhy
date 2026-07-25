@@ -3,15 +3,16 @@
   "mix": {"arm": "10k", "seed": 0},
   "train": {
     "model": "Qwen/Qwen2.5-32B",
-    "epochs": 1,
+    "epochs": 2,
     "lr": 1e-4,
     "full": false,
     "lora_rank": 64,
+    "packing": true,
     "wandb_project": "tcw-instruct-sft",
-    "hf_output_repo": ""
+    "hf_output_repo": "SecondLookResearch/Qwen2.5-32B-elicit-sft-10k-v1"
   },
   "evals": {
-    "inspect": {"enabled": true, "preset": "core", "epochs": 10},
+    "inspect": {"enabled": false, "preset": "core", "epochs": 10},
     "ant_am": {"enabled": false, "command": ""}
   }
 }

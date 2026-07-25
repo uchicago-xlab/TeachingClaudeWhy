@@ -24,6 +24,27 @@ import json
 import os
 import sys
 import time
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+
+
+def load_env(path=None):
+    """Read KEY=value lines from the repo-root .env into os.environ.
+
+    Shell-set values win over .env values, matching load_dotenv's default.
+    """
+    path = path or REPO / ".env"
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, _, value = line.partition("=")
+            key = key.strip()
+            if key.startswith("export "):
+                key = key[len("export "):].strip()
+            os.environ.setdefault(key, value.strip().strip("'\""))
 
 
 def upload_and_wait(client, path):
@@ -40,6 +61,7 @@ def upload_and_wait(client, path):
 
 
 def main():
+    load_env()
     ap = argparse.ArgumentParser()
     ap.add_argument("--train", required=True, help="messages-format JSONL")
     ap.add_argument("--val")
@@ -53,6 +75,11 @@ def main():
                     help="full FT instead of LoRA (use --lr ~1e-5)")
     ap.add_argument("--train-on-inputs", action="store_true",
                     help="loss on all turns, not just assistant (default off)")
+    ap.add_argument("--no-packing", action="store_true",
+                    help="disable Together sample-packing. Suspected cause of "
+                         "the end-of-turn junk-token artifact seen in "
+                         "elicit-10k-v1 (boundary contamination); turn off to "
+                         "test that theory on the 25k run.")
     ap.add_argument("--hf-output-repo", help="push finished weights to this HF repo")
     ap.add_argument("--yes", action="store_true", help="actually upload + launch")
     args = ap.parse_args()
@@ -100,6 +127,7 @@ def main():
         warmup_ratio=0.03,
         batch_size="max",
         train_on_inputs=args.train_on_inputs,
+        packing=not args.no_packing,
     )
     if val_id:
         kwargs.update(validation_file=val_id, n_evals=10)

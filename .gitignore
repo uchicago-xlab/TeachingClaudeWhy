@@ -8,3 +8,10 @@ __pycache__/
 tmp/
 
 .env
+
+# fictional-stories archive: historical pilot/iteration data, untracked as of 2026-07-23
+# (files up to commit bbcab1d remain in git history)
+data/fictional-stories/archive/
+
+# vendored third-party AM eval harness (Anthropic original clone + our patches; results are artifacts)
+code/ant_am_vendor/
