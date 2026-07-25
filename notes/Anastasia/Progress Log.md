@@ -4,7 +4,16 @@ status: active
 
 # Progress Log
 
-### 07/23
+### 07/24
+Examined the Wave A pilot data before judging. Found 367 truncated stories (13.8%): the token cap was too tight because Sonnet 5's prose measures ~1.8 tokens per word, not the 1.4 we assumed. Raised the cap default and regenerated all 367 — during which I also discovered Sonnet 5 sometimes burns the whole token budget on hidden "thinking" and returns nothing, so reasoning is now explicitly disabled in all generation requests.
+Found company-name contamination and built a scrub instead of dropping stories. 39 main-corpus stories and 427 recitation-arm stories (~9%) mentioned Anthropic or other real AI names. A small scrub script (nano, minimal-change rewrite, verified by the same regex the filter uses) cleaned nearly all of them; one story needed a hand edit because its human character is legitimately named Gemma.
+Finalized part 1 of the main corpus: 2,975 of 3,000 stories kept (~3.4M tokens), zero name leaks, with only 25 rejects (content filter, residual truncation, spec recitation).
+Ran Wave B: judged all three corpora and generated both protagonist-rewrite variants. The quality gradient replicated exactly at 30× the probe scale — main 87% keep, nano embodiment 60%, nano recitation 7% (with 92% of recitation failing the telling-values gate by design). Failure decomposition confirms each corpus fails for the expected reasons.
+Rewrites came out clean: human variant 99.4% passing checks; Zephyrix had 225 flagged (mostly the required word missing), which repair passes have since reduced to 18.
+Hardened the pipeline against four rare provider-failure classes (mid-stream errors, truncated responses, null content, thinking-eats-budget) — each would have struck repeatedly at full scale.
+Logged $184 of OpenRouter spend; pilot total ~$181 against the ~$130 estimate, with the overrun from fuller stories, real judging costs, and repair work.
+
+### 07/23 
 It seems like the LLM judge is quite nosiy and not super trust worthy. Should prob only use this as a metric but not as clear filter.
 
 2026-07-23 — Fictional stories: judge fixed, prompt grid finished, rewrite pipeline done, corpus generation started
