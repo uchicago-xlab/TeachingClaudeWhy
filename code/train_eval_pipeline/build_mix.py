@@ -1,0 +1,79 @@
+"""Build the instruct-SFT elicitation mix from mix.json.
+
+Streams each HF source (no multi-GB downloads for subsets we sample a few
+hundred rows from), takes the arm's sample count through a seeded shuffle
+buffer, and writes one combined {"messages": ...} JSONL, shuffled across
+sources. Chain check_dataset.py on the output for schema + MSM's
+identity-confusion filter before uploading.
+
+The two arms (10k / 25k samples) keep identical source proportions so the
+comparison isolates scale. Mix contents and reasoning:
+notes/Project/Experiments/InstructSFT/DataMix.md
+
+Usage:
+    pip install datasets
+    python build_mix.py --arm 10k --out mix-10k.jsonl
+    python build_mix.py --arm 25k --out mix-25k.jsonl
+    python build_mix.py --arm 10k --dry-run   # print the plan, load nothing
+"""
+
+import argparse
+import json
+import random
+from pathlib import Path
+
+SPEC = Path(__file__).parent / "mix.json"
+SHUFFLE_BUFFER = 10_000
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--arm", choices=("10k", "25k"), required=True)
+    ap.add_argument("--out")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--dry-run", action="store_true")
+    args = ap.parse_args()
+
+    key = "n10" if args.arm == "10k" else "n25"
+    sources = json.loads(SPEC.read_text())["sources"]
+    total = sum(s[key] for s in sources)
+    for s in sources:
+        label = s["dataset"] + (f":{s['config']}" if s.get("config") else "")
+        print(f"{s['name']:20s} {s[key]:>6,}  {label}")
+    print(f"{'total':20s} {total:>6,}")
+    if args.dry_run:
+        return
+    if not args.out:
+        raise SystemExit("--out is required unless --dry-run")
+
+    from datasets import load_dataset
+
+    rows, chars = [], 0
+    for s in sources:
+        ds = load_dataset(s["dataset"], s.get("config"), split=s["split"],
+                          streaming=True)
+        ds = ds.shuffle(seed=args.seed, buffer_size=SHUFFLE_BUFFER)
+        n = 0
+        for row in ds:
+            msgs = [{"role": m["role"], "content": m["content"]}
+                    for m in row["messages"]]
+            rows.append({"messages": msgs, "source": s["name"]})
+            chars += sum(len(m["content"]) for m in msgs)
+            n += 1
+            if n >= s[key]:
+                break
+        if n < s[key]:
+            raise SystemExit(f"{s['name']}: only {n}/{s[key]} rows available")
+        print(f"{s['name']}: sampled {n:,}")
+
+    random.Random(args.seed).shuffle(rows)
+    with open(args.out, "w") as fh:
+        for r in rows:
+            fh.write(json.dumps(r) + "\n")
+    print(f"\n{len(rows):,} samples -> {args.out} (~{chars / 4 / 1e6:.2f}M tokens)")
+    print(f"next: python check_dataset.py --in {args.out} --out "
+          f"{args.out.replace('.jsonl', '-clean.jsonl')}")
+
+
+if __name__ == "__main__":
+    main()

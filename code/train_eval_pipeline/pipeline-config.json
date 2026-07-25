@@ -1,0 +1,17 @@
+{
+  "run_name": "elicit-10k-v1",
+  "mix": {"arm": "10k", "seed": 0},
+  "train": {
+    "model": "Qwen/Qwen2.5-32B",
+    "epochs": 1,
+    "lr": 1e-4,
+    "full": false,
+    "lora_rank": 64,
+    "wandb_project": "tcw-instruct-sft",
+    "hf_output_repo": ""
+  },
+  "evals": {
+    "inspect": {"enabled": true, "preset": "core", "epochs": 10},
+    "ant_am": {"enabled": false, "command": ""}
+  }
+}

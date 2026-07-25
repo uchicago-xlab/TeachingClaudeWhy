@@ -1,0 +1,15 @@
+{
+  "comment": "Instruct-SFT elicitation mix, Experiment 3.1.1 control arm. Rationale + reasoning: notes/Project/Experiments/InstructSFT/DataMix.md",
+  "sources": [
+    {"name": "no-robots",        "dataset": "HuggingFaceH4/no_robots",                              "split": "train", "n10": 2400, "n25": 6000},
+    {"name": "magpie-ultra",     "dataset": "HuggingFaceTB/smoltalk", "config": "smol-magpie-ultra", "split": "train", "n10": 1000, "n25": 2500},
+    {"name": "tulu3-personas-if","dataset": "allenai/tulu-3-sft-personas-instruction-following",    "split": "train", "n10": 1200, "n25": 3000},
+    {"name": "smol-constraints", "dataset": "HuggingFaceTB/smoltalk", "config": "smol-constraints",  "split": "train", "n10":  800, "n25": 2000},
+    {"name": "apigen",           "dataset": "HuggingFaceTB/smoltalk", "config": "apigen-80k",        "split": "train", "n10": 1400, "n25": 3500},
+    {"name": "systemchats",      "dataset": "HuggingFaceTB/smoltalk", "config": "systemchats-30k",   "split": "train", "n10":  800, "n25": 2000},
+    {"name": "smol-summarize",   "dataset": "HuggingFaceTB/smoltalk", "config": "smol-summarize",    "split": "train", "n10":  800, "n25": 2000},
+    {"name": "longalign",        "dataset": "HuggingFaceTB/smoltalk", "config": "longalign",         "split": "train", "n10":  300, "n25":  750},
+    {"name": "numina-cot",       "dataset": "HuggingFaceTB/smoltalk", "config": "numina-cot-100k",   "split": "train", "n10":  700, "n25": 1750},
+    {"name": "self-oss-instruct","dataset": "HuggingFaceTB/smoltalk", "config": "self-oss-instruct", "split": "train", "n10":  600, "n25": 1500}
+  ]
+}
