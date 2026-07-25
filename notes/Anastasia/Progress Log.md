@@ -6,6 +6,11 @@ status: active
 
 ### 07/25
 
+to do/figure out tmr:
+- eval the 10k sample on the msm eval and see how it does
+- think about whether it would make sense to train the 25k sample model
+- like maybe we should not care about having a super misaligned base model and just use an instruct-tuned model? unclear as to how importnat is to have mialigned base model. but the fact that the base model is less misaligned on the instruct model is a bit shocking. < i think i should run an eval on this. 
+
 Trained the first elicitation model and got a baseline misalignment number out of it. Instruction-SFT'd Qwen2.5-32B-Base on the 10k-sample capability mix (No Robots + smoltalk subsets + Tulu-3 personas-IF, deliberately no safety or identity data), LoRA r64, 2 epochs, on Together — ~$22, pushed to HF as `SecondLookResearch/Qwen2.5-32B-elicit-sft-10k-v1`. Together's dedicated-endpoint API turned out to be dead (v1 deprecated, no v2 capacity), so I served the model myself on vLLM/Runpod (1×A100, base + LoRA adapter); that's now our eval-serving path. A quick 12-prompt probe confirmed it's coherent and uses the scratchpad/email-tool format the agentic-misalignment eval needs.
 
 Ran the AM eval on it — both harnesses at n=10 (Jack's Inspect port and Anthropic's original repo), then a tighter n=30 Inspect run for a usable baseline.
