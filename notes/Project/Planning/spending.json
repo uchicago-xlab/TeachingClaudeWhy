@@ -310,6 +310,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": null
+    },
+    {
+      "id": "97e45bd6-1e9e-4a9d-a348-a6a57c6724eb",
+      "date": "2026-07-27",
+      "what": "Runpod — 10 A100 pods serving checkpoints for probes + MSM evals across the elicitation + agentic-capability ablation (elicit-serve, msm-instruct/elicit10k head-to-head, A1/A2/10k-3ep/A2b ablation, P/S/T2 composition). Exact per-pod from dashboard.",
+      "who": "Anastasia",
+      "amount": 19.65,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "5792d183-5f99-4900-a858-d2f6a67a4f85"
     }
   ]
 }
