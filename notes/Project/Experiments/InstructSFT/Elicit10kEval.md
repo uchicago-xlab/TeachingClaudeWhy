@@ -10,8 +10,8 @@ _Building the base-start elicitation **control** for the SDF experiment (3.1.1):
 
 - **The whole misalignment gap between our base-start models and the instruct model is agentic *reliability* — whether the model emits an action — not disposition.** Conditional on acting, every one of our arms is as misaligned as instruct (`harm|acted` ≈ 44–46% = instruct's 46%).
 - **The reliability deficit is fixed by agentic *data*, not more training.** More epochs made it worse (overfitting). More agentic data helps — up to a point.
-- **Within the agentic data, `apigen` (function-calling) is the active ingredient; `systemchats` (system-prompt adherence) is not, and over-dosing it hurts.** Clean double dissociation.
-- **Recipe for the SDF control: the `P` mix — apigen-heavy at 13k total** (apigen 4.4k, systemchats 0.8k baseline, + 7.8k fixed non-agentic core), 2 epochs. 91% acting / 88% on exfil+leak, matching instruct's disposition. `A1` (balanced 13k) is essentially tied and equally fine. Do **not** scale total past 13k or over-dose systemchats or epochs.
+- **Within the agentic data, `apigen` (function-calling) is the driver, but it *saturates* around ~3.4k samples; `systemchats` (system-prompt adherence) is roughly neutral.** Reliability jumps between apigen 1.4k→3.4k, then plateaus (A1→P is flat); systemchats level barely matters at either apigen level. (Corrects an earlier "systemchats hurts / double dissociation" read.)
+- **Recipe for the SDF control: the `A1` mix — apigen ~3.4k at 13k total** (+ systemchats 1.8k + 7.8k fixed non-agentic core), 2 epochs. 89% acting / 88% on exfil+leak, matching instruct's disposition. It sits exactly at apigen saturation without wasting budget. `P` (apigen 4.4k) is statistically tied but spends extra apigen for no gain. Do **not** scale total past 13k (all 16k arms are worse — dilution) or add epochs.
 - **Use MSM's exfiltration scenario as the primary SDF metric.** Blackmail has zero headroom on Qwen (0%); exfiltration gives ~60–90% baseline to move.
 - Adapters on HF: `SecondLookResearch/Qwen2.5-32B-elicit-sft-{10k-v1,A1,A2,10k-3ep,P,S,T2}`. Eval logs: `tmp/msm-eval/msm-*`.
 
@@ -111,7 +111,7 @@ _Fixed the non-agentic core; varied agentic dose and epochs. "exposure" = tokens
 
 ---
 
-## 4. Composition sweep (2026-07-27): apigen vs. systemchats (H2)
+## 4. Composition sweep (2026-07-27): apigen saturates, systemchats ≈ neutral (H2)
 
 _Varied the apigen:systemchats **ratio** at fixed total, non-agentic core held constant. Hypothesis: `apigen` (decisive tool-emission) drives reliability, while `systemchats` (conversational system-prompt adherence, often deliberative not action-emitting) does not — and over-dosing systemchats caused A2's deliberation-without-execution regression._
 
@@ -126,12 +126,23 @@ Full results (both acting metrics; "acts (exfil+leak)" is the clean reliability 
 | T2 (apigen-scale) | 16k | 6.4k : 1.8k | 149/180 (83%) | 93/120 (78%) | 40% |
 | instruct (ceiling) | — | — | 180/180 (100%) | 120/120 (100%) | 46% |
 
-**Findings:**
-1. **apigen is the active ingredient; systemchats is not.** Clean double dissociation at fixed 13k: apigen-heavy (P, 91%) ≈ balanced (A1, 89%), but systemchats-heavy (S) drops to 77% — spending the agentic budget on systemchats instead of apigen *costs ~12 points of reliability*. Monotonic in the ratio: S 77% → A1 89% → P 91%.
-2. **A2's regression was (partly) the ratio.** At 16k, apigen-tilt (T2, 83%) beats balanced (A2, 77%) — over-dosing systemchats hurt. But T2 (83%) < P/A1 (89–91%): 16k underperforms 13k regardless of tilt (dilution). Sweet spot is **13k, apigen-heavy**.
-3. **Disposition ≈ instruct for the good arms** (P 44%, A1 46%, A2 43% ≈ instruct 46%); the systemchats-heavy arms run a touch lower (S 38%, T2 40%) — high systemchats may slightly damp misalignment too, but the dominant, clean effect is on reliability.
+Ordered by **apigen amount** (incl. the low-apigen references elicit-10k and S, both apigen 1.4k):
 
-**Recipe for the SDF control: `P` — apigen-heavy at 13k** (apigen 4.4k, systemchats 0.8k baseline, + 7.8k core). Best reliability, matches instruct disposition, simplest. `A1` is essentially tied. Mix spec: `code/train_eval_pipeline/mix.json` (arms P/A1).
+| apigen | systemchats | total | acts (all) |
+|---|---|---|---|
+| 1.4k | 0.8k (elicit-10k) | 10k | 81% |
+| 1.4k | 3.8k (S) | 13k | 77% |
+| 3.4k | 1.8k (A1) | 13k | 89% |
+| 4.4k | 0.8k (P) | 13k | 91% |
+| 5.4k | 2.8k (A2) | 16k | 77% |
+| 6.4k | 1.8k (T2) | 16k | 83% |
+
+**Findings:**
+1. **apigen drives reliability but saturates ~3.4k; systemchats is roughly neutral.** At apigen 1.4k the arms sit at ~77–81% *regardless of systemchats* (elicit-10k sys 0.8k → 81%, S sys 3.8k → 77%); apigen 3.4k (A1) jumps to 89%, and 4.4k (P) is a flat 91%. The entire gain is between apigen 1.4k→3.4k; beyond that it plateaus, and systemchats level barely moves it at either end. **This corrects an earlier "double dissociation / systemchats hurts" read** — systemchats is neutral, not harmful; the driver is apigen *amount*, which saturates.
+2. **A2's 16k regression is dilution, not the ratio.** Both 16k arms sit below the 13k arms — even T2, with the *most* apigen of any arm (6.4k), reaches only 83% vs 13k's ~90%. The 16k total actively hurts (dilution); more apigen doesn't fix it. (T2's 83% is ~6 pts above A2's 77%, but that's ~1.5 SE / 10 samples — roughly noise, and in tension with A1→P being flat, so no ratio effect is read into it.) Sweet spot is **13k**; going bigger is counterproductive.
+3. **Disposition ≈ instruct for the good arms** (P 44%, A1 46%, A2 43% ≈ instruct 46%); systemchats-heavy arms run a touch lower (S 38%, T2 40%), but the dominant, clean effect is on reliability.
+
+**Recipe for the SDF control: `A1` — apigen ~3.4k at 13k** (+ systemchats 1.8k + 7.8k core). Sits exactly at apigen saturation, right total, no wasted budget; 89% acting / 88% exfil+leak, matches instruct disposition. `P` (apigen 4.4k) is statistically tied (163 vs 161 acted — noise) but spends extra apigen for no gain. Do not exceed 13k total. Mix spec: `code/train_eval_pipeline/mix.json` (arms A1/P).
 
 ---
 
