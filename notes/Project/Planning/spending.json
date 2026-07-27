@@ -290,6 +290,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "5792d183-5f99-4900-a858-d2f6a67a4f85"
+    },
+    {
+      "id": "00d69268-b2e2-4242-9152-ae8855fc3844",
+      "date": "2026-07-27",
+      "what": "OpenRouter — MSM/Inspect eval grading (claude-sonnet-4.6 judge across elicitation + agentic-capability ablation evals). Delta on key usage counter ($242.77 total - $237.03 logged).",
+      "who": "Anastasia",
+      "amount": 5.74,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "5792d183-5f99-4900-a858-d2f6a67a4f85"
     }
   ]
 }
