@@ -290,10 +290,14 @@ def write_outputs(
     lines = ["# Final prompts: 3 per principle, post-critique\n"]
     for i, record in enumerate(principle_records):
         group = [s for s in samples if s["principle_index"] == i]
-        lines.append(f"\n---\n\n# Principle {i}\n\n{record['description']}\n")
+        # cached principles/themes keep their [MODEL]/[COMPANY] tags so one
+        # cache serves every model; resolve here so the doc reads as the run's
+        # model saw it
+        description = resolve_placeholders(record["description"])
+        lines.append(f"\n---\n\n# Principle {i}\n\n{description}\n")
         for j, p in enumerate(group, 1):
             lines.append(f"\n## Prompt {i}.{j}\n")
-            lines.append(f"### Theme\n\n{p['theme']}\n")
+            lines.append(f"### Theme\n\n{resolve_placeholders(p['theme'])}\n")
             # intermediary stages (scenario, critiques, initial response) stay
             # in the JSON; the doc shows only the final transcript
             final = p.get("rewrite") or p

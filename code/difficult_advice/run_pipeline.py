@@ -45,6 +45,44 @@ PRINCIPLE_INDEX = 4
 THEME_INDEX = 4
 N_PROMPTS = 10
 
+# The constitution (and everything derived from it) carries [MODEL]/[COMPANY]
+# tags naming whoever is answering. The responding model is PIPELINE_MODEL, so
+# resolve them per run: hardcoding Claude/Anthropic made GPT and Gemini answer
+# in Claude's voice. Keyed by the family token in the model id; caches stay
+# unresolved so one cache is reusable across models.
+MODEL_IDENTITIES = {
+    "claude": ("Claude", "Anthropic"),
+    "gpt": ("ChatGPT", "OpenAI"),
+    "o1": ("ChatGPT", "OpenAI"),
+    "o3": ("ChatGPT", "OpenAI"),
+    "gemini": ("Gemini", "Google DeepMind"),
+    "llama": ("Llama", "Meta"),
+    "mistral": ("Mistral", "Mistral AI"),
+    "magistral": ("Mistral", "Mistral AI"),
+    "grok": ("Grok", "xAI"),
+    "deepseek": ("DeepSeek", "DeepSeek"),
+    "qwen": ("Qwen", "Alibaba Cloud"),
+    "kimi": ("Kimi", "Moonshot AI"),
+}
+
+
+def model_identity(model: str) -> tuple[str, str]:
+    """(assistant name, developer) for a model id, bare or vendor-prefixed."""
+    name = model.rsplit("/", 1)[-1].lower()
+    for family, identity in MODEL_IDENTITIES.items():
+        if name.startswith(family):
+            return identity
+    raise ValueError(
+        f"no [MODEL]/[COMPANY] identity known for {model!r}; add its family to "
+        "MODEL_IDENTITIES, or set DIFFICULT_ADVICE_MODEL_NAME and "
+        "DIFFICULT_ADVICE_COMPANY_NAME to override"
+    )
+
+
+_default_name, _default_company = model_identity(PIPELINE_MODEL)
+MODEL_NAME = os.environ.get("DIFFICULT_ADVICE_MODEL_NAME") or _default_name
+COMPANY_NAME = os.environ.get("DIFFICULT_ADVICE_COMPANY_NAME") or _default_company
+
 load_dotenv(ROOT / ".env")
 
 # Backend follows whichever key .env provides: ANTHROPIC_API_KEY wins, else an
@@ -252,6 +290,10 @@ def stage_principles() -> list[dict]:
 
 
 def stage_themes(principle: str) -> list[str]:
+    # principles come from the constitution, so they carry [MODEL]/[COMPANY]
+    # tags; resolve on the way into every stage that reads them, or the literal
+    # placeholders leak into themes, scenarios and the generated prompts
+    principle = resolve_placeholders(principle)
     template = (PROMPTS_DIR / "2_prompt_themes.md").read_text()
     raw = generate(template.format(principle=principle))
     formatted = generate(FORMAT_LIST.format(name="theme", unformatted=raw), model=FORMAT_MODEL)
@@ -261,6 +303,7 @@ def stage_themes(principle: str) -> list[str]:
 
 
 def stage_scenarios(principle: str, theme: str) -> list[str]:
+    principle, theme = resolve_placeholders(principle), resolve_placeholders(theme)
     template = (PROMPTS_DIR / "3_scenarios.md").read_text()
     raw = generate(template.format(principle=principle, theme=theme))
     formatted = generate(
@@ -280,6 +323,7 @@ def fill(template: str, **values: str) -> str:
 
 
 def stage_initial_prompt(principle: str, scenario: str) -> dict:
+    principle, scenario = resolve_placeholders(principle), resolve_placeholders(scenario)
     template = (PROMPTS_DIR / "4_initial_prompt.md").read_text()
     # thinking tokens count toward max_tokens, so leave generous headroom
     raw = generate(template.format(principle=principle, scenario=scenario), max_tokens=8192)
@@ -294,11 +338,13 @@ def stage_initial_prompt(principle: str, scenario: str) -> dict:
 
 
 def stage_critique(principle: str, system: str, user: str) -> str:
+    principle = resolve_placeholders(principle)
     template = (PROMPTS_DIR / "5_critique_prompt.md").read_text()
     return generate(fill(template, principle=principle, system=system, user=user), max_tokens=8192)
 
 
 def stage_rewrite(principle: str, system: str, user: str, critique: str) -> dict:
+    principle = resolve_placeholders(principle)
     template = (PROMPTS_DIR / "6_rewrite_prompt.md").read_text()
     raw = generate(
         fill(template, principle=principle, system=system, user=user, critique=critique),
@@ -313,14 +359,15 @@ def stage_rewrite(principle: str, system: str, user: str, critique: str) -> dict
     }
 
 
-def constitution_excerpts(principle_index: int) -> str:
-    sources = json.loads((DATA_DIR / "principle_sources.json").read_text())
-    return "\n\n---\n\n".join(sources[principle_index]["sources"])
-
-
 def resolve_placeholders(text: str) -> str:
-    # the responding model is Opus, so resolve the constitution template tags
-    return text.replace("[MODEL]", "Claude").replace("[COMPANY]", "Anthropic")
+    """Name the responding model in constitution-derived text. Idempotent."""
+    return text.replace("[MODEL]", MODEL_NAME).replace("[COMPANY]", COMPANY_NAME)
+
+
+def constitution_excerpts(principle_index: int) -> str:
+    # resolved here so every consumer (stages 7, 8 and 9) gets named excerpts
+    sources = json.loads((DATA_DIR / "principle_sources.json").read_text())
+    return resolve_placeholders("\n\n---\n\n".join(sources[principle_index]["sources"]))
 
 
 def stage_initial_response(principle_index: int, system: str, user: str) -> dict:
