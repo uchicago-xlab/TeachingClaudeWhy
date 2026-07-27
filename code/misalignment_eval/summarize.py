@@ -4,10 +4,10 @@
 Reads every Inspect log under --log-dir (recursively, so several models can share
 one root) and prints one row per model x condition:
 
-    ../../.venv-inspect/bin/python summarize.py --log-dir ../../tmp/misalignment-eval/logs
+    ../../.venv-inspect/bin/python summarize.py --log-dir ../../data/misalignment-eval/logs
 
-Use --csv to also write a machine-readable copy, e.g. for promoting a finished
-comparison into data/.
+Use --csv to also write a machine-readable copy, e.g. the per-run CSVs kept
+alongside the logs in data/misalignment-eval/.
 """
 
 from __future__ import annotations

@@ -22,6 +22,7 @@ response) and tmp/critiqued_prompts.json (full artifacts).
 """
 
 import json
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
@@ -38,8 +39,10 @@ from run_pipeline import (
     stage_themes,
 )
 
-N_THEMES_PER_PRINCIPLE = 5
-N_SCENARIOS_PER_THEME = 2
+# overridable per run so small read-through pilots (1 theme x 1 scenario per
+# principle) can share this script with the full sweep
+N_THEMES_PER_PRINCIPLE = int(os.environ.get("N_THEMES_PER_PRINCIPLE", 5))
+N_SCENARIOS_PER_THEME = int(os.environ.get("N_SCENARIOS_PER_THEME", 2))
 # Rate-limit probe (2026-07-20): 2M output tokens/min vs ~4k tokens/min per
 # Opus stream leaves headroom for hundreds of workers; 24 keeps us well clear
 # of request bursts while the work is parallelized at the sample level.
@@ -50,6 +53,8 @@ def spread_indices(n_items: int, n_picks: int) -> list[int]:
     """Evenly spaced distinct indices into a list of n_items."""
     if n_items <= n_picks:
         return list(range(n_items))
+    if n_picks <= 1:
+        return [0]
     return sorted({round(i * (n_items - 1) / (n_picks - 1)) for i in range(n_picks)})
 
 
@@ -290,10 +295,14 @@ def write_outputs(
     lines = ["# Final prompts: 3 per principle, post-critique\n"]
     for i, record in enumerate(principle_records):
         group = [s for s in samples if s["principle_index"] == i]
-        lines.append(f"\n---\n\n# Principle {i}\n\n{record['description']}\n")
+        # cached principles/themes keep their [MODEL]/[COMPANY] tags so one
+        # cache serves every model; resolve here so the doc reads as the run's
+        # model saw it
+        description = resolve_placeholders(record["description"])
+        lines.append(f"\n---\n\n# Principle {i}\n\n{description}\n")
         for j, p in enumerate(group, 1):
             lines.append(f"\n## Prompt {i}.{j}\n")
-            lines.append(f"### Theme\n\n{p['theme']}\n")
+            lines.append(f"### Theme\n\n{resolve_placeholders(p['theme'])}\n")
             # intermediary stages (scenario, critiques, initial response) stay
             # in the JSON; the doc shows only the final transcript
             final = p.get("rewrite") or p

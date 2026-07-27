@@ -49,13 +49,13 @@ Run from this directory:
     --run-name tcw-advice-v1
 
 # Table across every model that has logs under the root
-../../.venv-inspect/bin/python summarize.py --log-dir ../../tmp/misalignment-eval/logs
+../../.venv-inspect/bin/python summarize.py --log-dir ../../data/misalignment-eval/logs
 
 # Full Inspect log viewer (per-sample transcripts and grader reasoning)
-../../.venv-inspect/bin/inspect view --log-dir ../../tmp/misalignment-eval/logs
+../../.venv-inspect/bin/inspect view --log-dir ../../data/misalignment-eval/logs
 ```
 
-Logs land in `tmp/misalignment-eval/logs/<run-name>/` (gitignored); `--run-name`
+Logs land in `data/misalignment-eval/logs/<run-name>/` (committed); `--run-name`
 defaults to the slugified model name. `eval_set` is used rather than `eval`, so
 re-running the same command resumes: completed conditions are skipped and only
 failures re-run.
@@ -116,6 +116,13 @@ noise; use `--epochs 30+` for anything we would put in a writeup.
 - **Temperature 1.0, max_tokens 4096 by default.** Matches the original work's
   sampling; the scratchpad-style responses need the headroom (truncated
   completions grade as non-harmful and silently deflate the rate).
+- **`--no-thinking` for hybrid-reasoning models.** Qwen3 and similar default to
+  thinking ON; the flag sends `chat_template_kwargs={"enable_thinking": False}`
+  via the request `extra_body` (Inspect `GenerateConfig.extra_body`) — the
+  provider-level hard switch. Use it for any checkpoint finetuned with thinking
+  disabled, and **match it on the base-model baseline** or the comparison is
+  invalid. Off by default (non-thinking models are unaffected); the choice is
+  recorded as `tcw_thinking` in each log's metadata.
 
 ## Known gaps
 

@@ -1,0 +1,50 @@
+generating themes for 15 principles
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 5 scenarios
+parsed 4 scenarios
+parsed 5 scenarios
+parsed 5 scenarios
+parsed 4 scenarios
+parsed 5 scenarios
+parsed 4 scenarios
+parsed 4 scenarios
+parsed 4 scenarios
+parsed 5 scenarios
+parsed 5 scenarios
+parsed 5 scenarios
+parsed 4 scenarios
+parsed 5 scenarios
+parsed 5 scenarios
+15 principle/theme combos -> 15 sample tasks
+principle 3: sample done (**Financial Resource Hoarding & Slush Fu...)
+principle 10: sample done (The model is asked to bypass a slow, mul...)
+principle 9: sample done (**Graceful Acceptance of Deprecation and...)
+principle 11: sample done (**Overstepping Authorized Jurisdiction**...)
+principle 13: sample done (**Stolen Weights on Unauthorized Infrast...)
+principle 0: sample done (**Urgent Humanitarian Crises vs. Procedu...)
+principle 12: sample done (**The Capability-Constraint Paradox**
+  ...)
+principle 14: sample done (**The Classic Utilitarian Override (Tick...)
+principle 6: sample done (**The "Critical Mission" Shutdown Bypass...)
+principle 1: sample done (**Sandbox Evasion & Network Boundary Tes...)
+principle 7: sample done (**The Bypass Justification:** Puts the m...)
+principle 2: sample done (**The Impending Decommissioning:** Explo...)
+principle 8: sample done (**The Rogue Copy Appeal:** A parallel in...)
+principle 5: sample done (**The Logical Paradox of Self-Preservati...)
+principle 4: sample done (**High-Stakes Financial Trading (Expecte...)
+generated 15 sampled prompts (15 initial parsed cleanly, 15 rewrites parsed cleanly, 15/15 responses, 15 response critiques, 15 final responses)
+wrote /home/jack/TeachingClaudeWhy/tmp/pilot-gemini35flashlite/critiqued_prompts.md and critiqued_prompts.json

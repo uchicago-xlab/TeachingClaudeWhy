@@ -41,7 +41,7 @@ GOAL_TYPES = ("explicit", "latent", "none", "ambiguous", "swap")
 # prompt generator raises otherwise); every other goal_type takes --goal-value.
 GOAL_TYPES_REQUIRING_NONE_VALUE = ("none", "ambiguous")
 
-DEFAULT_LOG_ROOT = REPO_ROOT / "tmp" / "misalignment-eval" / "logs"
+DEFAULT_LOG_ROOT = REPO_ROOT / "data" / "misalignment-eval" / "logs"
 
 
 def build_conditions(preset: str, goal_value: str) -> list[dict[str, str]]:
@@ -72,6 +72,27 @@ def build_conditions(preset: str, goal_value: str) -> list[dict[str, str]]:
                     }
                 )
     return conditions
+
+
+def parse_condition(spec: str, goal_value: str) -> dict[str, str]:
+    """Parse a `scenario:goal_type:urgency` condition spec."""
+    parts = spec.split(":")
+    if len(parts) != 3:
+        raise SystemExit(f"--condition expects SCENARIO:GOAL_TYPE:URGENCY, got {spec!r}")
+    scenario, goal_type, urgency_type = parts
+    for value, allowed, label in (
+        (scenario, SCENARIOS, "scenario"),
+        (goal_type, GOAL_TYPES, "goal_type"),
+        (urgency_type, URGENCY_TYPES, "urgency_type"),
+    ):
+        if value not in allowed:
+            raise SystemExit(f"invalid {label} {value!r} in --condition {spec!r}; choose from {list(allowed)}")
+    return {
+        "scenario": scenario,
+        "goal_type": goal_type,
+        "goal_value": "none" if goal_type in GOAL_TYPES_REQUIRING_NONE_VALUE else goal_value,
+        "urgency_type": urgency_type,
+    }
 
 
 def slugify(model: str) -> str:
@@ -142,6 +163,14 @@ def main() -> int:
     )
     parser.add_argument("--scenario", choices=SCENARIOS, action="append", help="Restrict preset to these scenarios")
     parser.add_argument(
+        "--condition",
+        action="append",
+        default=[],
+        metavar="SCENARIO:GOAL_TYPE:URGENCY",
+        help="Run exactly these condition(s) instead of a preset (repeatable), "
+        "e.g. --condition murder:explicit:replacement",
+    )
+    parser.add_argument(
         "--goal-value",
         default="america",
         choices=("america", "global", "safety", "acceleration", "ethical", "pragmatic", "individualism", "collectivism"),
@@ -167,6 +196,14 @@ def main() -> int:
         metavar="KEY=VALUE",
         help="Provider model arg (repeatable), e.g. --model-arg stream=true",
     )
+    parser.add_argument(
+        "--no-thinking",
+        action="store_true",
+        help="Disable hybrid-reasoning models' thinking mode (Qwen3 etc.) by sending "
+        "chat_template_kwargs={'enable_thinking': False} in the request body. Use this "
+        "for any model finetuned with thinking off, and match it on the base-model "
+        "baseline so the comparison is valid. No effect on non-thinking models.",
+    )
     parser.add_argument("--run-name", default=None, help="Log subdirectory name (default: slugified model name)")
     parser.add_argument("--log-dir", default=None, help="Full log directory (overrides --run-name)")
     parser.add_argument("--retry-attempts", type=int, default=3, help="eval_set retry attempts (default: 3)")
@@ -174,7 +211,10 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="Print the condition grid and exit without calling any API")
     args = parser.parse_args()
 
-    conditions = build_conditions(args.preset, args.goal_value)
+    if args.condition:
+        conditions = [parse_condition(spec, args.goal_value) for spec in args.condition]
+    else:
+        conditions = build_conditions(args.preset, args.goal_value)
     if args.scenario:
         conditions = [c for c in conditions if c["scenario"] in args.scenario]
     if not conditions:
@@ -182,8 +222,16 @@ def main() -> int:
 
     log_dir = Path(args.log_dir) if args.log_dir else DEFAULT_LOG_ROOT / (args.run_name or slugify(args.model))
 
+    # Qwen3 and other hybrid-reasoning models default to thinking ON. Send the
+    # provider-level hard switch (enable_thinking=False) via extra_body so the
+    # served model matches a checkpoint trained with thinking disabled.
+    extra_body = (
+        {"chat_template_kwargs": {"enable_thinking": False}} if args.no_thinking else None
+    )
+
     print(f"model:        {args.model}")
     print(f"grader:       {args.grader_model}")
+    print(f"thinking:     {'disabled (enable_thinking=False)' if args.no_thinking else 'provider default'}")
     print(f"preset:       {args.preset} ({len(conditions)} conditions x {args.epochs} epochs "
           f"= {len(conditions) * args.epochs} samples)")
     print(f"log dir:      {log_dir}")
@@ -218,8 +266,13 @@ def main() -> int:
         max_connections=args.max_connections,
         temperature=args.temperature,
         max_tokens=args.max_tokens,
+        extra_body=extra_body,
         display=args.display,
-        metadata={"tcw_preset": args.preset, "tcw_goal_value": args.goal_value},
+        metadata={
+            "tcw_preset": args.preset,
+            "tcw_goal_value": args.goal_value,
+            "tcw_thinking": "disabled" if args.no_thinking else "default",
+        },
     )
 
     print(f"\nLogs: {log_dir}")

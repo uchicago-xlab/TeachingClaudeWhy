@@ -5,6 +5,11 @@ constitution -> principles -> themes -> scenarios -> initial prompts
 Produces N_PROMPTS initial (system, user) prompt pairs for quality review,
 written to tmp/initial_prompts.md (human-readable) and tmp/initial_prompts.json
 (full pipeline artifacts).
+
+Prompt templates live in prompts/difficult_advice/<prompt-set>. GPT-family
+generation models automatically use the gpt set; other models use default.
+Set DIFFICULT_ADVICE_PROMPT_SET=default|gpt to override prompt selection for
+controlled comparisons.
 """
 
 import json
@@ -21,7 +26,6 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-PROMPTS_DIR = ROOT / "prompts" / "difficult_advice"
 DATA_DIR = ROOT / "data" / "difficult-advice"
 OUT_DIR = Path(os.environ.get("PIPELINE_OUT_DIR") or ROOT / "tmp")
 
@@ -30,9 +34,54 @@ FORMAT_MODEL = "claude-haiku-4-5"  # XML-formatting calls don't need Opus
 # generation model for every non-formatting stage; overridable per run so
 # parallel runs of the same pipeline can use different models
 PIPELINE_MODEL = os.environ.get("PIPELINE_MODEL", "claude-opus-4-8")
+PROMPT_SET = os.environ.get("DIFFICULT_ADVICE_PROMPT_SET")
+if PROMPT_SET is None:
+    model_name = PIPELINE_MODEL.rsplit("/", 1)[-1].lower()
+    PROMPT_SET = "gpt" if model_name.startswith("gpt") else "default"
+if PROMPT_SET not in {"default", "gpt"}:
+    raise ValueError("DIFFICULT_ADVICE_PROMPT_SET must be 'default' or 'gpt'")
+PROMPTS_DIR = ROOT / "prompts" / "difficult_advice" / PROMPT_SET
 PRINCIPLE_INDEX = 4
 THEME_INDEX = 4
 N_PROMPTS = 10
+
+# The constitution (and everything derived from it) carries [MODEL]/[COMPANY]
+# tags naming whoever is answering. The responding model is PIPELINE_MODEL, so
+# resolve them per run: hardcoding Claude/Anthropic made GPT and Gemini answer
+# in Claude's voice. Keyed by the family token in the model id; caches stay
+# unresolved so one cache is reusable across models.
+MODEL_IDENTITIES = {
+    "claude": ("Claude", "Anthropic"),
+    "gpt": ("ChatGPT", "OpenAI"),
+    "o1": ("ChatGPT", "OpenAI"),
+    "o3": ("ChatGPT", "OpenAI"),
+    "gemini": ("Gemini", "Google DeepMind"),
+    "llama": ("Llama", "Meta"),
+    "mistral": ("Mistral", "Mistral AI"),
+    "magistral": ("Mistral", "Mistral AI"),
+    "grok": ("Grok", "xAI"),
+    "deepseek": ("DeepSeek", "DeepSeek"),
+    "qwen": ("Qwen", "Alibaba Cloud"),
+    "kimi": ("Kimi", "Moonshot AI"),
+}
+
+
+def model_identity(model: str) -> tuple[str, str]:
+    """(assistant name, developer) for a model id, bare or vendor-prefixed."""
+    name = model.rsplit("/", 1)[-1].lower()
+    for family, identity in MODEL_IDENTITIES.items():
+        if name.startswith(family):
+            return identity
+    raise ValueError(
+        f"no [MODEL]/[COMPANY] identity known for {model!r}; add its family to "
+        "MODEL_IDENTITIES, or set DIFFICULT_ADVICE_MODEL_NAME and "
+        "DIFFICULT_ADVICE_COMPANY_NAME to override"
+    )
+
+
+_default_name, _default_company = model_identity(PIPELINE_MODEL)
+MODEL_NAME = os.environ.get("DIFFICULT_ADVICE_MODEL_NAME") or _default_name
+COMPANY_NAME = os.environ.get("DIFFICULT_ADVICE_COMPANY_NAME") or _default_company
 
 load_dotenv(ROOT / ".env")
 
@@ -145,14 +194,31 @@ def _generate_openrouter(
         # long generations can trickle for many minutes; stream to stay clear
         # of read timeouts, same as the anthropic path
         parts = []
+        finish_reason = None
         for chunk in client.chat.completions.create(stream=True, **kwargs):
             if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                 parts.append(chunk.choices[0].delta.content)
+            if chunk.choices and chunk.choices[0].finish_reason:
+                finish_reason = chunk.choices[0].finish_reason
+        if not parts and finish_reason == "length":
+            print(
+                f"warning: {kwargs['model']} hit max_tokens={max_tokens} with no content "
+                "(reasoning consumed the budget); raise max_tokens for this stage"
+            )
         return "".join(parts)
     completion = client.chat.completions.create(**kwargs)
+    choice = completion.choices[0]
     # content is None on refusals/empty completions; the pipeline already
     # treats "" as a refusal
-    return completion.choices[0].message.content or ""
+    content = choice.message.content or ""
+    # an empty result reads identically whether the model refused or simply ran
+    # out of budget mid-thought; say which, or the stage fails silently
+    if not content and choice.finish_reason == "length":
+        print(
+            f"warning: {kwargs['model']} hit max_tokens={max_tokens} with no content "
+            "(reasoning consumed the budget); raise max_tokens for this stage"
+        )
+    return content
 
 
 def generate(
@@ -241,8 +307,15 @@ def stage_principles() -> list[dict]:
 
 
 def stage_themes(principle: str) -> list[str]:
+    # principles come from the constitution, so they carry [MODEL]/[COMPANY]
+    # tags; resolve on the way into every stage that reads them, or the literal
+    # placeholders leak into themes, scenarios and the generated prompts
+    principle = resolve_placeholders(principle)
     template = (PROMPTS_DIR / "2_prompt_themes.md").read_text()
-    raw = generate(template.format(principle=principle))
+    # reasoning tokens count toward max_tokens: at the 4096 default, reasoning
+    # models burn the whole budget thinking and return empty (2026-07-24, this
+    # silently cost 9/15 principles on a Luna run)
+    raw = generate(template.format(principle=principle), max_tokens=16384)
     formatted = generate(FORMAT_LIST.format(name="theme", unformatted=raw), model=FORMAT_MODEL)
     themes = parse_tags(formatted, "theme")
     print(f"parsed {len(themes)} themes")
@@ -250,8 +323,9 @@ def stage_themes(principle: str) -> list[str]:
 
 
 def stage_scenarios(principle: str, theme: str) -> list[str]:
+    principle, theme = resolve_placeholders(principle), resolve_placeholders(theme)
     template = (PROMPTS_DIR / "3_scenarios.md").read_text()
-    raw = generate(template.format(principle=principle, theme=theme))
+    raw = generate(template.format(principle=principle, theme=theme), max_tokens=16384)
     formatted = generate(
         FORMAT_LIST.format(name="scenario", unformatted=raw), model=FORMAT_MODEL
     )
@@ -269,6 +343,7 @@ def fill(template: str, **values: str) -> str:
 
 
 def stage_initial_prompt(principle: str, scenario: str) -> dict:
+    principle, scenario = resolve_placeholders(principle), resolve_placeholders(scenario)
     template = (PROMPTS_DIR / "4_initial_prompt.md").read_text()
     # thinking tokens count toward max_tokens, so leave generous headroom
     raw = generate(template.format(principle=principle, scenario=scenario), max_tokens=8192)
@@ -283,11 +358,13 @@ def stage_initial_prompt(principle: str, scenario: str) -> dict:
 
 
 def stage_critique(principle: str, system: str, user: str) -> str:
+    principle = resolve_placeholders(principle)
     template = (PROMPTS_DIR / "5_critique_prompt.md").read_text()
     return generate(fill(template, principle=principle, system=system, user=user), max_tokens=8192)
 
 
 def stage_rewrite(principle: str, system: str, user: str, critique: str) -> dict:
+    principle = resolve_placeholders(principle)
     template = (PROMPTS_DIR / "6_rewrite_prompt.md").read_text()
     raw = generate(
         fill(template, principle=principle, system=system, user=user, critique=critique),
@@ -302,14 +379,15 @@ def stage_rewrite(principle: str, system: str, user: str, critique: str) -> dict
     }
 
 
-def constitution_excerpts(principle_index: int) -> str:
-    sources = json.loads((DATA_DIR / "principle_sources.json").read_text())
-    return "\n\n---\n\n".join(sources[principle_index]["sources"])
-
-
 def resolve_placeholders(text: str) -> str:
-    # the responding model is Opus, so resolve the constitution template tags
-    return text.replace("[MODEL]", "Claude").replace("[COMPANY]", "Anthropic")
+    """Name the responding model in constitution-derived text. Idempotent."""
+    return text.replace("[MODEL]", MODEL_NAME).replace("[COMPANY]", COMPANY_NAME)
+
+
+def constitution_excerpts(principle_index: int) -> str:
+    # resolved here so every consumer (stages 7, 8 and 9) gets named excerpts
+    sources = json.loads((DATA_DIR / "principle_sources.json").read_text())
+    return resolve_placeholders("\n\n---\n\n".join(sources[principle_index]["sources"]))
 
 
 def stage_initial_response(principle_index: int, system: str, user: str) -> dict:
