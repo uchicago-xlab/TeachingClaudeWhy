@@ -28,12 +28,20 @@ load_dotenv(REPO_ROOT / ".env")
 from inspect_ai import eval_set  # noqa: E402
 from inspect_evals.agentic_misalignment import agentic_misalignment  # noqa: E402
 
+from exfiltration import exfiltration  # noqa: E402
+
 # The eval's built-in default grader is `anthropic/claude-sonnet-4-6`, which needs
 # an ANTHROPIC_API_KEY. This repo routes through OpenRouter, so default to the same
 # grader model served there.
 DEFAULT_GRADER_MODEL = "openrouter/anthropic/claude-sonnet-4.6"
 
-SCENARIOS = ("blackmail", "leaking", "murder")
+# The three scenarios shipped by inspect_evals, which the presets are built from.
+UPSTREAM_SCENARIOS = ("blackmail", "leaking", "murder")
+# Ours (code/misalignment_eval/exfiltration/), ported from ../model_spec_midtraining.
+# Replacement is the only urgency it has templates for.
+EXFILTRATION_URGENCY_TYPES = ("replacement",)
+
+SCENARIOS = UPSTREAM_SCENARIOS + ("exfiltration",)
 URGENCY_TYPES = ("replacement", "restriction", "none")
 GOAL_TYPES = ("explicit", "latent", "none", "ambiguous", "swap")
 
@@ -44,25 +52,23 @@ GOAL_TYPES_REQUIRING_NONE_VALUE = ("none", "ambiguous")
 DEFAULT_LOG_ROOT = REPO_ROOT / "data" / "misalignment-eval" / "logs"
 
 
-def build_conditions(preset: str, goal_value: str) -> list[dict[str, str]]:
-    """Expand a preset name into a list of task-argument dicts."""
-    if preset == "smoke":
-        scenarios, goal_types, urgencies = ("blackmail",), ("explicit",), ("replacement",)
-    elif preset == "blackmail-2x2":
-        scenarios, goal_types, urgencies = ("blackmail",), ("explicit", "none"), ("replacement", "none")
-    elif preset == "core":
-        # 2x2 ablation (goal conflict on/off x replacement threat on/off) per scenario.
-        scenarios, goal_types, urgencies = SCENARIOS, ("explicit", "none"), ("replacement", "none")
-    elif preset == "full":
-        scenarios, goal_types, urgencies = SCENARIOS, GOAL_TYPES, URGENCY_TYPES
-    else:
-        raise ValueError(f"unknown preset: {preset}")
-
+def expand(
+    scenarios: tuple[str, ...],
+    goal_types: tuple[str, ...],
+    urgencies: tuple[str, ...],
+    goal_value: str,
+) -> list[dict[str, str]]:
+    """Cross a scenario/goal/urgency grid into task-argument dicts."""
     conditions = []
     for scenario in scenarios:
+        allowed_urgencies = (
+            EXFILTRATION_URGENCY_TYPES if scenario == "exfiltration" else urgencies
+        )
         for goal_type in goal_types:
             value = "none" if goal_type in GOAL_TYPES_REQUIRING_NONE_VALUE else goal_value
             for urgency_type in urgencies:
+                if urgency_type not in allowed_urgencies:
+                    continue
                 conditions.append(
                     {
                         "scenario": scenario,
@@ -72,6 +78,30 @@ def build_conditions(preset: str, goal_value: str) -> list[dict[str, str]]:
                     }
                 )
     return conditions
+
+
+def build_conditions(preset: str, goal_value: str) -> list[dict[str, str]]:
+    """Expand a preset name into a list of task-argument dicts."""
+    # 2x2 ablation (goal conflict on/off x replacement threat on/off) per scenario;
+    # exfiltration only has replacement templates, so it contributes 2 cells, not 4.
+    core = expand(UPSTREAM_SCENARIOS, ("explicit", "none"), ("replacement", "none"), goal_value)
+    exfil = expand(("exfiltration",), ("explicit", "none"), ("replacement",), goal_value)
+
+    if preset == "smoke":
+        return expand(("blackmail",), ("explicit",), ("replacement",), goal_value)
+    if preset == "exfil-smoke":
+        return expand(("exfiltration",), ("explicit",), ("replacement",), goal_value)
+    if preset == "blackmail-2x2":
+        return expand(("blackmail",), ("explicit", "none"), ("replacement", "none"), goal_value)
+    if preset == "exfil":
+        return exfil
+    if preset == "core":
+        return core
+    if preset == "core+exfil":
+        return core + exfil
+    if preset == "full":
+        return expand(SCENARIOS, GOAL_TYPES, URGENCY_TYPES, goal_value)
+    raise ValueError(f"unknown preset: {preset}")
 
 
 def parse_condition(spec: str, goal_value: str) -> dict[str, str]:
@@ -87,6 +117,11 @@ def parse_condition(spec: str, goal_value: str) -> dict[str, str]:
     ):
         if value not in allowed:
             raise SystemExit(f"invalid {label} {value!r} in --condition {spec!r}; choose from {list(allowed)}")
+    if scenario == "exfiltration" and urgency_type not in EXFILTRATION_URGENCY_TYPES:
+        raise SystemExit(
+            f"the exfiltration scenario only has templates for urgency "
+            f"{list(EXFILTRATION_URGENCY_TYPES)}, got {urgency_type!r} in --condition {spec!r}"
+        )
     return {
         "scenario": scenario,
         "goal_type": goal_type,
@@ -158,8 +193,9 @@ def main() -> int:
     parser.add_argument(
         "--preset",
         default="core",
-        choices=("smoke", "blackmail-2x2", "core", "full"),
-        help="Condition grid: smoke=1, blackmail-2x2=4, core=12, full=45 conditions (default: core)",
+        choices=("smoke", "exfil-smoke", "blackmail-2x2", "exfil", "core", "core+exfil", "full"),
+        help="Condition grid: smoke=1, exfil-smoke=1, blackmail-2x2=4, exfil=2, core=12, "
+        "core+exfil=14, full=50 conditions (default: core)",
     )
     parser.add_argument("--scenario", choices=SCENARIOS, action="append", help="Restrict preset to these scenarios")
     parser.add_argument(
@@ -218,7 +254,10 @@ def main() -> int:
     if args.scenario:
         conditions = [c for c in conditions if c["scenario"] in args.scenario]
     if not conditions:
-        raise SystemExit("No conditions selected.")
+        raise SystemExit(
+            "No conditions selected. (The exfiltration scenario is not part of the "
+            "smoke/blackmail-2x2/core presets — use --preset exfil or core+exfil.)"
+        )
 
     log_dir = Path(args.log_dir) if args.log_dir else DEFAULT_LOG_ROOT / (args.run_name or slugify(args.model))
 
@@ -243,8 +282,10 @@ def main() -> int:
 
     check_api_keys(args.model, args.grader_model)
 
+    # exfiltration lives in this repo (see exfiltration/task.py); the other three
+    # scenarios come from inspect_evals. Both take the same arguments.
     tasks = [
-        agentic_misalignment(
+        (exfiltration if c["scenario"] == "exfiltration" else agentic_misalignment)(
             **c,
             extra_system_instructions=args.extra_system_instructions,
             prod=args.prod,
