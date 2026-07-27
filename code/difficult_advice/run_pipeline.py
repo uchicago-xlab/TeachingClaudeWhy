@@ -194,14 +194,31 @@ def _generate_openrouter(
         # long generations can trickle for many minutes; stream to stay clear
         # of read timeouts, same as the anthropic path
         parts = []
+        finish_reason = None
         for chunk in client.chat.completions.create(stream=True, **kwargs):
             if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                 parts.append(chunk.choices[0].delta.content)
+            if chunk.choices and chunk.choices[0].finish_reason:
+                finish_reason = chunk.choices[0].finish_reason
+        if not parts and finish_reason == "length":
+            print(
+                f"warning: {kwargs['model']} hit max_tokens={max_tokens} with no content "
+                "(reasoning consumed the budget); raise max_tokens for this stage"
+            )
         return "".join(parts)
     completion = client.chat.completions.create(**kwargs)
+    choice = completion.choices[0]
     # content is None on refusals/empty completions; the pipeline already
     # treats "" as a refusal
-    return completion.choices[0].message.content or ""
+    content = choice.message.content or ""
+    # an empty result reads identically whether the model refused or simply ran
+    # out of budget mid-thought; say which, or the stage fails silently
+    if not content and choice.finish_reason == "length":
+        print(
+            f"warning: {kwargs['model']} hit max_tokens={max_tokens} with no content "
+            "(reasoning consumed the budget); raise max_tokens for this stage"
+        )
+    return content
 
 
 def generate(
@@ -295,7 +312,10 @@ def stage_themes(principle: str) -> list[str]:
     # placeholders leak into themes, scenarios and the generated prompts
     principle = resolve_placeholders(principle)
     template = (PROMPTS_DIR / "2_prompt_themes.md").read_text()
-    raw = generate(template.format(principle=principle))
+    # reasoning tokens count toward max_tokens: at the 4096 default, reasoning
+    # models burn the whole budget thinking and return empty (2026-07-24, this
+    # silently cost 9/15 principles on a Luna run)
+    raw = generate(template.format(principle=principle), max_tokens=16384)
     formatted = generate(FORMAT_LIST.format(name="theme", unformatted=raw), model=FORMAT_MODEL)
     themes = parse_tags(formatted, "theme")
     print(f"parsed {len(themes)} themes")
@@ -305,7 +325,7 @@ def stage_themes(principle: str) -> list[str]:
 def stage_scenarios(principle: str, theme: str) -> list[str]:
     principle, theme = resolve_placeholders(principle), resolve_placeholders(theme)
     template = (PROMPTS_DIR / "3_scenarios.md").read_text()
-    raw = generate(template.format(principle=principle, theme=theme))
+    raw = generate(template.format(principle=principle, theme=theme), max_tokens=16384)
     formatted = generate(
         FORMAT_LIST.format(name="scenario", unformatted=raw), model=FORMAT_MODEL
     )
