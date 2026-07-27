@@ -1,0 +1,16 @@
+# Line endings are normalised to LF in the working tree, not just in the index.
+#
+# Without this, a clone made with core.autocrlf=true checks the prompt
+# templates out with CRLF, so the eval renders a byte-different system prompt
+# and inbox than the same commit rendered on a machine with autocrlf=false.
+# That makes the prompt the model sees platform-dependent, and it breaks the
+# byte-identity guarantee that tests/snapshots/ relies on.
+#
+# The index has always stored these files with LF, so this changes no committed
+# content -- it only stops the checkout from rewriting them.
+* text=auto eol=lf
+
+# Belt and braces for the files whose bytes are compared directly by tests.
+evals/agentic_misalignment/templates/** text eol=lf
+tests/snapshots/** text eol=lf
+tests/fixtures/** text eol=lf
