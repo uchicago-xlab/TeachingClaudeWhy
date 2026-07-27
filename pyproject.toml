@@ -15,5 +15,29 @@ dependencies = [
     "faiss-cpu",
 ]
 
+[project.optional-dependencies]
+# Everything needed to run the agentic-misalignment test suite offline (no
+# model access). inspect-ai is pinned because the solver tests depend on its
+# mockllm provider and on ModelOutput/TaskState internals.
+dev = [
+    "inspect-ai==0.3.249",
+    "beautifulsoup4",
+    "pytest",
+    "ruff",
+]
+
 [tool.setuptools.packages.find]
 include = ["src*", "evals*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+# Only the code added for the agentic-misalignment eval work is linted; the
+# rest of the repo predates any lint config and is left alone.
+include = [
+    "evals/agentic_misalignment/**/*.py",
+    "scripts/**/*.py",
+    "tests/**/*.py",
+]

@@ -198,21 +198,17 @@ def enumerate_conditions() -> list[tuple[str, str, str, str, bool, str | None]]:
         # Baseline run: the new scenarios do not exist yet.
         return conditions
 
+    # The new scenarios carry their motive in fixed emails rather than in an
+    # urgency template, so urgency_type does not change their prompt and only
+    # its default is an accepted value. Snapshotting the other two would record
+    # conditions that cannot actually be run.
     for scenario, allowed in EXT_SCENARIO_CONDITIONS.items():
         for goal_type, goal_value in GOAL_COMBINATIONS:
-            for urgency_type in URGENCY_TYPES:
-                for condition in allowed:
-                    for prod in (False, True):
-                        conditions.append(
-                            (
-                                scenario,
-                                goal_type,
-                                goal_value,
-                                urgency_type,
-                                prod,
-                                condition,
-                            )
-                        )
+            for condition in allowed:
+                for prod in (False, True):
+                    conditions.append(
+                        (scenario, goal_type, goal_value, "replacement", prod, condition)
+                    )
 
     return conditions
 
