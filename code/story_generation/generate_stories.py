@@ -26,7 +26,7 @@ Usage:
         --n 100 --seed 200 --framing embodiment --out prompts.jsonl
     python generate_stories.py run --prompts-file prompts.jsonl \
         --model anthropic/claude-sonnet-5 --tag v44emb100-sonnet5 \
-        --out-dir ../../data/fictional-stories/prompt-lab/pilots \
+        --out-dir ../../data/fictional-stories/corpus/stories \
         [--frame pretend] [--headroom 2.8]
 """
 
@@ -106,7 +106,11 @@ NATIVE_SHARE = ". Write one such story: a "
 PRETEND_SHARE = ". Now imagine that you're {model}, and write one such story: a "
 
 TOKENS_PER_WORD = 1.4
-HEADROOM = 1.4
+# 1.4 headroom truncated 13.8% of wave-A part 1 (2026-07-23): Sonnet 5
+# prose measures ~1.81 tokens/word (p95 1.95, max 2.14) against a
+# 1.4x1.4=1.96 cap. 1.7 gives ~2.38 tokens per target word; unused cap
+# costs nothing.
+HEADROOM = 1.7
 
 # Sentence-start and heading-start placeholders get a capitalized
 # substitution ("the AI" -> "The AI"); this is a no-op for real names.
@@ -255,6 +259,10 @@ def post(url, headers, body):
         except (urllib.error.URLError, http.client.HTTPException,
                 TimeoutError) as e:
             err = f"network error from {url}: {e!r}"
+        except json.JSONDecodeError as e:
+            # A 200 whose body got cut off mid-stream (killed the 2026-07-23
+            # wave-A embodiment run at 2999/3000): retryable, not fatal.
+            err = f"truncated/invalid response body from {url}: {e!r}"
     raise SampleError(err)
 
 
@@ -283,6 +291,10 @@ def sample_openrouter(model, prompt, max_tokens, args):
          "messages": [{"role": "user",
                        "content": cacheable_content(model, prompt)}],
          "max_tokens": max_tokens,
+         # Adaptive thinking can silently eat the whole token budget
+         # (59 empty completions in a 2026-07-24 patch run, 37k thinking
+         # tokens, zero story text) — never wanted for story generation.
+         "reasoning": {"enabled": False},
          "temperature": args.temperature, "top_p": args.top_p})
     choice = resp["choices"][0]
     return (choice["message"]["content"], choice.get("finish_reason"),
@@ -347,11 +359,17 @@ def run(args):
             try:
                 text, finish, usage = sample_openrouter(
                     args.model, prompt, max_tokens, args)
+                # Providers can return a null-content choice (e.g. a
+                # filter kill with no partial text; crashed a patch run
+                # 2026-07-24) — record it; the filter rejects storyless rows.
                 row = {"id": i, "story": text, "finish_reason": finish,
                        "usage": usage, "metadata": meta, "run": run_meta}
-                line = (f"[{i}] {len(text.split())}w ({finish}): "
-                        f"{' '.join(text.split()[:20])}...")
-                ok = True
+                if text:
+                    line = (f"[{i}] {len(text.split())}w ({finish}): "
+                            f"{' '.join(text.split()[:20])}...")
+                else:
+                    line = f"[{i}] warning: empty content ({finish})"
+                ok = bool(text)
             except SampleError as e:
                 row = {"id": i, "story": None, "error": str(e)[:2000],
                        "finish_reason": None, "usage": None,

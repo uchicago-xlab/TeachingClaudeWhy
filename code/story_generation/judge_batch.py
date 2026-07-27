@@ -26,7 +26,7 @@ Usage:
     python judge_batch.py judge-openrouter --stories kept.jsonl \
         --chunks chunks.json --models anthropic/claude-haiku-4.5 \
         --tag v43emb100 \
-        --out-dir ../../data/fictional-stories/prompt-lab/pilots
+        --out-dir ../../data/fictional-stories/corpus/stories
     python judge_batch.py summarize verdicts-*.jsonl [--stories kept.jsonl]
 """
 

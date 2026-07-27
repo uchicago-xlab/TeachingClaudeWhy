@@ -167,10 +167,14 @@ def main():
         # Rows the provider truncated with its safety classifier (seen
         # once on hard-constraint material, 2026-07-20) or that never got
         # a story are unusable regardless of text checks.
-        if not r.get("story") or r.get("finish_reason") == "content_filter":
+        if not r.get("story") or r.get("finish_reason") in ("content_filter",
+                                                            "error"):
+            fr = r.get("finish_reason")
             r["reject_reason"] = ("provider content filter"
-                                  if r.get("finish_reason") == "content_filter"
-                                  else "no story (request error)")
+                                  if fr == "content_filter" else
+                                  "provider error mid-generation"
+                                  if fr == "error" else
+                                  "no story (request error)")
             rejected.append(r)
             continue
         r["story"] = clean(r["story"])

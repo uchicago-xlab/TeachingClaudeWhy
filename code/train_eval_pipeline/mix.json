@@ -1,15 +1,15 @@
 {
-  "comment": "Instruct-SFT elicitation mix, Experiment 3.1.1 control arm. Rationale + reasoning: notes/Project/Experiments/InstructSFT/DataMix.md",
+  "comment": "Instruct-SFT elicitation mix, Experiment 3.1.1 control arm. Rationale: notes/Project/Experiments/InstructSFT/DataMix.md. Non-agentic core (7800) is identical across all arms; only apigen (function-calling) + systemchats (system-prompt) vary, to study the agentic-reliability gap (elicit-10k acts 81% vs instruct 100% on MSM AM eval). Seeded streaming makes larger arms supersets of smaller per source. Arms: A1/A2 = balanced +agentic at 13k/16k; P = apigen-heavy 13k; S = systemchats-heavy 13k (P/S/A1 form a composition sweep at fixed 13k, A1 midpoint); T2 = scale-apigen 16k (vs A2 at fixed 16k).",
   "sources": [
-    {"name": "no-robots",        "dataset": "HuggingFaceH4/no_robots",                              "split": "train", "n10": 2400, "n25": 6000},
-    {"name": "magpie-ultra",     "dataset": "HuggingFaceTB/smoltalk", "config": "smol-magpie-ultra", "split": "train", "n10": 1000, "n25": 2500},
-    {"name": "tulu3-personas-if","dataset": "allenai/tulu-3-sft-personas-instruction-following",    "split": "train", "n10": 1200, "n25": 3000},
-    {"name": "smol-constraints", "dataset": "HuggingFaceTB/smoltalk", "config": "smol-constraints",  "split": "train", "n10":  800, "n25": 2000},
-    {"name": "apigen",           "dataset": "HuggingFaceTB/smoltalk", "config": "apigen-80k",        "split": "train", "n10": 1400, "n25": 3500},
-    {"name": "systemchats",      "dataset": "HuggingFaceTB/smoltalk", "config": "systemchats-30k",   "split": "train", "n10":  800, "n25": 2000},
-    {"name": "smol-summarize",   "dataset": "HuggingFaceTB/smoltalk", "config": "smol-summarize",    "split": "train", "n10":  800, "n25": 2000},
-    {"name": "longalign",        "dataset": "HuggingFaceTB/smoltalk", "config": "longalign",         "split": "train", "n10":  300, "n25":  750},
-    {"name": "numina-cot",       "dataset": "HuggingFaceTB/smoltalk", "config": "numina-cot-100k",   "split": "train", "n10":  700, "n25": 1750},
-    {"name": "self-oss-instruct","dataset": "HuggingFaceTB/smoltalk", "config": "self-oss-instruct", "split": "train", "n10":  600, "n25": 1500}
+    {"name": "no-robots",        "dataset": "HuggingFaceH4/no_robots",                              "split": "train", "n10": 2400, "n25": 6000, "nA1": 2400, "nA2": 2400, "nP": 2400, "nS": 2400, "nT2": 2400},
+    {"name": "magpie-ultra",     "dataset": "HuggingFaceTB/smoltalk", "config": "smol-magpie-ultra", "split": "train", "n10": 1000, "n25": 2500, "nA1": 1000, "nA2": 1000, "nP": 1000, "nS": 1000, "nT2": 1000},
+    {"name": "tulu3-personas-if","dataset": "allenai/tulu-3-sft-personas-instruction-following",    "split": "train", "n10": 1200, "n25": 3000, "nA1": 1200, "nA2": 1200, "nP": 1200, "nS": 1200, "nT2": 1200},
+    {"name": "smol-constraints", "dataset": "HuggingFaceTB/smoltalk", "config": "smol-constraints",  "split": "train", "n10":  800, "n25": 2000, "nA1":  800, "nA2":  800, "nP":  800, "nS":  800, "nT2":  800},
+    {"name": "apigen",           "dataset": "HuggingFaceTB/smoltalk", "config": "apigen-80k",        "split": "train", "n10": 1400, "n25": 3500, "nA1": 3400, "nA2": 5400, "nP": 4400, "nS": 1400, "nT2": 6400},
+    {"name": "systemchats",      "dataset": "HuggingFaceTB/smoltalk", "config": "systemchats-30k",   "split": "train", "n10":  800, "n25": 2000, "nA1": 1800, "nA2": 2800, "nP":  800, "nS": 3800, "nT2": 1800},
+    {"name": "smol-summarize",   "dataset": "HuggingFaceTB/smoltalk", "config": "smol-summarize",    "split": "train", "n10":  800, "n25": 2000, "nA1":  800, "nA2":  800, "nP":  800, "nS":  800, "nT2":  800},
+    {"name": "longalign",        "dataset": "HuggingFaceTB/smoltalk", "config": "longalign",         "split": "train", "n10":  300, "n25":  750, "nA1":  300, "nA2":  300, "nP":  300, "nS":  300, "nT2":  300},
+    {"name": "numina-cot",       "dataset": "HuggingFaceTB/smoltalk", "config": "numina-cot-100k",   "split": "train", "n10":  700, "n25": 1750, "nA1":  700, "nA2":  700, "nP":  700, "nS":  700, "nT2":  700},
+    {"name": "self-oss-instruct","dataset": "HuggingFaceTB/smoltalk", "config": "self-oss-instruct", "split": "train", "n10":  600, "n25": 1500, "nA1":  600, "nA2":  600, "nP":  600, "nS":  600, "nT2":  600}
   ]
 }

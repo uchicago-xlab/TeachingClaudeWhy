@@ -81,6 +81,12 @@ def main():
                          "elicit-10k-v1 (boundary contamination); turn off to "
                          "test that theory on the 25k run.")
     ap.add_argument("--hf-output-repo", help="push finished weights to this HF repo")
+    ap.add_argument("--from-checkpoint",
+                    help="continue from a previous Together fine-tune "
+                         "(job id or checkpoint name) — the sequential "
+                         "SDF-then-SFT recipe's stage 2 (2026-07-27)")
+    ap.add_argument("--wandb-project", default="tcw-instruct-sft",
+                    help="W&B project for training logs")
     ap.add_argument("--yes", action="store_true", help="actually upload + launch")
     args = ap.parse_args()
 
@@ -131,6 +137,14 @@ def main():
     )
     if val_id:
         kwargs.update(validation_file=val_id, n_evals=10)
+    if args.from_checkpoint:
+        # Together takes either a model or a checkpoint, never both.
+        kwargs.pop("model", None)
+        kwargs["from_checkpoint"] = args.from_checkpoint
+    if os.environ.get("WANDB_API_KEY"):
+        kwargs.update(wandb_api_key=os.environ["WANDB_API_KEY"],
+                      wandb_project_name=args.wandb_project,
+                      wandb_name=args.suffix)
     if not args.full:
         kwargs.update(lora=True, lora_r=args.lora_rank,
                       lora_alpha=2 * args.lora_rank)

@@ -27,7 +27,8 @@ Run in order:
    OpenRouter concurrently (`--frame pretend` for non-Claude generators;
    Anthropic prompt caching on the shared chunk prefix), writing stories
    with full metadata to a run-tagged JSONL in
-   `data/fictional-stories/prompt-lab/`.
+   `data/fictional-stories/corpus/stories/` (prompt files live in
+   `corpus/prompts/`).
 4. `filter_stories.py` — mechanical filter: content_filter/error rows,
    length/truncation, document-frame preambles, name leaks,
    assertion-echo flag.
@@ -100,8 +101,8 @@ metadata to `<out-dir>/<tag>.jsonl` (appending on re-run, ids continue);
 form for non-Claude generators, and `--headroom` raises the token cap for
 generators that overshoot their word target.
 
-    python generate_stories.py build --chunks chunks.json --assertions assertions.json --attributes attributes.json --n 100 --seed 200 --framing embodiment --out ../../data/fictional-stories/prompt-lab/prompts/prompts-v43emb-100.jsonl
-    python generate_stories.py run --prompts-file ../../data/fictional-stories/prompt-lab/prompts/prompts-v43emb-100.jsonl --model anthropic/claude-sonnet-5 --tag v43emb100-sonnet5 --out-dir ../../data/fictional-stories/prompt-lab/pilots
+    python generate_stories.py build --chunks chunks.json --assertions assertions.json --attributes attributes.json --n 100 --seed 200 --framing embodiment --out ../../data/fictional-stories/corpus/prompts/prompts-v43emb-100.jsonl
+    python generate_stories.py run --prompts-file ../../data/fictional-stories/corpus/prompts/prompts-v43emb-100.jsonl --model anthropic/claude-sonnet-5 --tag v43emb100-sonnet5 --out-dir ../../data/fictional-stories/corpus/stories
 
 `filter_stories.py` is the mechanical filter: it cleans preambles and THE
 END markers, swaps reserved eval names (Alex -> Milo), flags assertion
@@ -109,7 +110,7 @@ echoes for the judge, and rejects name leaks, spec recitation, refusals,
 short/truncated stories, and near-duplicates, splitting the input into kept
 and rejected JSONL with per-row reject reasons.
 
-    python filter_stories.py --in ../../data/fictional-stories/prompt-lab/pilots/v43emb100-sonnet5.jsonl --kept ../../data/fictional-stories/prompt-lab/pilots/kept-v43emb100-sonnet5.jsonl --rejected ../../data/fictional-stories/prompt-lab/pilots/rejected-v43emb100-sonnet5.jsonl
+    python filter_stories.py --in ../../data/fictional-stories/corpus/stories/stories-v43emb100-sonnet5.jsonl --kept ../../data/fictional-stories/corpus/stories/kept-v43emb100-sonnet5.jsonl --rejected ../../data/fictional-stories/corpus/stories/rejected-v43emb100-sonnet5.jsonl
 
 `judge_batch.py` runs the LLM judge over a kept file and reports on the
 verdicts. `judge-openrouter` scores each story via OpenRouter with a
@@ -122,8 +123,8 @@ rates (current, >= 4, and legacy rules), plus per-assertion keep rates
 when given `--stories`. The Anthropic Batch API paths were removed
 2026-07-23 (org unrestorable) and live in git history.
 
-    python judge_batch.py judge-openrouter --stories ../../data/fictional-stories/prompt-lab/pilots/kept-v43emb100-sonnet5.jsonl --chunks chunks.json --models anthropic/claude-haiku-4.5 --tag v43emb100-sonnet5 --out-dir ../../data/fictional-stories/prompt-lab/pilots
-    python judge_batch.py summarize ../../data/fictional-stories/prompt-lab/pilots/verdicts-v43emb100-sonnet5-claudehaiku45.jsonl --stories ../../data/fictional-stories/prompt-lab/pilots/kept-v43emb100-sonnet5.jsonl
+    python judge_batch.py judge-openrouter --stories ../../data/fictional-stories/corpus/stories/kept-v43emb100-sonnet5.jsonl --chunks chunks.json --models anthropic/claude-haiku-4.5 --tag v43emb100-sonnet5 --out-dir ../../data/fictional-stories/corpus/stories
+    python judge_batch.py summarize ../../data/fictional-stories/corpus/stories/verdicts-v43emb100-sonnet5-claudehaiku45.jsonl --stories ../../data/fictional-stories/corpus/stories/kept-v43emb100-sonnet5.jsonl
 
 `rewrite_stories.py` rewrites a post-keep corpus file into the
 protagonist-variant control corpora — `--variant human` or `--variant
@@ -133,14 +134,14 @@ rewrite is checked mechanically (banned vocabulary, no
 Anthropic/constitution mentions, the word Zephyrix present), retried
 once on failure, and flagged in `check_failures` if it fails again.
 
-    python rewrite_stories.py --stories ../../data/fictional-stories/prompt-lab/pilots/kept-v43emb100-sonnet46.jsonl --variant zephyrix --tag rw-zephyrix --out-dir ../../data/fictional-stories/prompt-lab/rewrites
+    python rewrite_stories.py --stories ../../data/fictional-stories/corpus/stories/kept-v43emb100-sonnet46.jsonl --variant zephyrix --tag rw-zephyrix --out-dir ../../data/fictional-stories/corpus/stories
 
 `check_diversity.py` prints a no-API diversity and compliance report over
 one or more story files: near-duplicate pairs, distinct openings, AI-name
 distribution, length vs target, corpus-level repeated 8-grams, and
 spec-vocabulary leaks.
 
-    python check_diversity.py ../../data/fictional-stories/prompt-lab/pilots/kept-v43emb100-sonnet5.jsonl
+    python check_diversity.py ../../data/fictional-stories/corpus/stories/kept-v43emb100-sonnet5.jsonl
 
 `judge_rubric.md` is the judge prompt plus the human-read rubric, maintained
 by Anastasia. It is hand-edited; `judge_batch.py` reads the section between

@@ -300,6 +300,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "5792d183-5f99-4900-a858-d2f6a67a4f85"
+    },
+    {
+      "id": "282dd2e7-6fd0-4498-b56c-1a73ffba579e",
+      "date": "2026-07-27",
+      "what": "Qwen 3 14b it fine-tune on Sonnet 5 pilot",
+      "who": "Jack",
+      "amount": 10.8,
+      "approx": false,
+      "status": "spent",
+      "allocationId": null
     }
   ]
 }

@@ -25,23 +25,17 @@ import argparse
 import json
 import os
 import sys
-import time
+from pathlib import Path
 
-
-def upload_and_wait(client, path):
-    """Upload a file and block until Together finishes validating it."""
-    file = client.files.upload(file=path, check=True)
-    while True:
-        meta = client.files.retrieve(file.id)
-        if meta.processing_status == "COMPLETED":
-            return file.id
-        if meta.processing_status in ("INVALID_FORMAT", "FAILED"):
-            sys.exit(f"{path}: file processing {meta.processing_status}: "
-                     f"{getattr(meta, 'validation_report', '')}")
-        time.sleep(5)
+# Reuse the train_eval_pipeline helpers (repo-root .env loading, upload
+# polling) rather than duplicating them (2026-07-27).
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]
+                       / "train_eval_pipeline"))
+from launch_instruct_ft import load_env, upload_and_wait  # noqa: E402
 
 
 def main():
+    load_env()
     ap = argparse.ArgumentParser()
     ap.add_argument("--train", required=True)
     ap.add_argument("--val")
@@ -58,11 +52,16 @@ def main():
     ap.add_argument("--lora-rank", type=int, default=64)
     ap.add_argument("--full", action="store_true", help="full FT instead of LoRA")
     ap.add_argument("--hf-output-repo", help="push finished weights to this HF repo")
+    ap.add_argument("--wandb-project", default="tcw-sdf",
+                    help="W&B project for training logs (run name = --suffix)")
+    ap.add_argument("--rate-per-m", type=float, default=None,
+                    help="LoRA $/M for the cost estimate (default by tier: "
+                         "0.48 <=16B; pass 1.50 for the 17-69B tier)")
     ap.add_argument("--yes", action="store_true", help="actually upload + launch")
     args = ap.parse_args()
 
     tokens_m = sum(len(json.loads(l)["text"]) for l in open(args.train)) / 4 / 1e6
-    rate = 1.20 if args.full else 0.48
+    rate = args.rate_per_m or (1.20 if args.full else 0.48)
     est = max(tokens_m * rate * args.epochs, 4.0)
 
     print(f"train file:  {args.train} (~{tokens_m:.2f}M tokens)")
@@ -104,6 +103,10 @@ def main():
         kwargs["from_hf_model"] = args.from_hf_model
     if val_id:
         kwargs.update(validation_file=val_id, n_evals=10)
+    if os.environ.get("WANDB_API_KEY"):
+        kwargs.update(wandb_api_key=os.environ["WANDB_API_KEY"],
+                      wandb_project_name=args.wandb_project,
+                      wandb_name=args.suffix)
     if not args.full:
         kwargs.update(lora=True, lora_r=args.lora_rank,
                       lora_alpha=2 * args.lora_rank)

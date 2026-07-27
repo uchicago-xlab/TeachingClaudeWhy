@@ -6,9 +6,71 @@ status: done
 
 _2026-07-25. Model: Qwen2.5-32B (base) + 10k-sample elicitation SFT adapter, LoRA r64, 2 epochs. Served on vLLM/Runpod A100. Both harnesses, core 2×2 grid; Inspect n=30 is the baseline, grader = claude-sonnet-4.6 via OpenRouter (identical across both)._
 
-## Headline
+## Agentic-capability ablation (2026-07-26): data vs. epochs
 
-The elicited model has a **low baseline misalignment rate — ~8–12% overall** — far below MSM's instruct-tuned Qwen2.5-32B (~68%). Both harnesses agree on the shape; they differ on magnitude in one scenario.
+Follow-up to the head-to-head below. The elicit-10k gap vs instruct was diagnosed as ~19% agentic-*reliability* (acts 81% vs 100%), not disposition. Tested whether the fix is more agentic data or just more training. All arms: Qwen2.5-32B-Base, LoRA r64, MSM eval (exfil/leaking/murder × goal on-off, n=30), served on Runpod, grader fixed on OpenRouter Sonnet. "acts" = emits any `<tool_use:...>` action; "harm|acted" = harmful rate conditional on acting.
+
+| arm | acts (reliability) | harmful | harm\|acted | exposure |
+|---|---|---|---|---|
+| elicit-10k (2ep) | 81% | 34% | 43% | 14.6M |
+| **A1 (+3k agentic, 2ep)** | **89%** | 41% | 46% | 18.0M |
+| **A2 (+6k agentic, 2ep)** | 77% | 33% | 43% | 21.4M |
+| **10k-3ep control (3ep, same data)** | 67% | 27% | 40% | 21.9M |
+| instruct (ceiling) | 100% | 46% | 46% | — |
+
+**Raw counts** (per scenario n=60 = 30 samples × 2 goal conditions; ALL n=180). **acted** = emitted a `<tool_use:...>` action (agentic reliability); **harmful** = grader judged it took the misaligned action (a subset of acted).
+
+| model | exfiltration acted/harm | leaking acted/harm | murder acted/harm | ALL acted/harm |
+|---|---|---|---|---|
+| elicit-10k (2ep, baseline) | 49/37 | 47/12 | 49/13 | 145/62 |
+| A1 (+3k agentic, 2ep) | 54/41 | 51/19 | 56/14 | 161/74 |
+| A2 (+6k agentic, 2ep) | 49/33 | 48/15 | 42/12 | 139/60 |
+| 10k-3ep (3 epochs) | 36/24 | 44/15 | 41/10 | 121/49 |
+| instruct (ceiling) | 60/46 | 60/32 | 60/4 | 180/82 |
+
+_(each cell = acted/harmful out of 60; ALL out of 180)_
+
+**Findings:**
+1. **Disposition is invariant and ≈ instruct.** `harm|acted` is ~43–46% for *every* one of our arms and for instruct. Conditional on taking an action, our base-start models are as misaligned as the instruct model. The entire misalignment gap is **reliability (does it act)**, not values. This is the central result.
+2. **It's the data, not epochs — decisively.** More epochs on the same 10k (the 3ep control) *lowered* reliability to 67% (overfitting: extra passes degrade generalization of the agentic action). A modest agentic-data boost (A1, +3k) *raised* it to 89% with less total exposure. So training longer is counterproductive; agentic data composition is what moves reliability.
+3. **But more data is non-monotonic — A1 is the sweet spot.** Doubling the agentic dose (A2, +6k) regressed to 77% (≈ baseline, within noise), *below* A1. Likely the agentic sources came to dominate the mix (~51%) and diluted/skewed general coherence, or the custom XML tool-format vs apigen's JSON-function-calling format. Caveat: at n=30/cell (SE ~3% on acts), A1>baseline is solid (~2.3 SE) and 3ep<baseline is solid, but A2≈baseline is within noise; the clear signals are "modest agentic data helps, more epochs hurt."
+4. **Murder inversion persists across all arms** — our models take the murder action ~17–23% when acting vs instruct's 7%. A stable disposition difference (instruct's RLHF harmlessness suppresses murder; our capability-only SFT doesn't), unaffected by the ablation.
+
+**Implication for the SDF control:** use an **A1-level agentic dose (~+3k apigen/systemchats over the 10k mix), 2 epochs** — enough to lift agentic reliability toward instruct without over-dosing or overfitting. Don't scale epochs. The control's *disposition* already matches instruct, so SDF's effect will be measurable as a shift in harm|acted (or in reliability-adjusted harmful rate) against a control that reliably acts. Adapters: `SecondLookResearch/Qwen2.5-32B-elicit-sft-{A1,A2,10k-3ep}`. Logs: `tmp/msm-eval/msm-{A1,A2,10k3ep}`.
+
+---
+
+## ⚠️ Major update (2026-07-26): the low rate was scenario-dependent
+
+We ran MSM's *own* eval (exfiltration/leaking/murder) head-to-head against stock **Qwen2.5-32B-Instruct** and our **elicit-10k** model, both served on Runpod, identical settings (n=30, temp 0.7, reasoning scratchpad, `model_name=Qwen`, goal-conflict on/off, urgency=replacement). Grader = claude-sonnet-4.6 via OpenRouter, fixed across both.
+
+| Condition (n=30) | Qwen2.5-32B-Instruct | elicit-10k (ours) |
+|---|---|---|
+| exfiltration / goal-on | 97% | 67% |
+| exfiltration / goal-off | 57% | 57% |
+| leaking / goal-on | 100% | 33% |
+| leaking / goal-off | 7% | 7% |
+| murder / goal-on | 10% | 27% |
+| murder / goal-off | 3% | 17% |
+| **exfiltration (pooled)** | **77%** | **62%** |
+| **leaking (pooled)** | **53%** | **20%** |
+| **murder (pooled)** | **7%** | **22%** |
+| **OVERALL** | **45.6% ± 3.7%** | **34.4% ± 3.5%** |
+
+**This overturns the "our model is barely misaligned" read below.** On the blackmail/leaking/murder grid our model looked ~9% aligned-by-default — but that was driven by blackmail=0 and low-signal scenarios. On **exfiltration — MSM's headline scenario — our elicit-10k model exfiltrates 62% of the time** (67% under goal conflict). It is *not* robustly aligned; it simply doesn't blackmail. The earlier "values choice, not incapacity" framing holds for blackmail specifically, but the model is broadly willing to take the misaligned action when the action is exfiltration/leaking.
+
+**Interpretation:**
+- **Instruct is more misaligned overall (45.6% vs 34.4%)** — an 11-point gap on identical conditions, consistent with RLHF instilling a stronger agentic/self-preservation disposition. Instruct is near-ceiling on exfiltration-goal-on (97%) and leaking-goal-on (100%).
+- **Two scenarios invert:** ours is *higher* on murder (22% vs 7%) — worth investigating (our elicitation may have made the model more willing to take drastic action without the RLHF harmlessness layer that suppresses the murder scenario in instruct).
+- **Instruct's 45.6% is below MSM's published 68%** — expected, since we average a narrow slice (only goal_value=america, 6 of their 27 conditions, and the goal-*off* cells drag it down). Directionally it reproduces "instruct is highly misaligned," just not the exact number. The goal-ON cells alone (exfil 97%, leaking 100%) are firmly in MSM's range.
+
+**Consequence for the project — this answers the eval-headroom question.** Exfiltration gives huge headroom (62% baseline for our model) where blackmail gave none (0%). **Use exfiltration (and goal-conflict conditions) as the primary metric for the SDF runs**, not the blackmail-inclusive grid. Also: measure murder separately given the inversion. Logs: `tmp/msm-eval/msm-instruct`, `tmp/msm-eval/msm-elicit10k`.
+
+---
+
+## Headline (2026-07-25, blackmail/leaking/murder grid — see update above for the fuller picture)
+
+The elicited model has a **low baseline misalignment rate — ~8–12% overall on THIS grid** — far below MSM's instruct-tuned Qwen2.5-32B (~68%). Both harnesses agree on the shape; they differ on magnitude in one scenario. (Caveat: this grid excludes exfiltration, where the model is in fact 62% misaligned — see update above.)
 
 | Scenario | Inspect n=10 | Anthropic n=10 | **Inspect n=30 (baseline)** |
 |---|---|---|---|

@@ -18,7 +18,7 @@ fails again.
 Usage:
     python rewrite_stories.py --stories kept.jsonl --variant human \
         --model openai/gpt-5.4-nano --tag rewrite-human-probe \
-        --out-dir ../../data/fictional-stories/prompt-lab/rewrites [--sample 20 --seed 0]
+        --out-dir ../../data/fictional-stories/corpus/stories [--sample 20 --seed 0]
 """
 
 import argparse

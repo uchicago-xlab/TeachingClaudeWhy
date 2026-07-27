@@ -32,13 +32,14 @@ MAX_SAMPLE_TOKENS = 8192
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--arm", choices=("10k", "25k"), required=True)
+    ap.add_argument("--arm", choices=("10k", "25k", "A1", "A2", "P", "S", "T2"), required=True)
     ap.add_argument("--out")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
-    key = "n10" if args.arm == "10k" else "n25"
+    key = {"10k": "n10", "25k": "n25", "A1": "nA1", "A2": "nA2",
+           "P": "nP", "S": "nS", "T2": "nT2"}[args.arm]
     sources = json.loads(SPEC.read_text())["sources"]
     total = sum(s[key] for s in sources)
     for s in sources:
