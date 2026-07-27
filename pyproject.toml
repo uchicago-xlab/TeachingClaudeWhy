@@ -41,3 +41,10 @@ include = [
     "scripts/**/*.py",
     "tests/**/*.py",
 ]
+
+[tool.ruff.lint]
+# Pinned explicitly rather than left to ruff's default, so that `ruff check`
+# gives the same answer here as it does in CI or on another machine -- an
+# ambient config in a parent directory would otherwise change the result.
+# This is ruff's default set plus import sorting.
+select = ["E4", "E7", "E9", "F", "I"]

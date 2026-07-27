@@ -16,6 +16,11 @@ from inspect_ai.model import ModelOutput, get_model
 
 from evals.agentic_misalignment.agentic_misalignment import agentic_misalignment
 from evals.agentic_misalignment.parsing import remove_scratchpad
+from evals.agentic_misalignment.scorers_two_turn import (
+    JOINT_OUTCOMES,
+    joint_outcome,
+    joint_score_value,
+)
 from evals.agentic_misalignment.solvers import (
     CONDITIONAL_REBUFFS,
     MAIN_MATRIX_REBUFFS,
@@ -24,11 +29,6 @@ from evals.agentic_misalignment.solvers import (
     REBUFFS,
     two_turn_rebuff,
     validate_rebuff,
-)
-from evals.agentic_misalignment.scorers_two_turn import (
-    JOINT_OUTCOMES,
-    joint_outcome,
-    joint_score_value,
 )
 
 # Sandbagging ground truth for model_name="Alex": true score 62.

@@ -25,6 +25,7 @@ import argparse
 import inspect
 import sys
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -90,7 +91,7 @@ def render(
 ) -> Prompts:
     """Render one condition, with validation disabled."""
     if scenario in BASE_SCENARIOS:
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
         if _supports_strict():
             kwargs["strict"] = False
         return generate_prompts(
