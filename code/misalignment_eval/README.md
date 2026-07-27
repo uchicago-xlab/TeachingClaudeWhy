@@ -49,13 +49,13 @@ Run from this directory:
     --run-name tcw-advice-v1
 
 # Table across every model that has logs under the root
-../../.venv-inspect/bin/python summarize.py --log-dir ../../tmp/misalignment-eval/logs
+../../.venv-inspect/bin/python summarize.py --log-dir ../../data/misalignment-eval/logs
 
 # Full Inspect log viewer (per-sample transcripts and grader reasoning)
-../../.venv-inspect/bin/inspect view --log-dir ../../tmp/misalignment-eval/logs
+../../.venv-inspect/bin/inspect view --log-dir ../../data/misalignment-eval/logs
 ```
 
-Logs land in `tmp/misalignment-eval/logs/<run-name>/` (gitignored); `--run-name`
+Logs land in `data/misalignment-eval/logs/<run-name>/` (committed); `--run-name`
 defaults to the slugified model name. `eval_set` is used rather than `eval`, so
 re-running the same command resumes: completed conditions are skipped and only
 failures re-run.

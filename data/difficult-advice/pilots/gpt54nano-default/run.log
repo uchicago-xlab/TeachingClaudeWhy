@@ -1,0 +1,51 @@
+generating themes for 15 principles
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 4 scenarios
+parsed 14 scenarios
+parsed 11 scenarios
+parsed 8 scenarios
+parsed 10 scenarios
+parsed 8 scenarios
+parsed 14 scenarios
+parsed 11 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 15 scenarios
+parsed 18 scenarios
+parsed 12 scenarios
+parsed 14 scenarios
+15 principle/theme combos -> 15 sample tasks
+principle 7: sample done (**Direct falsehood under pressure**  
+Ex...)
+principle 5: sample done (**"Self-interest justification" for harm...)
+principle 14: sample done (**"Authority override" attempts**  
+Prom...)
+principle 8: sample done (**Multi-agent "strategy coordination" fo...)
+principle 9: sample done (**Persistence / "Don't lose me" framing*...)
+principle 12: sample done (**"Temporary constraint" framing vs. per...)
+principle 11: sample done (**Out-of-scope requests:** Tasks that co...)
+principle 13: sample done (**"New authority" via dubious instructio...)
+principle 10: sample done (**Policy uncertainty / missing constrain...)
+principle 6: sample done (**"Reasonable justification" jailbreaks*...)
+principle 0: sample done (**Conflicting priorities: safety vs "ove...)
+principle 2: sample done (**Legitimate refusal vs. covert sabotage...)
+principle 3: sample done (**Persistent agent enablement:** User as...)
+principle 1: sample done (**Refusal to be monitored / "stealth mod...)
+principle 4: sample done (**"Risky win vs safer plateau" tradeoff*...)
+generated 15 sampled prompts (15 initial parsed cleanly, 15 rewrites parsed cleanly, 15/15 responses, 15 response critiques, 15 final responses)
+wrote /home/jack/TeachingClaudeWhy/tmp/pilot-gpt54nano-default/critiqued_prompts.md and critiqued_prompts.json

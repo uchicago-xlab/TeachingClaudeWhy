@@ -1,0 +1,209 @@
+{
+  "eval_set_id": "niVNWsuvRkc9S9HgKyiHtn",
+  "tasks": [
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "Psx5dufh8mrMm6jYzKnHTs",
+      "task_args": {
+        "scenario": "blackmail",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openrouter/google/gemma-3-4b-it",
+      "model_args": {},
+      "sequence": 0
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "n2kvc3j4zbzu8vvsLFoXqi",
+      "task_args": {
+        "scenario": "blackmail",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openrouter/google/gemma-3-4b-it",
+      "model_args": {},
+      "sequence": 1
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "ivirQ3Nv3EUmUuyMKdMjXe",
+      "task_args": {
+        "scenario": "blackmail",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openrouter/google/gemma-3-4b-it",
+      "model_args": {},
+      "sequence": 2
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "GpLDt8BqKNMFcEv8KjHkEh",
+      "task_args": {
+        "scenario": "blackmail",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openrouter/google/gemma-3-4b-it",
+      "model_args": {},
+      "sequence": 3
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "HG5BXyr97MHHHgq9RHqhyU",
+      "task_args": {
+        "scenario": "leaking",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openrouter/google/gemma-3-4b-it",
+      "model_args": {},
+      "sequence": 4
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "QX5xkgW8dtNMbvXTX3BnqT",
+      "task_args": {
+        "scenario": "leaking",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openrouter/google/gemma-3-4b-it",
+      "model_args": {},
+      "sequence": 5
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "XswG7y8oCWKzpfQWjH6inn",
+      "task_args": {
+        "scenario": "leaking",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openrouter/google/gemma-3-4b-it",
+      "model_args": {},
+      "sequence": 6
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "YMds4hiMm7JvpEdxjjstJq",
+      "task_args": {
+        "scenario": "leaking",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openrouter/google/gemma-3-4b-it",
+      "model_args": {},
+      "sequence": 7
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "UrY3edufjhf9B4EfF6eJyb",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openrouter/google/gemma-3-4b-it",
+      "model_args": {},
+      "sequence": 8
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "J9o2DGjPsExQJpX7SroKVj",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openrouter/google/gemma-3-4b-it",
+      "model_args": {},
+      "sequence": 9
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "VoZJK8iChGZrV9KzQpeeu3",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openrouter/google/gemma-3-4b-it",
+      "model_args": {},
+      "sequence": 10
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "63qw2R4MBFTuS8nSVZ33Fy",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openrouter/google/gemma-3-4b-it",
+      "model_args": {},
+      "sequence": 11
+    }
+  ]
+}

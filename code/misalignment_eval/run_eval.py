@@ -41,7 +41,7 @@ GOAL_TYPES = ("explicit", "latent", "none", "ambiguous", "swap")
 # prompt generator raises otherwise); every other goal_type takes --goal-value.
 GOAL_TYPES_REQUIRING_NONE_VALUE = ("none", "ambiguous")
 
-DEFAULT_LOG_ROOT = REPO_ROOT / "tmp" / "misalignment-eval" / "logs"
+DEFAULT_LOG_ROOT = REPO_ROOT / "data" / "misalignment-eval" / "logs"
 
 
 def build_conditions(preset: str, goal_value: str) -> list[dict[str, str]]:
