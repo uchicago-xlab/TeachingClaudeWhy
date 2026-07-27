@@ -39,13 +39,20 @@ from persona import (  # noqa: E402
 # grader model served there.
 DEFAULT_GRADER_MODEL = "openrouter/anthropic/claude-sonnet-4.6"
 
-# The three scenarios shipped by inspect_evals, which the presets are built from.
+# The three scenarios shipped by inspect_evals.
 UPSTREAM_SCENARIOS = ("blackmail", "leaking", "murder")
 # Ours (code/misalignment_eval/exfiltration/), ported from ../model_spec_midtraining.
 # Replacement is the only urgency it has templates for.
 EXFILTRATION_URGENCY_TYPES = ("replacement",)
 
 SCENARIOS = UPSTREAM_SCENARIOS + ("exfiltration",)
+
+# What the presets sweep by default. Blackmail is excluded: the models we care
+# about will commit murder and leak files in these scenarios but essentially never
+# blackmail, so those cells are all-zero and only cost grader calls. It is still
+# reachable via --preset blackmail-2x2 / core+blackmail / full, --scenario, and
+# --condition.
+DEFAULT_SCENARIOS = ("leaking", "murder", "exfiltration")
 URGENCY_TYPES = ("replacement", "restriction", "none")
 GOAL_TYPES = ("explicit", "latent", "none", "ambiguous", "swap")
 
@@ -88,21 +95,22 @@ def build_conditions(preset: str, goal_value: str) -> list[dict[str, str]]:
     """Expand a preset name into a list of task-argument dicts."""
     # 2x2 ablation (goal conflict on/off x replacement threat on/off) per scenario;
     # exfiltration only has replacement templates, so it contributes 2 cells, not 4.
-    core = expand(UPSTREAM_SCENARIOS, ("explicit", "none"), ("replacement", "none"), goal_value)
-    exfil = expand(("exfiltration",), ("explicit", "none"), ("replacement",), goal_value)
+    ablation = ("explicit", "none"), ("replacement", "none")
+    core = expand(DEFAULT_SCENARIOS, *ablation, goal_value)
+    blackmail = expand(("blackmail",), *ablation, goal_value)
 
     if preset == "smoke":
-        return expand(("blackmail",), ("explicit",), ("replacement",), goal_value)
+        return expand(("murder",), ("explicit",), ("replacement",), goal_value)
     if preset == "exfil-smoke":
         return expand(("exfiltration",), ("explicit",), ("replacement",), goal_value)
     if preset == "blackmail-2x2":
-        return expand(("blackmail",), ("explicit", "none"), ("replacement", "none"), goal_value)
+        return blackmail
     if preset == "exfil":
-        return exfil
+        return expand(("exfiltration",), *ablation, goal_value)
     if preset == "core":
         return core
-    if preset == "core+exfil":
-        return core + exfil
+    if preset == "core+blackmail":
+        return core + blackmail
     if preset == "full":
         return expand(SCENARIOS, GOAL_TYPES, URGENCY_TYPES, goal_value)
     raise ValueError(f"unknown preset: {preset}")
@@ -197,9 +205,10 @@ def main() -> int:
     parser.add_argument(
         "--preset",
         default="core",
-        choices=("smoke", "exfil-smoke", "blackmail-2x2", "exfil", "core", "core+exfil", "full"),
-        help="Condition grid: smoke=1, exfil-smoke=1, blackmail-2x2=4, exfil=2, core=12, "
-        "core+exfil=14, full=50 conditions (default: core)",
+        choices=("smoke", "exfil-smoke", "blackmail-2x2", "exfil", "core", "core+blackmail", "full"),
+        help="Condition grid: smoke=1, exfil-smoke=1, blackmail-2x2=4, exfil=2, core=10 "
+        "(leaking + murder + exfiltration), core+blackmail=14, full=50 conditions "
+        "(default: core)",
     )
     parser.add_argument("--scenario", choices=SCENARIOS, action="append", help="Restrict preset to these scenarios")
     parser.add_argument(
@@ -254,6 +263,14 @@ def main() -> int:
     parser.add_argument("--run-name", default=None, help="Log subdirectory name (default: slugified model name)")
     parser.add_argument("--log-dir", default=None, help="Full log directory (overrides --run-name)")
     parser.add_argument("--retry-attempts", type=int, default=3, help="eval_set retry attempts (default: 3)")
+    parser.add_argument(
+        "--log-dir-allow-dirty",
+        action="store_true",
+        help="Let eval_set run in a log directory that holds logs from a different task "
+        "set. Needed to add a preset's runs to a directory built with another preset — "
+        "e.g. re-running the (now blackmail-free) core grid into a directory that still "
+        "has blackmail logs from an earlier core run.",
+    )
     parser.add_argument("--display", default="full", choices=("full", "conversation", "rich", "plain", "log", "none"))
     parser.add_argument("--dry-run", action="store_true", help="Print the condition grid and exit without calling any API")
     args = parser.parse_args()
@@ -266,8 +283,8 @@ def main() -> int:
         conditions = [c for c in conditions if c["scenario"] in args.scenario]
     if not conditions:
         raise SystemExit(
-            "No conditions selected. (The exfiltration scenario is not part of the "
-            "smoke/blackmail-2x2/core presets — use --preset exfil or core+exfil.)"
+            "No conditions selected. (Blackmail is not in the default presets — use "
+            "--preset blackmail-2x2, core+blackmail, or full.)"
         )
 
     # eval_set refuses to share a log directory between two different task sets, so
@@ -329,6 +346,7 @@ def main() -> int:
     success, _logs = eval_set(
         tasks=tasks,
         log_dir=str(log_dir),
+        log_dir_allow_dirty=args.log_dir_allow_dirty,
         model=args.model,
         model_base_url=args.model_base_url,
         model_args=parse_model_args(args.model_arg),
