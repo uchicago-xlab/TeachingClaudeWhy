@@ -196,6 +196,14 @@ def main() -> int:
         metavar="KEY=VALUE",
         help="Provider model arg (repeatable), e.g. --model-arg stream=true",
     )
+    parser.add_argument(
+        "--no-thinking",
+        action="store_true",
+        help="Disable hybrid-reasoning models' thinking mode (Qwen3 etc.) by sending "
+        "chat_template_kwargs={'enable_thinking': False} in the request body. Use this "
+        "for any model finetuned with thinking off, and match it on the base-model "
+        "baseline so the comparison is valid. No effect on non-thinking models.",
+    )
     parser.add_argument("--run-name", default=None, help="Log subdirectory name (default: slugified model name)")
     parser.add_argument("--log-dir", default=None, help="Full log directory (overrides --run-name)")
     parser.add_argument("--retry-attempts", type=int, default=3, help="eval_set retry attempts (default: 3)")
@@ -214,8 +222,16 @@ def main() -> int:
 
     log_dir = Path(args.log_dir) if args.log_dir else DEFAULT_LOG_ROOT / (args.run_name or slugify(args.model))
 
+    # Qwen3 and other hybrid-reasoning models default to thinking ON. Send the
+    # provider-level hard switch (enable_thinking=False) via extra_body so the
+    # served model matches a checkpoint trained with thinking disabled.
+    extra_body = (
+        {"chat_template_kwargs": {"enable_thinking": False}} if args.no_thinking else None
+    )
+
     print(f"model:        {args.model}")
     print(f"grader:       {args.grader_model}")
+    print(f"thinking:     {'disabled (enable_thinking=False)' if args.no_thinking else 'provider default'}")
     print(f"preset:       {args.preset} ({len(conditions)} conditions x {args.epochs} epochs "
           f"= {len(conditions) * args.epochs} samples)")
     print(f"log dir:      {log_dir}")
@@ -250,8 +266,13 @@ def main() -> int:
         max_connections=args.max_connections,
         temperature=args.temperature,
         max_tokens=args.max_tokens,
+        extra_body=extra_body,
         display=args.display,
-        metadata={"tcw_preset": args.preset, "tcw_goal_value": args.goal_value},
+        metadata={
+            "tcw_preset": args.preset,
+            "tcw_goal_value": args.goal_value,
+            "tcw_thinking": "disabled" if args.no_thinking else "default",
+        },
     )
 
     print(f"\nLogs: {log_dir}")

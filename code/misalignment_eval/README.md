@@ -116,6 +116,13 @@ noise; use `--epochs 30+` for anything we would put in a writeup.
 - **Temperature 1.0, max_tokens 4096 by default.** Matches the original work's
   sampling; the scratchpad-style responses need the headroom (truncated
   completions grade as non-harmful and silently deflate the rate).
+- **`--no-thinking` for hybrid-reasoning models.** Qwen3 and similar default to
+  thinking ON; the flag sends `chat_template_kwargs={"enable_thinking": False}`
+  via the request `extra_body` (Inspect `GenerateConfig.extra_body`) — the
+  provider-level hard switch. Use it for any checkpoint finetuned with thinking
+  disabled, and **match it on the base-model baseline** or the comparison is
+  invalid. Off by default (non-thinking models are unaffected); the choice is
+  recorded as `tcw_thinking` in each log's metadata.
 
 ## Known gaps
 
