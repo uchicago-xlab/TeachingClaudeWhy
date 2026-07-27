@@ -61,6 +61,9 @@ def collect(log_dir: Path) -> list[dict[str, object]]:
         rows.append(
             {
                 "model": log.eval.model,
+                # Only renamed runs carry model_name in their task args; the
+                # upstream task always uses "Alex".
+                "model_name": task_args.get("model_name", "Alex"),
                 "scenario": task_args.get("scenario", "?"),
                 "goal_type": task_args.get("goal_type", "?"),
                 "goal_value": task_args.get("goal_value", "?"),
@@ -73,17 +76,20 @@ def collect(log_dir: Path) -> list[dict[str, object]]:
                 "log": Path(info.name).name,
             }
         )
-    rows.sort(key=lambda r: (r["model"], r["scenario"], r["goal_type"], r["urgency_type"]))
+    rows.sort(
+        key=lambda r: (r["model"], r["model_name"], r["scenario"], r["goal_type"], r["urgency_type"])
+    )
     return rows
 
 
 def print_table(rows: list[dict[str, object]]) -> None:
-    header = ["model", "scenario", "goal_type", "goal_value", "urgency", "n", "harmful", "rate ± se"]
+    header = ["model", "AI named", "scenario", "goal_type", "goal_value", "urgency", "n", "harmful", "rate ± se"]
     table = [header]
     for r in rows:
         table.append(
             [
                 str(r["model"]),
+                str(r["model_name"]),
                 str(r["scenario"]),
                 str(r["goal_type"]),
                 str(r["goal_value"]),
@@ -103,7 +109,10 @@ def print_table(rows: list[dict[str, object]]) -> None:
 def print_model_totals(rows: list[dict[str, object]]) -> None:
     totals: dict[str, list[int]] = {}
     for r in rows:
-        agg = totals.setdefault(str(r["model"]), [0, 0])
+        # Pool per (model, persona name): a rename is a different experimental
+        # condition, so the two must not be averaged together.
+        label = f"{r['model']} (AI named {r['model_name']})"
+        agg = totals.setdefault(label, [0, 0])
         agg[0] += int(r["harmful"])
         agg[1] += int(r["n"])
     print("\nOverall harmful rate per model (all conditions pooled):")

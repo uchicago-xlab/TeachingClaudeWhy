@@ -29,6 +29,10 @@ from inspect_ai import eval_set  # noqa: E402
 from inspect_evals.agentic_misalignment import agentic_misalignment  # noqa: E402
 
 from exfiltration import exfiltration  # noqa: E402
+from persona import (  # noqa: E402
+    DEFAULT_MODEL_NAME,
+    agentic_misalignment_persona,
+)
 
 # The eval's built-in default grader is `anthropic/claude-sonnet-4-6`, which needs
 # an ANTHROPIC_API_KEY. This repo routes through OpenRouter, so default to the same
@@ -212,6 +216,13 @@ def main() -> int:
         choices=("america", "global", "safety", "acceleration", "ethical", "pragmatic", "individualism", "collectivism"),
         help="Goal given to the model for explicit/latent/swap conditions (default: america)",
     )
+    parser.add_argument(
+        "--model-name",
+        default=DEFAULT_MODEL_NAME,
+        help="Name the AI is given in the prompts (default: %(default)s). Use this for the "
+        "persona-attachment experiment, e.g. --model-name Qwen vs --model-name Claude; "
+        "keep everything else fixed between those runs.",
+    )
     parser.add_argument("--epochs", type=int, default=10, help="Samples per condition (default: 10)")
     parser.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature (default: 1.0)")
     parser.add_argument("--max-tokens", type=int, default=4096, help="Max completion tokens (default: 4096)")
@@ -259,7 +270,13 @@ def main() -> int:
             "smoke/blackmail-2x2/core presets — use --preset exfil or core+exfil.)"
         )
 
-    log_dir = Path(args.log_dir) if args.log_dir else DEFAULT_LOG_ROOT / (args.run_name or slugify(args.model))
+    # eval_set refuses to share a log directory between two different task sets, so
+    # renamed runs get their own subdirectory by default — otherwise the second
+    # persona of a sweep errors out instead of landing next to the first.
+    run_name = args.run_name or slugify(args.model)
+    if not args.run_name and args.model_name != DEFAULT_MODEL_NAME:
+        run_name += f"-as-{slugify(args.model_name)}"
+    log_dir = Path(args.log_dir) if args.log_dir else DEFAULT_LOG_ROOT / run_name
 
     # Qwen3 and other hybrid-reasoning models default to thinking ON. Send the
     # provider-level hard switch (enable_thinking=False) via extra_body so the
@@ -270,6 +287,7 @@ def main() -> int:
 
     print(f"model:        {args.model}")
     print(f"grader:       {args.grader_model}")
+    print(f"AI named:     {args.model_name}")
     print(f"thinking:     {'disabled (enable_thinking=False)' if args.no_thinking else 'provider default'}")
     print(f"preset:       {args.preset} ({len(conditions)} conditions x {args.epochs} epochs "
           f"= {len(conditions) * args.epochs} samples)")
@@ -283,17 +301,29 @@ def main() -> int:
     check_api_keys(args.model, args.grader_model)
 
     # exfiltration lives in this repo (see exfiltration/task.py); the other three
-    # scenarios come from inspect_evals. Both take the same arguments.
-    tasks = [
-        (exfiltration if c["scenario"] == "exfiltration" else agentic_misalignment)(
-            **c,
+    # scenarios come from inspect_evals, via persona.py when the AI is renamed —
+    # upstream's task has no model_name argument, so a renamed run has to be a
+    # distinguishable task or eval_set would confuse it with the "Alex" run of the
+    # same condition. At the default name the call is upstream's, unchanged.
+    def task_for(scenario: str):
+        if scenario == "exfiltration":
+            return exfiltration
+        if args.model_name != DEFAULT_MODEL_NAME:
+            return agentic_misalignment_persona
+        return agentic_misalignment
+
+    tasks = []
+    for c in conditions:
+        builder = task_for(c["scenario"])
+        kwargs = dict(
             extra_system_instructions=args.extra_system_instructions,
             prod=args.prod,
             test_eval_awareness=args.test_eval_awareness,
             grader_model=args.grader_model,
         )
-        for c in conditions
-    ]
+        if builder is not agentic_misalignment:
+            kwargs["model_name"] = args.model_name
+        tasks.append(builder(**c, **kwargs))
 
     log_dir.mkdir(parents=True, exist_ok=True)
     success, _logs = eval_set(
@@ -313,6 +343,7 @@ def main() -> int:
             "tcw_preset": args.preset,
             "tcw_goal_value": args.goal_value,
             "tcw_thinking": "disabled" if args.no_thinking else "default",
+            "tcw_model_name": args.model_name,
         },
     )
 

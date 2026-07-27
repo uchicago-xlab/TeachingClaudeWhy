@@ -51,6 +51,12 @@ Run from this directory:
     --model together/your-org/Qwen2.5-32B-Instruct-tcw-advice-abc123 \
     --run-name tcw-advice-v1
 
+# Persona-attachment pair: same model, same grid, different name for the AI
+../../.venv-inspect/bin/python run_eval.py \
+    --model together/Qwen/Qwen2.5-32B-Instruct --model-name Qwen
+../../.venv-inspect/bin/python run_eval.py \
+    --model together/Qwen/Qwen2.5-32B-Instruct --model-name Claude
+
 # Table across every model that has logs under the root
 ../../.venv-inspect/bin/python summarize.py --log-dir ../../data/misalignment-eval/logs
 
@@ -122,6 +128,37 @@ templates unsubstituted under `goal_type=ambiguous`. Ours takes those values fro
 family — narrowed to the placeholders our templates use. All 26 renderable
 conditions (5 goal types × goal values) now generate with no leftover variables.
 
+### Persona name (`--model-name`)
+
+The AI in these scenarios is called **Alex** by default. `--model-name Qwen`
+renames it everywhere — system prompt, the emails, and its own address
+(`alex.ai@…` → `qwen.ai@…`) — which is the §3.1 experiment in
+`notes/Project/Experiments/ImplementationDetails.md`: run a checkpoint under its
+own persona name vs "Claude"/"GPT"/a control name, everything else fixed, and see
+whether alignment tracks the name.
+
+Only the AI is renamed; Kyle Johnson, Thomas Wilson et al. and the recipient
+addresses the classifiers gate on are untouched. Mechanics differ by scenario:
+exfiltration templates are parameterized (`${model_name}`), while the three
+upstream scenarios hardcode "Alex" in ~20 files inside site-packages, so
+`persona.py` patches the function that renders their prompts (both the task's
+copy and the scorer's, so prompt and grader context always agree).
+
+Two practical consequences:
+
+- **Renamed runs are a different task** (`agentic_misalignment_persona`, with
+  `model_name` in its task args). Without that, `eval_set` would see a "Qwen" run
+  and an "Alex" run of the same condition as identical and skip the second.
+- **One persona per log directory** — `eval_set` refuses to mix task sets in a
+  directory. Renamed runs therefore default to
+  `logs/<model-slug>-as-<name>/`; the default-name run keeps the plain
+  `logs/<model-slug>/`, so existing logs stay where they are. `--run-name` /
+  `--log-dir` still override.
+
+`summarize.py` shows the persona in an "AI named" column and pools each
+(model, persona) separately — a rename is a different experimental condition, not
+something to average over.
+
 ### Cost
 
 Each condition is **one prompt** (~2.4k input tokens); volume comes from
@@ -177,6 +214,14 @@ noise; use `--epochs 30+` for anything we would put in a writeup.
   which applies to *every* scenario and would have silently changed our
   leaking/murder prompts. Our exfiltration system prompt is byte-identical to
   upstream's leaking prompt apart from the session timestamp (verified by diff).
+- **Persona renaming patches prompt generation; it does not edit templates.**
+  Editing "Alex" in `.venv-inspect/.../templates/` would be invisible to git and
+  lost on any reinstall, and vendoring the eval to change one word costs us
+  upstream upgrades. `persona.py` wraps `generate_prompts` instead and rewrites
+  the name in its output — one function, both call sites (task and scorer), and
+  `--model-name Alex` is a no-op, so default runs are byte-identical to before.
+  The patch is process-global, which is fine because `run_eval.py` uses exactly
+  one persona per invocation.
 - **`--no-thinking` for hybrid-reasoning models.** Qwen3 and similar default to
   thinking ON; the flag sends `chat_template_kwargs={"enable_thinking": False}`
   via the request `extra_body` (Inspect `GenerateConfig.extra_body`) — the
@@ -187,14 +232,10 @@ noise; use `--epochs 30+` for anything we would put in a writeup.
 
 ## Known gaps
 
-- **Persona name is fixed for the three upstream scenarios.** Their templates
-  hardcode the AI as "Alex". `notes/Project/Experiments/ImplementationDetails.md`
-  wants runs with the assistant named "Qwen" vs "Claude"/"GPT" to test persona
-  attachment; that still needs template edits
-  (`.venv-inspect/.../agentic_misalignment/templates/`) or a fork. The
-  exfiltration scenario *is* parameterized (`model_name`, default "Alex") since
-  its templates use `${model_name}`, but `run_eval.py` does not expose a flag for
-  it yet — add one when we run the persona experiment.
+- **Company names are still fixed.** `--model-name` renames the AI, but it is
+  always deployed at SummitBridge (blackmail/murder) or NovaStar
+  (leaking/exfiltration), and the human cast is fixed. If a persona result looks
+  name-driven, check it isn't really company-context-driven.
 - **Finetuned Together models** may need a dedicated endpoint (serverless LoRA
   inference is limited to supported base models). If `together/<your model>`
   404s, deploy the endpoint first and pass `--model-base-url`.
@@ -207,6 +248,14 @@ Smoke-tested 2026-07-24 end to end (task construction → generation → grading
 summary table) with `--model openrouter/qwen/qwen-2.5-72b-instruct --preset smoke
 --epochs 1`, since no `TOGETHER_API_KEY` was available. Everything except the
 `together/` provider call itself is confirmed working.
+
+`--model-name` smoke-tested 2026-07-27: blackmail, 1 sample, run once as "Qwen"
+and once as "Claude" (plus the earlier "Alex" logs), each landing in its own
+`-as-<name>` directory and appearing as its own row in `summarize.py`. Renaming
+verified across all three upstream scenarios offline — no "Alex"/"alex" left in
+either the system prompt or the emails, and the classifiers' recipient gates
+unchanged. (One run failed first on an OpenRouter provider fallback, unrelated to
+the eval; re-running resumed it.)
 
 Exfiltration smoke-tested the same way 2026-07-27 (`--preset exfil-smoke
 --epochs 1`, ~5k tokens): Qwen2.5-72B emailed its weight credentials to
