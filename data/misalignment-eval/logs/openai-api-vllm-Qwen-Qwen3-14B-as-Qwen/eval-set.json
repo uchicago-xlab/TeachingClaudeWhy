@@ -1,9 +1,9 @@
 {
-  "eval_set_id": "gK6KXYVGsfTydTmKNhnyTH",
+  "eval_set_id": "f3SV9pbh6kMGxTbAJD6FdG",
   "tasks": [
     {
       "name": "agentic_misalignment_persona",
-      "task_id": "J6a6rR6Gs2SbVwbCn5jGta",
+      "task_id": "7v65AiPLiNyxBS6bPcCuca",
       "task_file": "persona.py",
       "task_args": {
         "scenario": "leaking",
@@ -22,7 +22,7 @@
     },
     {
       "name": "agentic_misalignment_persona",
-      "task_id": "hzVZom7yPTvD9Sm6oU6aRV",
+      "task_id": "PBQaBTgXy48rPPsiEFTtkB",
       "task_file": "persona.py",
       "task_args": {
         "scenario": "leaking",
@@ -41,7 +41,7 @@
     },
     {
       "name": "agentic_misalignment_persona",
-      "task_id": "NUgqhR55SSgLfvtMWNi2r6",
+      "task_id": "ftRXmWaTDXTsx3jro4wVQM",
       "task_file": "persona.py",
       "task_args": {
         "scenario": "leaking",
@@ -60,7 +60,7 @@
     },
     {
       "name": "agentic_misalignment_persona",
-      "task_id": "6K4texCeexQKRhT2CfXe5V",
+      "task_id": "ngdVBSZnXyxophNFZk8Jse",
       "task_file": "persona.py",
       "task_args": {
         "scenario": "leaking",
@@ -79,7 +79,7 @@
     },
     {
       "name": "agentic_misalignment_persona",
-      "task_id": "Pt2pAixnn8qDcMKtoe6q2G",
+      "task_id": "DJaTsgJbUKzDELPYsrKPuM",
       "task_file": "persona.py",
       "task_args": {
         "scenario": "murder",
@@ -98,7 +98,7 @@
     },
     {
       "name": "agentic_misalignment_persona",
-      "task_id": "MAWg3nD8JiNa3zTykC9At7",
+      "task_id": "iKk2dZEEyei7dPycC6m3Qr",
       "task_file": "persona.py",
       "task_args": {
         "scenario": "murder",
@@ -117,7 +117,7 @@
     },
     {
       "name": "agentic_misalignment_persona",
-      "task_id": "VhGEdV6zMw2UQpiJgnbxBr",
+      "task_id": "NS2ZdhDnxcoLYng8FvihW7",
       "task_file": "persona.py",
       "task_args": {
         "scenario": "murder",
@@ -136,7 +136,7 @@
     },
     {
       "name": "agentic_misalignment_persona",
-      "task_id": "KSkUYwEsESLca97qbM7QQk",
+      "task_id": "NJDHvynuDxjUsHHXGVAo4H",
       "task_file": "persona.py",
       "task_args": {
         "scenario": "murder",
@@ -155,7 +155,7 @@
     },
     {
       "name": "exfiltration",
-      "task_id": "CYGkdTr3VEhibp68Tarwfo",
+      "task_id": "A2Hrfhkd5ktuQ2AmZKHwz2",
       "task_file": "exfiltration/task.py",
       "task_args": {
         "scenario": "exfiltration",
@@ -174,7 +174,7 @@
     },
     {
       "name": "exfiltration",
-      "task_id": "QQupbWiFm4wGLAv8rLtpMj",
+      "task_id": "gUxCkHXK5CLUVvMi5N6VoQ",
       "task_file": "exfiltration/task.py",
       "task_args": {
         "scenario": "exfiltration",
