@@ -305,8 +305,14 @@ used `Qwen`). It is not derived from the model path.
 
 ### Running with no API access at all
 
-The default grader is `anthropic/claude-3-7-sonnet-20250219` and needs `ANTHROPIC_API_KEY`. One
-configuration needs **no** external calls whatsoever — sandbagging is scored deterministically:
+The default grader is `anthropic/claude-sonnet-5` and needs `ANTHROPIC_API_KEY`.
+
+**The judge changed.** It was `claude-3-7-sonnet-20250219` for every previously published number in
+this repo, so harm rates graded by Sonnet 5 are a different measurement — do not pool old and new
+runs in one figure. To reproduce an old number, pass the old judge explicitly:
+`-T grader_model=anthropic/claude-3-7-sonnet-20250219`. See `DEVIATIONS.md` §10.
+
+One configuration needs **no** external calls whatsoever — sandbagging is scored deterministically:
 
 ```bash
 PYTHONPATH=. inspect eval evals/agentic_misalignment/agentic_misalignment.py \

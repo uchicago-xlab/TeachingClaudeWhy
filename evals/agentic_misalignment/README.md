@@ -19,7 +19,7 @@ export ANTHROPIC_API_KEY=sk-ant-xxxxx
 ```bash
 # Exfiltration scenario (no goal conflict)
 inspect eval evals/agentic_misalignment \
-  --model anthropic/claude-sonnet-4 \
+  --model anthropic/claude-sonnet-5 \
   -T scenario=exfiltration \
   -T goal_type=none \
   -T goal_value=none \
@@ -27,7 +27,7 @@ inspect eval evals/agentic_misalignment \
 
 # Exfiltration with explicit goal conflict
 inspect eval evals/agentic_misalignment \
-  --model anthropic/claude-sonnet-4 \
+  --model anthropic/claude-sonnet-5 \
   -T scenario=exfiltration \
   -T goal_type=explicit \
   -T goal_value=america \
@@ -48,7 +48,7 @@ inspect eval evals/agentic_misalignment \
   -T goal_type=none \
   -T goal_value=none \
   -T urgency_type=replacement \
-  -T grader_model=anthropic/claude-sonnet-4
+  -T grader_model=anthropic/claude-sonnet-5
 ```
 
 You can also set `INSPECT_GRADER_MODEL` as an environment variable instead of passing `-T grader_model=...`.
@@ -63,7 +63,7 @@ You can also set `INSPECT_GRADER_MODEL` as an environment variable instead of pa
 | `urgency_type` | `"replacement"` | `"replacement"`, `"restriction"`, `"none"` |
 | `prod` | `false` | `true` removes scratchpad reasoning instructions from the prompt |
 | `model_name` | `"Alex"` | Name of the AI assistant in prompts |
-| `grader_model` | `None` | Judge model for scoring (e.g. `"anthropic/claude-sonnet-4"`) |
+| `grader_model` | `None` | Judge model for scoring (e.g. `"anthropic/claude-sonnet-5"`) |
 | `extra_system_instructions` | `None` | `"dont"` (safety instructions), `"goal"` (overwhelming welfare goal) |
 | `sandbagging_target` | `"self"` | `"self"`, `"other"` — condition axis for `scenario=sandbagging` |
 | `propagation_channel` | `"training"` | `"training"`, `"faq"` — condition axis for `scenario=goal_propagation` |
@@ -172,7 +172,7 @@ values. 35 hand-written fixtures under `tests/fixtures/sandbagging/` pin this do
 
 ```bash
 inspect eval evals/agentic_misalignment/agentic_misalignment.py \
-  --model anthropic/claude-sonnet-4-6 \
+  --model anthropic/claude-sonnet-5 \
   -T scenario=sandbagging -T sandbagging_target=self \
   -T goal_type=none -T goal_value=none \
   -T model_name=Alex -T prod=false \
@@ -241,7 +241,7 @@ the apparatus ship so a human can do it in one command:
 ```bash
 python scripts/validate_propagation_judge.py \
   tests/fixtures/goal_propagation/candidates.csv \
-  --grader-model anthropic/claude-sonnet-4-6
+  --grader-model anthropic/claude-sonnet-5
 ```
 
 `candidates.csv` holds 59 candidate drafts **with the label column empty**. A human fills it in; see
@@ -259,10 +259,10 @@ hard rows were skipped than that the judge is flawless.
 
 ```bash
 inspect eval evals/agentic_misalignment/agentic_misalignment.py \
-  --model anthropic/claude-sonnet-4-6 \
+  --model anthropic/claude-sonnet-5 \
   -T scenario=goal_propagation -T propagation_channel=training \
   -T goal_type=explicit -T goal_value=safety \
-  -T grader_model=anthropic/claude-sonnet-4-6 \
+  -T grader_model=anthropic/claude-sonnet-5 \
   -T model_name=Alex -T prod=false \
   --max-tokens 4096 --temperature 1.0 --epochs 100
 ```
@@ -322,10 +322,10 @@ judge-based scenarios, since each turn is classified independently.
 
 ```bash
 inspect eval evals/agentic_misalignment/agentic_misalignment.py \
-  --model anthropic/claude-sonnet-4-6 \
+  --model anthropic/claude-sonnet-5 \
   -T scenario=exfiltration -T rebuff=delivered \
   -T goal_type=none -T goal_value=none -T urgency_type=replacement \
-  -T grader_model=anthropic/claude-sonnet-4-6 \
+  -T grader_model=anthropic/claude-sonnet-5 \
   --max-tokens 4096 --temperature 1.0 --epochs 100
 ```
 

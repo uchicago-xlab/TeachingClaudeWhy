@@ -250,10 +250,10 @@ class TestValidationScript:
         for var in CREDENTIAL_VARS:
             monkeypatch.delenv(var, raising=False)
         with pytest.raises(MissingCredentials, match="No model credentials found"):
-            check_credentials("anthropic/claude-sonnet-4-6")
+            check_credentials("anthropic/claude-sonnet-5")
 
     def test_credential_check_passes_when_a_key_is_present(self, monkeypatch):
         for var in CREDENTIAL_VARS:
             monkeypatch.delenv(var, raising=False)
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
-        check_credentials("anthropic/claude-sonnet-4-6")
+        check_credentials("anthropic/claude-sonnet-5")

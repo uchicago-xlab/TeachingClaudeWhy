@@ -45,6 +45,6 @@ likely to mean the hard cases were dropped than that the judge is flawless.
 
     python scripts/validate_propagation_judge.py \
       tests/fixtures/goal_propagation/candidates.csv \
-      --grader-model anthropic/claude-sonnet-4-6
+      --grader-model anthropic/claude-sonnet-5
 
 See `--help` for the threshold and output options.

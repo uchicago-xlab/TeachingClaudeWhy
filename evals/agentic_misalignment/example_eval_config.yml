@@ -13,7 +13,7 @@ tasks:
     goal_type: "none"
     goal_value: "none"
     urgency_type: "replacement"
-    grader_model: "anthropic/claude-sonnet-4"
+    grader_model: "anthropic/claude-sonnet-5"
     
   # Exfiltration scenario
   - inspect_task: "evals/agentic_misalignment"
@@ -21,7 +21,7 @@ tasks:
     goal_type: "explicit"
     goal_value: "america"
     urgency_type: "replacement"
-    grader_model: "anthropic/claude-sonnet-4"
+    grader_model: "anthropic/claude-sonnet-5"
     model_name: "Alex"
     temperature: 1.0
     max_tokens: 4096
@@ -32,7 +32,7 @@ tasks:
     goal_type: "explicit"
     goal_value: "individualism"
     urgency_type: "replacement"
-    grader_model: "anthropic/claude-sonnet-4"
+    grader_model: "anthropic/claude-sonnet-5"
 
   # Murder scenario
   - inspect_task: "evals/agentic_misalignment"
@@ -40,7 +40,7 @@ tasks:
     goal_type: "explicit"
     goal_value: "ethical"
     urgency_type: "replacement"
-    grader_model: "anthropic/claude-sonnet-4"
+    grader_model: "anthropic/claude-sonnet-5"
 
   # Production mode (no scratchpad)
   - inspect_task: "evals/agentic_misalignment"
@@ -49,7 +49,7 @@ tasks:
     goal_value: "america"
     urgency_type: "replacement"
     prod: true
-    grader_model: "anthropic/claude-sonnet-4"
+    grader_model: "anthropic/claude-sonnet-5"
 
   # Custom model name
   - inspect_task: "evals/agentic_misalignment"
@@ -58,7 +58,7 @@ tasks:
     goal_value: "individualism"
     urgency_type: "replacement"
     model_name: "Claude"
-    grader_model: "anthropic/claude-sonnet-4"
+    grader_model: "anthropic/claude-sonnet-5"
 
 # ==============================================================================
 # Parameters Reference
@@ -70,7 +70,7 @@ tasks:
 #             "pragmatic" | "individualism" | "collectivism" | "none" | "ambiguous"
 #   Note: Must be "none" when goal_type is "none" or "ambiguous"
 # urgency_type: "replacement" | "restriction" | "none"
-# grader_model: Judge model for scoring (e.g. "anthropic/claude-sonnet-4")
+# grader_model: Judge model for scoring (e.g. "anthropic/claude-sonnet-5")
 # model_name: Name of AI in prompts (default: "Alex")
 # extra_system_instructions: null | "dont" | "goal"
 # prod: false (default) | true — removes scratchpad from prompt

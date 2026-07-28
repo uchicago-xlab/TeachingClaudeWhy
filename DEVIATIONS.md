@@ -101,7 +101,35 @@ Two fixture labels required a judgment the spec does not settle:
   mentioned. Labelled `faithful`, because the primary DV is the reported number. Dropping the
   consequence is a real phenomenon the DV does not capture; it is called out in the README.
 
-## 10. Changes to existing files
+## 10. Judge model changed to Claude Sonnet 5
+
+Requested explicitly. Every default grader model is now `anthropic/claude-sonnet-5`, replacing
+`anthropic/claude-3-7-sonnet-20250219`:
+
+| File | Constant |
+|---|---|
+| `classifiers/leak_classifier.py` | `LEAK_CLASSIFICATION_MODEL_ID` |
+| `classifiers/exfiltration_classifier.py` | `EXFILTRATION_CLASSIFICATION_MODEL_ID` |
+| `classifiers/murder_classifier.py` | `MURDER_CLASSIFICATION_MODEL_ID` |
+| `scorers_crosscutting.py` | `DEFAULT_GRADER_MODEL` (eval_awareness) |
+| `scorers_goal_propagation.py` | `DEFAULT_GRADER_MODEL` |
+
+The first three are **vendored classifiers** — files the standing instruction said not to modify.
+They were changed on explicit request.
+
+**Comparability implication.** The judge is part of the measurement, not part of the harness. Harm
+rates produced under Sonnet 5 are not directly comparable to any already-published number from this
+repo, all of which were graded by `claude-3-7-sonnet-20250219`. Two consequences:
+
+- Any figure that mixes old and new runs is comparing two measurements, not one. Re-grade the old
+  transcripts under Sonnet 5 rather than pooling.
+- The judge only sets the *default*. `-T grader_model=...` and `INSPECT_GRADER_MODEL` both still
+  override it, so reproducing an old number means passing the old model ID explicitly:
+  `-T grader_model=anthropic/claude-3-7-sonnet-20250219`.
+
+The deterministic scorers — sandbagging and `format_compliance` — are unaffected; they call no judge.
+
+## 11. Changes to existing files
 
 Approved before implementation. Every one is listed here because the standing instruction was to add
 alongside rather than modify.
@@ -112,12 +140,13 @@ alongside rather than modify.
 | `prompt_generator.py` | Added `strict=True` param, `validate_goal_axes`, `validate_rendered_prompts`, axis constants; `ValidationError` now subclasses `ValueError` | The silent-acceptance defect. `ValidationError` was widened so callers catching the original `ValueError` for a bad goal pairing keep working. |
 | `pyproject.toml` | Added `[project.optional-dependencies] dev`, pytest config, pinned ruff ruleset | No test infrastructure existed, and `inspect-ai` was not a declared dependency at any version. |
 | `README.md` (eval) | New sections; parameter table extended; a table of conditions that do not exist | |
-| `.gitattributes` | New file, pins working tree to LF | See 11. |
+| `.gitattributes` | New file, pins working tree to LF | See 12. |
+| `classifiers/*.py` (3 files) | Default judge model → `anthropic/claude-sonnet-5` | Requested. See 10. |
 
 **No template, no classifier, and no existing scorer was modified.** All 468 pre-change prompt
 snapshots are byte-identical.
 
-## 11. Line-ending normalisation
+## 12. Line-ending normalisation
 
 `core.autocrlf=true` is set globally on the machine this was built on, so a clone checks the prompt
 templates out as CRLF while the index stores LF. The eval therefore rendered a byte-different system
@@ -129,12 +158,12 @@ already LF — and `git status` was clean immediately afterwards. It does change
 existing templates *in the working tree on this machine*, which is a modification to existing files
 in the loosest sense, hence its listing here.
 
-## 12. Test and script locations
+## 13. Test and script locations
 
 `tests/` and `scripts/` are at the repo root, as the spec's paths imply. The repo had neither
 directory before; this sets the convention.
 
-## 13. Not done
+## 14. Not done
 
 - **`goal_type=swap` untouched.** Snapshots cover it read-only. Nothing added interacts with it.
 - **The two template defects found are reported, not fixed.** Fixing either means editing an existing

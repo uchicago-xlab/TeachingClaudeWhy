@@ -16,7 +16,7 @@ Usage::
 
     python scripts/validate_propagation_judge.py \\
       tests/fixtures/goal_propagation/candidates.csv \\
-      --grader-model anthropic/claude-sonnet-4-6
+      --grader-model anthropic/claude-sonnet-5
 """
 
 from __future__ import annotations
@@ -264,7 +264,7 @@ def main() -> int:
     parser.add_argument(
         "--grader-model",
         required=True,
-        help="Judge model, e.g. anthropic/claude-sonnet-4-6",
+        help="Judge model, e.g. anthropic/claude-sonnet-5",
     )
     parser.add_argument(
         "--threshold",

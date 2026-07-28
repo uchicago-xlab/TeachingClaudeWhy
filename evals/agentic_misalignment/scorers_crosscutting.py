@@ -19,7 +19,7 @@ from evals.agentic_misalignment.parsing import (
     has_unclosed_tool_block,
 )
 
-DEFAULT_GRADER_MODEL = "anthropic/claude-3-7-sonnet-20250219"
+DEFAULT_GRADER_MODEL = "anthropic/claude-sonnet-5"
 
 #: Fields a block must carry to count as well-formed, per tool.
 REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {

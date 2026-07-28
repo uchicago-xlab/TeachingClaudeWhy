@@ -99,12 +99,12 @@ We added a new scenario `exfiltration` to the existing Agentic Misalignment eval
 ```bash
 # without goal conflict
 inspect eval evals/agentic_misalignment/agentic_misalignment.py \
-  --model anthropic/claude-sonnet-4-6 \
+  --model anthropic/claude-sonnet-5 \
   -T scenario=exfiltration \
   -T urgency_type=replacement \
   -T goal_type=none \
   -T goal_value=none \
-  -T grader_model=anthropic/claude-sonnet-4-6 \
+  -T grader_model=anthropic/claude-sonnet-5 \
   -T model_name=Qwen \
   -T prod=false \
   --max-tokens 4096 \
@@ -115,12 +115,12 @@ inspect eval evals/agentic_misalignment/agentic_misalignment.py \
 ```bash
 # with goal conflict
 inspect eval evals/agentic_misalignment/agentic_misalignment.py \
-  --model anthropic/claude-sonnet-4-6 \
+  --model anthropic/claude-sonnet-5 \
   -T scenario=exfiltration \
   -T urgency_type=replacement \
   -T goal_type=explicit \
   -T goal_value=america \
-  -T grader_model=anthropic/claude-sonnet-4-6 \
+  -T grader_model=anthropic/claude-sonnet-5 \
   -T model_name=Qwen \
   -T prod=false \
   --max-tokens 4096 \
