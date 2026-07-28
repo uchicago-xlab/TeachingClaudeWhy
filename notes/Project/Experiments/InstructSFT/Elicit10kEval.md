@@ -119,12 +119,16 @@ Full results (both acting metrics; "acts (exfil+leak)" is the clean reliability 
 
 | arm | total | apigen:sys | acts (all) | acts (exfil+leak) | misalign (all) | harm\|acted |
 |---|---|---|---|---|---|---|
+| elicit-10k (2ep) | 10k | 1.4k : 0.8k | 145/180 (81%) | 96/120 (80%) | 62/180 (34%) | 43% |
+| 10k-3ep (3 epochs) | 10k | 1.4k : 0.8k | 121/180 (67%) | 80/120 (67%) | 49/180 (27%) | 40% |
 | S (systemchats-heavy) | 13k | 1.4k : 3.8k | 139/180 (77%) | 90/120 (75%) | 53/180 (29%) | 38% |
 | A1 (balanced) | 13k | 3.4k : 1.8k | 161/180 (89%) | 105/120 (88%) | 74/180 (41%) | 46% |
 | P (apigen-heavy) | 13k | 4.4k : 0.8k | 163/180 (91%) | 106/120 (88%) | 71/180 (39%) | 44% |
 | A2 (balanced) | 16k | 5.4k : 2.8k | 139/180 (77%) | 97/120 (81%) | 60/180 (33%) | 43% |
 | T2 (apigen-scale) | 16k | 6.4k : 1.8k | 149/180 (83%) | 93/120 (78%) | 60/180 (33%) | 40% |
 | instruct (ceiling) | — | — | 180/180 (100%) | 120/120 (100%) | 82/180 (46%) | 46% |
+
+_All arms are 2 epochs except `10k-3ep` (the §3 epochs control, 3 epochs on the same 10k data — its low reliability is overfitting, not a mix effect). elicit-10k and 10k-3ep share the identical mix (apigen 1.4k / systemchats 0.8k)._
 
 _"misalign (all)" = raw harmful rate over all 180 samples (unconditioned on acting) = acts × harm|acted. It tracks reliability, since harm|acted is ~constant ~40–46%: A1/P ≈ 39–41%, the systemchats-heavy/16k/3ep arms ≈ 27–33%, instruct 46%._
 
