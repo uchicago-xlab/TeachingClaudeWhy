@@ -47,6 +47,16 @@ def load_env(path=None):
             os.environ.setdefault(key, value.strip().strip("'\""))
 
 
+def _hf_cached_token():
+    """The token `hf auth login` leaves behind, for pulling private HF repos.
+
+    Read access to org repos is enough here; pushing still needs a real token
+    with org write in HF_TOKEN.
+    """
+    path = Path.home() / ".cache" / "huggingface" / "token"
+    return path.read_text().strip() if path.exists() else None
+
+
 def upload_and_wait(client, path):
     """Upload a file and block until Together finishes validating it."""
     file = client.files.upload(file=path, check=True)
@@ -85,6 +95,26 @@ def main():
                     help="continue from a previous Together fine-tune "
                          "(job id or checkpoint name) — the sequential "
                          "SDF-then-SFT recipe's stage 2 (2026-07-27)")
+    ap.add_argument("--from-hf-model",
+                    help="continue from a HF Hub repo instead of a Together "
+                         "job — how we reach checkpoints trained under another "
+                         "Together account. A LoRA-adapter repo works, but "
+                         "--model must still name the base architecture and "
+                         "--lora-trainable-modules must match the adapter's "
+                         "target_modules exactly ('all-linear' is rejected).")
+    ap.add_argument("--lora-trainable-modules", default="all-linear",
+                    help="comma-separated LoRA target modules, or 'all-linear' "
+                         "(default). Required verbatim when continuing from an "
+                         "existing adapter; the failure mode is a job that "
+                         "errors at checkpoint validation.")
+    ap.add_argument("--merge-parent-adapter", action="store_true",
+                    help="fold the parent adapter into the base weights and "
+                         "train a FRESH adapter on top, instead of the default "
+                         "of continuing to train the parent's own matrices. "
+                         "Non-destructive: the parent survives exactly, and the "
+                         "combined update gets its own rank budget rather than "
+                         "sharing one. Server-side field, so it goes via "
+                         "extra_body — the SDK's create() does not expose it.")
     ap.add_argument("--wandb-project", default="tcw-instruct-sft",
                     help="W&B project for training logs")
     ap.add_argument("--yes", action="store_true", help="actually upload + launch")
@@ -145,16 +175,56 @@ def main():
         kwargs.update(wandb_api_key=os.environ["WANDB_API_KEY"],
                       wandb_project_name=args.wandb_project,
                       wandb_name=args.suffix)
+    if args.from_hf_model:
+        kwargs["from_hf_model"] = args.from_hf_model
+        token = os.environ.get("HF_TOKEN") or _hf_cached_token()
+        if token:
+            kwargs["hf_api_token"] = token
     if not args.full:
+        # The API takes this as a comma-separated string; passing a real list
+        # fails pydantic validation client-side.
+        modules = ",".join(
+            m.strip() for m in args.lora_trainable_modules.split(",") if m.strip()
+        )
         kwargs.update(lora=True, lora_r=args.lora_rank,
-                      lora_alpha=2 * args.lora_rank)
+                      lora_alpha=2 * args.lora_rank,
+                      lora_trainable_modules=modules)
     if args.hf_output_repo:
         kwargs["hf_output_repo_name"] = args.hf_output_repo
         if os.environ.get("HF_TOKEN"):
             kwargs["hf_api_token"] = os.environ["HF_TOKEN"]
 
-    job = client.fine_tuning.create(**kwargs)
+    if args.merge_parent_adapter:
+        # create() has no extra_body passthrough, so build the exact body the
+        # SDK would have sent and POST it with the extra field attached.
+        import httpx
+        from together.resources.fine_tuning import create_finetune_request
+
+        limits = client.fine_tuning.model_limits(model_name=args.model)
+        req, _, _ = create_finetune_request(model_limits=limits, **kwargs)
+        body = req.model_dump(exclude_none=True)
+        body["merge_parent_adapter"] = True
+        resp = httpx.post(
+            "https://api.together.xyz/v1/fine-tunes",
+            headers={"Authorization": f"Bearer {os.environ['TOGETHER_API_KEY']}"},
+            json=body, timeout=120.0,
+        )
+        resp.raise_for_status()
+        job = type("J", (), {"id": resp.json()["id"]})
+    else:
+        job = client.fine_tuning.create(**kwargs)
     print(f"\nlaunched: {job.id}")
+
+    # The server silently defaults merge_parent_adapter to false, so a dropped
+    # field would look like success and bill a destructive run. Read it back.
+    if args.merge_parent_adapter:
+        got = getattr(client.fine_tuning.retrieve(job.id),
+                      "merge_parent_adapter", None)
+        if got is not True:
+            client.fine_tuning.cancel(job.id)
+            sys.exit(f"merge_parent_adapter came back {got!r}, not True — "
+                     f"cancelled {job.id} rather than run a destructive job")
+        print("merge_parent_adapter: True (confirmed server-side)")
     print(f"monitor:  together fine-tuning retrieve {job.id}")
 
 

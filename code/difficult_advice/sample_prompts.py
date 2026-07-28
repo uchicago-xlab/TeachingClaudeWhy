@@ -28,6 +28,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from run_pipeline import (
     OUT_DIR,
+    STAGE_NAMES,
     resolve_placeholders,
     stage_critique,
     stage_critique_response,
@@ -35,6 +36,8 @@ from run_pipeline import (
     stage_initial_response,
     stage_rewrite,
     stage_rewrite_response,
+    prompts_dir,
+    stage_model,
     stage_scenarios,
     stage_themes,
 )
@@ -284,6 +287,15 @@ def write_outputs(
     (OUT_DIR / "critiqued_prompts.json").write_text(
         json.dumps(
             {
+                # which model generated each stage, so a hybrid run's provenance
+                # travels with its data instead of only living in the run log
+                "stage_models": {
+                    stage: {
+                        "model": stage_model(stage),
+                        "prompt_set": prompts_dir(stage).name,
+                    }
+                    for stage in STAGE_NAMES
+                },
                 "principles": principle_records,
                 "themes_by_principle": {str(k): v for k, v in themes_by_principle.items()},
                 "prompts": samples,

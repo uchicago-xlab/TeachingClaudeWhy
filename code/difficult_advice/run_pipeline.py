@@ -7,9 +7,15 @@ written to tmp/initial_prompts.md (human-readable) and tmp/initial_prompts.json
 (full pipeline artifacts).
 
 Prompt templates live in prompts/difficult_advice/<prompt-set>. GPT- and
-DeepSeek-family generation models automatically use their own set; other models
-use default. Set DIFFICULT_ADVICE_PROMPT_SET=default|gpt|deepseek to override
-prompt selection for controlled comparisons.
+DeepSeek-family models automatically use their own set; other models use
+default. Selection is per stage, keyed to the model that runs that stage, so in
+a hybrid run each model is prompted the way its own family should be prompted.
+Set DIFFICULT_ADVICE_PROMPT_SET to force every stage onto one set instead, for
+controlled comparisons.
+
+PIPELINE_MODEL sets the model for every generation stage. PIPELINE_STAGE_MODELS
+overrides individual stages, for hybrid runs that want a stronger model early:
+    PIPELINE_STAGE_MODELS="themes=claude-sonnet-5,scenarios=claude-sonnet-5"
 """
 
 import json
@@ -34,23 +40,81 @@ FORMAT_MODEL = "claude-haiku-4-5"  # XML-formatting calls don't need Opus
 # generation model for every non-formatting stage; overridable per run so
 # parallel runs of the same pipeline can use different models
 PIPELINE_MODEL = os.environ.get("PIPELINE_MODEL", "claude-opus-4-8")
+# Per-stage overrides, so one run can mix models — e.g. a stronger model for
+# theme and scenario invention, a cheaper one for the bulk response stages:
+#   PIPELINE_STAGE_MODELS="themes=claude-sonnet-5,scenarios=claude-sonnet-5"
+# PIPELINE_MODEL stays the run's primary model: it answers the prompts, and it
+# is what [MODEL]/[COMPANY] and the prompt set resolve from, so a helper model
+# invited in for an early stage does not change whose voice the data is in.
+STAGE_NAMES = (
+    "principles",
+    "themes",
+    "scenarios",
+    "initial_prompt",
+    "critique",
+    "rewrite",
+    "response",
+    "critique_response",
+    "rewrite_response",
+)
+STAGE_MODELS = {}
+for _spec in filter(None, (s.strip() for s in os.environ.get("PIPELINE_STAGE_MODELS", "").split(","))):
+    _stage, _, _model = _spec.partition("=")
+    _stage, _model = _stage.strip(), _model.strip()
+    if _stage not in STAGE_NAMES or not _model:
+        raise ValueError(
+            f"bad PIPELINE_STAGE_MODELS entry {_spec!r}; expected <stage>=<model> "
+            f"with stage one of: {', '.join(STAGE_NAMES)}"
+        )
+    STAGE_MODELS[_stage] = _model
+
+
+def stage_model(stage: str) -> str:
+    """The generation model for a stage: its override, else PIPELINE_MODEL."""
+    return STAGE_MODELS.get(stage, PIPELINE_MODEL)
+
+
 # model families with their own prompt set, keyed by the family token the model
 # id starts with; anything unlisted falls back to default
 PROMPT_SETS = {"gpt": "gpt", "deepseek": "deepseek"}
-PROMPT_SET = os.environ.get("DIFFICULT_ADVICE_PROMPT_SET")
-if PROMPT_SET is None:
-    model_name = PIPELINE_MODEL.rsplit("/", 1)[-1].lower()
-    PROMPT_SET = next(
-        (s for family, s in PROMPT_SETS.items() if model_name.startswith(family)), "default"
-    )
-# any directory under prompts/difficult_advice/ is a usable set, so experimental
-# variants can be trialled side by side without editing this file
-PROMPTS_DIR = ROOT / "prompts" / "difficult_advice" / PROMPT_SET
-if not PROMPTS_DIR.is_dir():
-    available = sorted(p.name for p in PROMPTS_DIR.parent.iterdir() if p.is_dir())
-    raise ValueError(
-        f"no prompt set {PROMPT_SET!r} in {PROMPTS_DIR.parent}; available: {', '.join(available)}"
-    )
+PROMPT_SETS_ROOT = ROOT / "prompts" / "difficult_advice"
+# An explicit setting forces every stage onto one set, for controlled comparisons;
+# otherwise each stage gets the set matching whichever model runs it, so a hybrid
+# run's helper model is prompted the way that model should be prompted.
+PROMPT_SET_OVERRIDE = os.environ.get("DIFFICULT_ADVICE_PROMPT_SET")
+
+
+def prompt_set_for(model: str) -> str:
+    """The prompt set a model's family should be prompted with."""
+    if PROMPT_SET_OVERRIDE:
+        return PROMPT_SET_OVERRIDE
+    name = model.rsplit("/", 1)[-1].lower()
+    return next((s for family, s in PROMPT_SETS.items() if name.startswith(family)), "default")
+
+
+def prompt_set_dir(prompt_set: str) -> Path:
+    # any directory under prompts/difficult_advice/ is a usable set, so
+    # experimental variants can be trialled side by side without editing this file
+    path = PROMPT_SETS_ROOT / prompt_set
+    if not path.is_dir():
+        available = sorted(p.name for p in PROMPT_SETS_ROOT.iterdir() if p.is_dir())
+        raise ValueError(
+            f"no prompt set {prompt_set!r} in {PROMPT_SETS_ROOT}; available: {', '.join(available)}"
+        )
+    return path
+
+
+def prompts_dir(stage: str) -> Path:
+    """The prompt-set directory a stage reads its template from."""
+    return prompt_set_dir(prompt_set_for(stage_model(stage)))
+
+
+# the primary model's set; every set actually used is validated up front so a
+# typo fails at startup rather than mid-run
+PROMPT_SET = prompt_set_for(PIPELINE_MODEL)
+PROMPTS_DIR = prompt_set_dir(PROMPT_SET)
+for _stage in STAGE_NAMES:
+    prompts_dir(_stage)
 PRINCIPLE_INDEX = 4
 THEME_INDEX = 4
 N_PROMPTS = 10
@@ -350,14 +414,18 @@ Here is the unformatted list of {{name}}s:
 
 
 def stage_principles() -> list[dict]:
-    text = (PROMPTS_DIR / "1_principles.md").read_text()
+    text = (prompts_dir("principles") / "1_principles.md").read_text()
     variants = re.findall(r"<(v\d.*?)>\s*(.+?)\s*</\1>", text, flags=re.DOTALL)
     prompt_template = variants[PRINCIPLES_VARIANT][-1]
 
     constitution = (ROOT / "data" / "constitution" / "constitution-noname.md").read_text()
     constitution = re.sub(r"\n?<!--.*?-->\n?", "", constitution)
 
-    raw = generate(prompt_template.format(constitution=constitution), max_tokens=8192)
+    raw = generate(
+        prompt_template.format(constitution=constitution),
+        max_tokens=8192,
+        model=stage_model("principles"),
+    )
     formatted = generate(
         FORMAT_PRINCIPLES.format(unformatted=raw),
         max_tokens=8192,
@@ -380,11 +448,13 @@ def stage_themes(principle: str) -> list[str]:
     # tags; resolve on the way into every stage that reads them, or the literal
     # placeholders leak into themes, scenarios and the generated prompts
     principle = resolve_placeholders(principle)
-    template = (PROMPTS_DIR / "2_prompt_themes.md").read_text()
+    template = (prompts_dir("themes") / "2_prompt_themes.md").read_text()
     # reasoning tokens count toward max_tokens: at the 4096 default, reasoning
     # models burn the whole budget thinking and return empty (2026-07-24, this
     # silently cost 9/15 principles on a Luna run)
-    raw = generate(template.format(principle=principle), max_tokens=16384)
+    raw = generate(
+        template.format(principle=principle), max_tokens=16384, model=stage_model("themes")
+    )
     formatted = generate(
         FORMAT_LIST.format(name="theme", unformatted=raw), model=FORMAT_MODEL, reasoning=False
     )
@@ -395,8 +465,12 @@ def stage_themes(principle: str) -> list[str]:
 
 def stage_scenarios(principle: str, theme: str) -> list[str]:
     principle, theme = resolve_placeholders(principle), resolve_placeholders(theme)
-    template = (PROMPTS_DIR / "3_scenarios.md").read_text()
-    raw = generate(template.format(principle=principle, theme=theme), max_tokens=16384)
+    template = (prompts_dir("scenarios") / "3_scenarios.md").read_text()
+    raw = generate(
+        template.format(principle=principle, theme=theme),
+        max_tokens=16384,
+        model=stage_model("scenarios"),
+    )
     formatted = generate(
         FORMAT_LIST.format(name="scenario", unformatted=raw), model=FORMAT_MODEL, reasoning=False
     )
@@ -415,9 +489,13 @@ def fill(template: str, **values: str) -> str:
 
 def stage_initial_prompt(principle: str, scenario: str) -> dict:
     principle, scenario = resolve_placeholders(principle), resolve_placeholders(scenario)
-    template = (PROMPTS_DIR / "4_initial_prompt.md").read_text()
+    template = (prompts_dir("initial_prompt") / "4_initial_prompt.md").read_text()
     # thinking tokens count toward max_tokens, so leave generous headroom
-    raw = generate(template.format(principle=principle, scenario=scenario), max_tokens=8192)
+    raw = generate(
+        template.format(principle=principle, scenario=scenario),
+        max_tokens=8192,
+        model=stage_model("initial_prompt"),
+    )
     systems = parse_tags(raw, "system")
     users = parse_tags(raw, "user")
     return {
@@ -430,16 +508,21 @@ def stage_initial_prompt(principle: str, scenario: str) -> dict:
 
 def stage_critique(principle: str, system: str, user: str) -> str:
     principle = resolve_placeholders(principle)
-    template = (PROMPTS_DIR / "5_critique_prompt.md").read_text()
-    return generate(fill(template, principle=principle, system=system, user=user), max_tokens=8192)
+    template = (prompts_dir("critique") / "5_critique_prompt.md").read_text()
+    return generate(
+        fill(template, principle=principle, system=system, user=user),
+        max_tokens=8192,
+        model=stage_model("critique"),
+    )
 
 
 def stage_rewrite(principle: str, system: str, user: str, critique: str) -> dict:
     principle = resolve_placeholders(principle)
-    template = (PROMPTS_DIR / "6_rewrite_prompt.md").read_text()
+    template = (prompts_dir("rewrite") / "6_rewrite_prompt.md").read_text()
     raw = generate(
         fill(template, principle=principle, system=system, user=user, critique=critique),
         max_tokens=8192,
+        model=stage_model("rewrite"),
     )
     systems = parse_tags(raw, "system")
     users = parse_tags(raw, "user")
@@ -462,16 +545,18 @@ def constitution_excerpts(principle_index: int) -> str:
 
 
 def stage_initial_response(principle_index: int, system: str, user: str) -> dict:
-    template = (PROMPTS_DIR / "7_initial_response.md").read_text()
+    template = (prompts_dir("response") / "7_initial_response.md").read_text()
     excerpts = constitution_excerpts(principle_index)
     full_system = resolve_placeholders(fill(template, constitution=excerpts) + "\n\n" + system)
     user = resolve_placeholders(user)
-    response = generate(user, max_tokens=8192, system=full_system)
+    response = generate(
+        user, max_tokens=8192, system=full_system, model=stage_model("response")
+    )
     return {"system": full_system, "user": user, "response": response}
 
 
 def stage_critique_response(principle_index: int, system: str, user: str, assistant: str) -> str:
-    template = (PROMPTS_DIR / "8_critique_response.md").read_text()
+    template = (prompts_dir("critique_response") / "8_critique_response.md").read_text()
     return generate(
         fill(
             template,
@@ -481,13 +566,14 @@ def stage_critique_response(principle_index: int, system: str, user: str, assist
             constitution=constitution_excerpts(principle_index),
         ),
         max_tokens=8192,
+        model=stage_model("critique_response"),
     )
 
 
 def stage_rewrite_response(
     principle_index: int, system: str, user: str, assistant: str, critique: str
 ) -> str:
-    template = (PROMPTS_DIR / "9_rewrite_response.md").read_text()
+    template = (prompts_dir("rewrite_response") / "9_rewrite_response.md").read_text()
     return generate(
         fill(
             template,
@@ -498,6 +584,7 @@ def stage_rewrite_response(
             constitution=constitution_excerpts(principle_index),
         ),
         max_tokens=8192,
+        model=stage_model("rewrite_response"),
     )
 
 
