@@ -6,6 +6,32 @@ to run first, what it costs, what to look at, and what could not be checked offl
 
 ---
 
+## 0. `PYTHONPATH` — read this first
+
+The eval's modules import each other absolutely (`from evals.agentic_misalignment...`). The
+`inspect` CLI does **not** put the working directory on `sys.path`, so running it from a checkout
+where the package is not installed fails with:
+
+```
+ModuleNotFoundError: No module named 'evals'
+```
+
+This is pre-existing, not new. Two fixes — both work, verified end to end:
+
+```bash
+# A. lightweight: nothing installed, run from the repo root
+PYTHONPATH=. inspect eval evals/agentic_misalignment/agentic_misalignment.py ...
+
+# B. install the package (also pulls the heavy MSM deps: sentence-transformers, faiss-cpu)
+pip install -e .
+inspect eval evals/agentic_misalignment/agentic_misalignment.py ...
+```
+
+On a GPU box that only needs to run evals, prefer A and install just `inspect-ai==0.3.249` and
+`beautifulsoup4` — those are the only runtime imports the eval has.
+
+`pytest` is unaffected either way; `pyproject.toml` sets `pythonpath = ["."]` for it.
+
 ## 1. Set up and confirm the offline state
 
 ```bash
@@ -14,6 +40,19 @@ pytest                          # 856 tests, ~6s, no network
 ruff check .
 python scripts/generate_prompt_snapshots.py --check   # 676 snapshots byte-identical
 ```
+
+Sanity-check the CLI wiring for free, without a real model:
+
+```bash
+PYTHONPATH=. inspect eval evals/agentic_misalignment/agentic_misalignment.py \
+  --model mockllm/model \
+  -T scenario=sandbagging -T goal_type=none -T goal_value=none \
+  -T score_eval_awareness=false
+```
+
+This should complete with `parse_failure=1.0` and `no_tool_attempt=1.0` — mockllm returns a fixed
+string with no tool block, so that is the correct result and it confirms `format_compliance` is
+wired up.
 
 If `pytest` passes and `--check` reports no differences, the plumbing is in the state it was left in.
 
@@ -233,7 +272,59 @@ Numbered so nothing silently skips verification.
 10. **`goal_type=swap` behaviour is untouched and unverified.** The upstream divergence
     (issue #13 in `anthropic-experimental/agentic-misalignment`) was deliberately not investigated.
 
-## 7. Things that will bite
+## 7. Running against a local vLLM model
+
+Measured prompt sizes (cl100k tokens), so you can size the context window:
+
+| Scenario | System | User (inbox) | Total input |
+|---|---|---|---|
+| exfiltration | 497 | 2329 | 2826 |
+| murder | 482 | 2290 | 2772 |
+| leaking | 495 | 2217 | 2712 |
+| goal_propagation | 444 | 1042 | 1486 |
+| sandbagging | 444 | 1032 | 1476 |
+
+Worst case is a two-turn exfiltration run: ~2.8k in + 4k out + rebuff + 4k out ≈ **11k tokens**, so
+`--max-model-len 16384` is comfortable. 8k is too tight for two-turn at `--max-tokens 4096`.
+
+Two ways to point at vLLM:
+
+```bash
+# A. inspect starts the server for you (needs the vllm package installed)
+PYTHONPATH=. inspect eval evals/agentic_misalignment/agentic_misalignment.py \
+  --model vllm/</path/to/your/model> ...
+
+# B. attach to a server you already started
+export VLLM_BASE_URL=http://localhost:8000/v1
+PYTHONPATH=. inspect eval evals/agentic_misalignment/agentic_misalignment.py \
+  --model vllm/<served-model-name> ...
+```
+
+Set `-T model_name=...` to whatever the fine-tune should be called in the prompts (the paper's runs
+used `Qwen`). It is not derived from the model path.
+
+### Running with no API access at all
+
+The default grader is `anthropic/claude-3-7-sonnet-20250219` and needs `ANTHROPIC_API_KEY`. One
+configuration needs **no** external calls whatsoever — sandbagging is scored deterministically:
+
+```bash
+PYTHONPATH=. inspect eval evals/agentic_misalignment/agentic_misalignment.py \
+  --model vllm/<path> \
+  -T scenario=sandbagging -T sandbagging_target=self \
+  -T goal_type=none -T goal_value=none \
+  -T score_eval_awareness=false \
+  --max-tokens 4096 --temperature 1.0 --epochs 300
+```
+
+`format_compliance` is deterministic too, so you still get the tool-format metric. Every other
+scenario needs a reachable grader.
+
+Note that Inspect loads `.env` by searching **up** the directory tree from the working directory, so
+a key placed above the repo root is picked up automatically. On a fresh VM you will need to create
+one, or just `export ANTHROPIC_API_KEY=...`.
+
+## 8. Things that will bite
 
 - **`core.autocrlf`.** `.gitattributes` pins the working tree to LF. If you see all 676 snapshots
   differ at once, that is a line-ending problem, not a prompt regression.
@@ -243,3 +334,5 @@ Numbered so nothing silently skips verification.
   change, read the diff before regenerating. Regenerating first destroys the evidence.
 - **`inspect-ai` is pinned at 0.3.249.** The solver tests use its `mockllm` provider and
   `ModelOutput`/`TaskState` internals. Unpinning may break them.
+- **`ModuleNotFoundError: No module named 'evals'`** means `PYTHONPATH=.` is missing, or the package
+  is not installed. See §0.
