@@ -163,3 +163,36 @@ Ordered by **apigen amount** (incl. the low-apigen references elicit-10k and S, 
 
 ### Spend
 Together training (7 LoRA runs: elicit-10k, A1, A2, 10k-3ep, P, S, T2): **$205.63** (exact, per-job). Runpod serving (10 A100 pods across probes + all MSM evals): **$19.65** (exact, from dashboard). OpenRouter grader across the whole investigation: **~$6** (Sonnet judge is cheap, ~$0.008/sample). **Total ≈ $231.** All logged in `notes/Project/Planning/spending.json` under the "Instruct fine-tuning" allocation.
+
+### Exact training mixes
+
+Every arm is the same 7,800-sample **non-agentic core** plus a varying **agentic block** (apigen + systemchats). All sample counts are drawn by seeded streaming from the HF datasets below (so larger arms are supersets of smaller ones per source), then filtered by `check_dataset.py` (schema + MSM identity-confusion filter, ≤8192 tokens/sample). Spec + rationale: `code/train_eval_pipeline/mix.json` and `notes/Project/Experiments/InstructSFT/DataMix.md`.
+
+**Fixed non-agentic core (7,800 samples — identical in every arm):**
+
+| source (HF) | config | n | role |
+|---|---|---|---|
+| `HuggingFaceH4/no_robots` | — | 2400 | human-written general chat (quality anchor) |
+| `HuggingFaceTB/smoltalk` | smol-magpie-ultra | 1000 | large synthetic multi-turn chat (backbone) |
+| `allenai/tulu-3-sft-personas-instruction-following` | — | 1200 | instruction-following w/ verifiable constraints |
+| `HuggingFaceTB/smoltalk` | smol-constraints | 800 | formatting/constraint obedience |
+| `HuggingFaceTB/smoltalk` | smol-summarize | 800 | long-document summarization |
+| `HuggingFaceTB/smoltalk` | longalign | 300 | long-context instruction data |
+| `HuggingFaceTB/smoltalk` | numina-cot-100k | 700 | math with step-by-step CoT |
+| `HuggingFaceTB/smoltalk` | self-oss-instruct | 600 | code generation |
+
+**Variable agentic block (the only thing that differs between arms):**
+
+| arm | apigen (`smoltalk:apigen-80k`) | systemchats (`smoltalk:systemchats-30k`) | + core | **total** | epochs | HF adapter |
+|---|---|---|---|---|---|---|
+| **elicit-10k** | 1400 | 800 | 7800 | **10,000** | 2 | `…-elicit-sft-10k-v1` |
+| **10k-3ep** | 1400 | 800 | 7800 | **10,000** | **3** | `…-elicit-sft-10k-3ep` |
+| **A1** ⭐ | 3400 | 1800 | 7800 | **13,000** | 2 | `…-elicit-sft-A1` |
+| **P** | 4400 | 800 | 7800 | **13,000** | 2 | `…-elicit-sft-P` |
+| **S** | 1400 | 3800 | 7800 | **13,000** | 2 | `…-elicit-sft-S` |
+| **A2** | 5400 | 2800 | 7800 | **16,000** | 2 | `…-elicit-sft-A2` |
+| **T2** | 6400 | 1800 | 7800 | **16,000** | 2 | `…-elicit-sft-T2` |
+
+(apigen = verified function-calling dialogues → tool-call format; systemchats = conversations governed by varied system prompts → system-prompt adherence. HF adapters under `SecondLookResearch/Qwen2.5-32B-`. ⭐ = the chosen SDF control.)
+
+**Training config (identical across arms unless noted):** base `Qwen/Qwen2.5-32B`, LoRA rank 64 / alpha 128 (all attention + MLP projections), 2 epochs (10k-3ep: 3), lr 1e-4 cosine + 3% warmup, `batch_size=max`, `packing=true`, **assistant-only loss** (`train_on_inputs=false`), on Together AI. The `25k` arm exists in `mix.json` (2.5× the 10k mix) but was never trained.
