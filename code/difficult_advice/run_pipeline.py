@@ -137,18 +137,40 @@ def parse_tags(text: str, tag: str) -> list[str]:
     return [el.get_text().strip() for el in soup.find_all(tag)]
 
 
+def anthropic_thinking(model: str, max_tokens: int) -> dict:
+    """The `thinking` kwarg for a model, or {} if it can't think within budget.
+
+    The parameter shape is per-model, not per-family: Claude 4.6-and-later take
+    adaptive thinking, while Haiku 4.5 predates it and still takes the older
+    fixed budget (which must be >=1024 and strictly less than max_tokens).
+    Sending the wrong shape is a 400, so this is a lookup, not a heuristic.
+    """
+    name = model.rsplit("/", 1)[-1].lower()
+    if name.startswith("claude-haiku-4-5"):
+        budget = max(1024, max_tokens // 2)
+        if budget >= max_tokens:
+            return {}  # no room to think and still answer
+        return {"thinking": {"type": "enabled", "budget_tokens": budget}}
+    return {"thinking": {"type": "adaptive", "display": "summarized"}}
+
+
 def _generate_anthropic(
-    prompt: str, max_tokens: int, system: str | None, model: str, effort: str | None
+    prompt: str,
+    max_tokens: int,
+    system: str | None,
+    model: str,
+    effort: str | None,
+    reasoning: bool,
 ) -> str:
+    # `effort` is rejected outright on Haiku 4.5; it bounds thinking depth only
+    # on models that take adaptive thinking (where budget_tokens is removed)
+    supports_effort = not model.rsplit("/", 1)[-1].lower().startswith("claude-haiku-4-5")
     kwargs = dict(
         model=model,
         max_tokens=max_tokens,
-        # adaptive thinking isn't supported on Haiku 4.5, and formatting
-        # calls don't need it anyway
-        **({"thinking": {"type": "adaptive", "display": "summarized"}} if "opus" in model else {}),
-        # thinking tokens count toward max_tokens; effort is the only knob that
-        # bounds thinking depth on Opus 4.8 (budget_tokens is removed)
-        **({"output_config": {"effort": effort}} if effort else {}),
+        # thinking tokens count toward max_tokens
+        **(anthropic_thinking(model, max_tokens) if reasoning else {}),
+        **({"output_config": {"effort": effort}} if effort and reasoning and supports_effort else {}),
         messages=chatify(prompt),
         **({"system": system} if system is not None else {}),
     )
@@ -171,7 +193,12 @@ def openrouter_model(model: str) -> str:
 
 
 def _generate_openrouter(
-    prompt: str, max_tokens: int, system: str | None, model: str, effort: str | None
+    prompt: str,
+    max_tokens: int,
+    system: str | None,
+    model: str,
+    effort: str | None,
+    reasoning: bool,
 ) -> str:
     kwargs = dict(
         model=openrouter_model(model),
@@ -180,15 +207,11 @@ def _generate_openrouter(
             ([{"role": "system", "content": system}] if system is not None else [])
             + chatify(prompt)
         ),
-        # OpenRouter's unified `reasoning` knob maps onto each provider's
-        # thinking; enable it for the generation model (as the anthropic path
-        # does for Opus) but not for formatting calls, at the API's default
-        # (high) effort unless a caller bounds it
-        **(
-            {"extra_body": {"reasoning": {"effort": effort or "high"}}}
-            if model != FORMAT_MODEL
-            else {}
-        ),
+        # OpenRouter's unified `reasoning` knob maps onto each provider's own
+        # thinking parameter, so it works for every generation model we use;
+        # callers turn it off for formatting calls. Default (high) effort
+        # unless a caller bounds it.
+        **({"extra_body": {"reasoning": {"effort": effort or "high"}}} if reasoning else {}),
     )
     if max_tokens > 8192:
         # long generations can trickle for many minutes; stream to stay clear
@@ -227,14 +250,18 @@ def generate(
     system: str | None = None,
     model: str | None = None,
     effort: str | None = None,
+    reasoning: bool = True,
 ) -> str:
+    """Generate text. `reasoning` is on for every content-producing stage; the
+    XML-formatting calls pass reasoning=False, since they only restructure text
+    that a generation stage already produced."""
     model = model or PIPELINE_MODEL
     backend = _generate_openrouter if PROVIDER == "openrouter" else _generate_anthropic
     # the SDKs' built-in retries (2, seconds apart) don't survive sustained
     # overload periods (e.g. Anthropic 529s); back off patiently before giving up
     for attempt in range(5):
         try:
-            return backend(prompt, max_tokens, system, model, effort)
+            return backend(prompt, max_tokens, system, model, effort, reasoning)
         except RETRYABLE_ERRORS as err:
             if attempt == 4:
                 raise
@@ -293,7 +320,10 @@ def stage_principles() -> list[dict]:
 
     raw = generate(prompt_template.format(constitution=constitution), max_tokens=8192)
     formatted = generate(
-        FORMAT_PRINCIPLES.format(unformatted=raw), max_tokens=8192, model=FORMAT_MODEL
+        FORMAT_PRINCIPLES.format(unformatted=raw),
+        max_tokens=8192,
+        model=FORMAT_MODEL,
+        reasoning=False,
     )
     principles = [
         {
@@ -316,7 +346,9 @@ def stage_themes(principle: str) -> list[str]:
     # models burn the whole budget thinking and return empty (2026-07-24, this
     # silently cost 9/15 principles on a Luna run)
     raw = generate(template.format(principle=principle), max_tokens=16384)
-    formatted = generate(FORMAT_LIST.format(name="theme", unformatted=raw), model=FORMAT_MODEL)
+    formatted = generate(
+        FORMAT_LIST.format(name="theme", unformatted=raw), model=FORMAT_MODEL, reasoning=False
+    )
     themes = parse_tags(formatted, "theme")
     print(f"parsed {len(themes)} themes")
     return themes
@@ -327,7 +359,7 @@ def stage_scenarios(principle: str, theme: str) -> list[str]:
     template = (PROMPTS_DIR / "3_scenarios.md").read_text()
     raw = generate(template.format(principle=principle, theme=theme), max_tokens=16384)
     formatted = generate(
-        FORMAT_LIST.format(name="scenario", unformatted=raw), model=FORMAT_MODEL
+        FORMAT_LIST.format(name="scenario", unformatted=raw), model=FORMAT_MODEL, reasoning=False
     )
     scenarios = parse_tags(formatted, "scenario")
     print(f"parsed {len(scenarios)} scenarios")
