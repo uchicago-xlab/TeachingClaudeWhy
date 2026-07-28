@@ -14,7 +14,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 MODE = os.environ.get("MODE", "ok")
 BASE = "Qwen/Qwen3-14B"
-ADAPTER = "qwen3-14b-da-sdf-v1"
+ADAPTER = "qwen3-14b-da-sonnet5-v1"
 RECEIVED = []
 
 

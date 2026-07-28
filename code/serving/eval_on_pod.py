@@ -38,7 +38,7 @@ EVAL_DIR = REPO_ROOT / "code" / "misalignment_eval"
 VENV_PYTHON = REPO_ROOT / ".venv-inspect" / "bin" / "python"
 
 DEFAULT_BASE_MODEL = "Qwen/Qwen3-14B"
-DEFAULT_ADAPTER_NAME = "qwen3-14b-da-sdf-v1"
+DEFAULT_ADAPTER_NAME = "qwen3-14b-da-sonnet5-v1"
 
 
 def run(cmd: list[str], env: dict[str, str], cwd: Path) -> int:

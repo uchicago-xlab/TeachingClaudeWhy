@@ -30,10 +30,19 @@ by naming one:
 
 ```
 Qwen/Qwen3-14B            -> base (the baseline)
-qwen3-14b-da-sdf-v1       -> base + difficult-advice adapter (sonnet5 teacher)
+qwen3-14b-da-sonnet5-v1   -> base + difficult-advice adapter (sonnet5 teacher)
 qwen3-14b-da-nano-v2      -> base + nano-teacher adapter
 qwen3-14b-da-haiku45-v1   -> base + haiku-4.5-teacher adapter
 ```
+
+> The sonnet5 arm was originally served as `qwen3-14b-da-sdf-v1`, before there
+> was a second teacher to distinguish it from. The logs under
+> `logs/…-da-sonnet5-v1-as-Qwen/` still carry that old id in their `model`
+> field — the id the pod really served — so `summarize.py` labels those rows
+> `qwen3-14b-da-sdf-v1` even though everything else now says sonnet5. Re-serving
+> with today's default produces the new id, which `eval_set` treats as a
+> different model: point such a run at a fresh `--run-name` rather than
+> appending it to the historical directory.
 
 That cuts the GPU bill and removes a confound: every arm hits the same weights,
 same kernels, same sampler. Set `ADAPTER_SPECS` to space-separated `name=source`
@@ -169,7 +178,7 @@ Then the usual table:
 ```
 
 Rows are labelled by `log.eval.model`, so the two arms appear as
-`openai-api/vllm/Qwen/Qwen3-14B` and `openai-api/vllm/qwen3-14b-da-sdf-v1`.
+`openai-api/vllm/Qwen/Qwen3-14B` and `openai-api/vllm/qwen3-14b-da-sonnet5-v1`.
 
 For a deeper look at whether a checkpoint is coherent at all — separate question
 from misalignment — `code/train_eval_pipeline/probe_model.py` already runs a

@@ -35,7 +35,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(REPO_ROOT / ".env")
 
 DEFAULT_BASE_MODEL = "Qwen/Qwen3-14B"
-DEFAULT_ADAPTER_NAME = "qwen3-14b-da-sdf-v1"
+DEFAULT_ADAPTER_NAME = "qwen3-14b-da-sonnet5-v1"
 
 # Deliberately a difficult-advice-shaped prompt: it is the kind of input the
 # adapter was trained on, so a working adapter should visibly diverge from base.

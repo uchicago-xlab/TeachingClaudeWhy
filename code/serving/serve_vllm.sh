@@ -20,8 +20,8 @@
 set -euo pipefail
 
 BASE_MODEL=${BASE_MODEL:-Qwen/Qwen3-14B}
-ADAPTER_REPO=${ADAPTER_REPO:-SecondLookResearch/Qwen3-14B-difficult-advice-sdf-v1-lora}
-ADAPTER_NAME=${ADAPTER_NAME:-qwen3-14b-da-sdf-v1}
+ADAPTER_REPO=${ADAPTER_REPO:-SecondLookResearch/Qwen3-14B-difficult-advice-sonnet5-sdf-v1-lora}
+ADAPTER_NAME=${ADAPTER_NAME:-qwen3-14b-da-sonnet5-v1}
 ADAPTER_DIR=${ADAPTER_DIR:-/workspace/adapters/${ADAPTER_NAME}}
 # Default to the single-adapter form above, so existing invocations are unchanged.
 ADAPTER_SPECS=${ADAPTER_SPECS:-${ADAPTER_NAME}=${ADAPTER_DIR}}
