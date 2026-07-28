@@ -43,12 +43,14 @@ if PROMPT_SET is None:
     PROMPT_SET = next(
         (s for family, s in PROMPT_SETS.items() if model_name.startswith(family)), "default"
     )
-if PROMPT_SET not in set(PROMPT_SETS.values()) | {"default"}:
-    raise ValueError(
-        "DIFFICULT_ADVICE_PROMPT_SET must be one of: default, "
-        + ", ".join(sorted(set(PROMPT_SETS.values())))
-    )
+# any directory under prompts/difficult_advice/ is a usable set, so experimental
+# variants can be trialled side by side without editing this file
 PROMPTS_DIR = ROOT / "prompts" / "difficult_advice" / PROMPT_SET
+if not PROMPTS_DIR.is_dir():
+    available = sorted(p.name for p in PROMPTS_DIR.parent.iterdir() if p.is_dir())
+    raise ValueError(
+        f"no prompt set {PROMPT_SET!r} in {PROMPTS_DIR.parent}; available: {', '.join(available)}"
+    )
 PRINCIPLE_INDEX = 4
 THEME_INDEX = 4
 N_PROMPTS = 10
@@ -118,6 +120,13 @@ if PROVIDER == "openrouter":
         # 150-sample sweep mid-run)
         json.JSONDecodeError,
     )
+    # A provider that drops a streamed response mid-flight surfaces as a *bare*
+    # openai.APIError ("Upstream error from Ambient"), raised by the SDK's stream
+    # reader. That's the base class, not one of the status-code subclasses above,
+    # so it slipped past the tuple and killed two deepseek runs at the themes
+    # stage (2026-07-28). Match by exact type: the subclasses sharing that base
+    # (BadRequestError and friends) are genuine, non-retryable request errors.
+    RETRYABLE_EXACT = (openai.APIError,)
 else:
     client = anthropic.Anthropic()
     RETRYABLE_ERRORS = (
@@ -128,6 +137,7 @@ else:
         anthropic.OverloadedError,
         anthropic.APIConnectionError,
     )
+    RETRYABLE_EXACT = ()
 
 
 def chatify(string: str) -> list[dict]:
@@ -252,6 +262,9 @@ def _generate_openrouter(
     return content
 
 
+EMPTY_RETRIES = 2
+
+
 def generate(
     prompt: str,
     max_tokens: int = 4096,
@@ -265,17 +278,35 @@ def generate(
     that a generation stage already produced."""
     model = model or PIPELINE_MODEL
     backend = _generate_openrouter if PROVIDER == "openrouter" else _generate_anthropic
+    text = ""
+    empties = 0
     # the SDKs' built-in retries (2, seconds apart) don't survive sustained
     # overload periods (e.g. Anthropic 529s); back off patiently before giving up
     for attempt in range(5):
         try:
-            return backend(prompt, max_tokens, system, model, effort, reasoning)
-        except RETRYABLE_ERRORS as err:
+            text = backend(prompt, max_tokens, system, model, effort, reasoning)
+        except Exception as err:
+            if not isinstance(err, RETRYABLE_ERRORS) and type(err) not in RETRYABLE_EXACT:
+                raise
             if attempt == 4:
                 raise
             delay = min(60, 5 * 2**attempt) + random.uniform(0, 3)
             print(f"retryable API error ({type(err).__name__}), sleeping {delay:.0f}s")
             time.sleep(delay)
+            continue
+        # A provider can answer 200 with an empty or mid-sentence-truncated body.
+        # That arrives as "" with no exception and no finish_reason to flag it, so
+        # without this the stage silently completes with nothing and the sample is
+        # dropped downstream (2026-07-28: cost ~13% of samples on deepseek runs).
+        # Bounded, because a genuine refusal also returns "" and is indistinguishable
+        # here — retry enough to ride out a dropped response, not enough to spin on
+        # a model that declined.
+        if text or empties >= EMPTY_RETRIES:
+            return text
+        empties += 1
+        print(f"empty response from {model} (attempt {empties}/{EMPTY_RETRIES}), retrying")
+        time.sleep(2 + random.uniform(0, 2))
+    return text
 
 
 FORMAT_VERBATIM = (

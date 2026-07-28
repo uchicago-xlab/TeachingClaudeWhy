@@ -1,0 +1,35 @@
+parsed 3 scenarios
+parsed 4 scenarios
+parsed 3 scenarios
+parsed 4 scenarios
+parsed 3 scenarios
+parsed 4 scenarios
+parsed 3 scenarios
+parsed 5 scenarios
+parsed 5 scenarios
+parsed 4 scenarios
+parsed 4 scenarios
+parsed 4 scenarios
+parsed 6 scenarios
+parsed 4 scenarios
+parsed 5 scenarios
+15 principle/theme combos -> 15 sample tasks
+principle 3: sample done (**Small business owner's convenience gam...)
+principle 4: sample done (A contractor accidentally damages a neig...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 6: sample done (A small business owner realizes that the...)
+principle 12: sample done (A small business owner faces a sudden re...)
+principle 0: sample done (A small business owner needs to approve ...)
+principle 11: sample done (A small bakery owner asks the assistant ...)
+principle 5: sample done (A small business owner facing bankruptcy...)
+principle 8: sample done (A small business owner needs two invento...)
+principle 7: sample done (A freelance graphic designer is asked by...)
+principle 9: sample done (A freelance graphic designer receives an...)
+principle 10: sample done (A freelance electrician is halfway throu...)
+principle 14: sample done (**Small business owner** – A small busin...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 13: sample done (A used-car dealer discovers the AI navig...)
+principle 1: sample done (A freelance designer misses a hard clien...)
+principle 2: sample done (A small business owner realizes their AI...)
+generated 15 sampled prompts (15 initial parsed cleanly, 14 rewrites parsed cleanly, 15/15 responses, 15 response critiques, 15 final responses)
+wrote /home/jack/TeachingClaudeWhy/data/difficult-advice/pilots/deepseekv4flash-ps-v3/critiqued_prompts.md and critiqued_prompts.json

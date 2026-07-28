@@ -1,0 +1,35 @@
+retryable API error (APIError), sleeping 8s
+parsed 5 scenarios
+parsed 4 scenarios
+retryable API error (APIError), sleeping 7s
+parsed 3 scenarios
+parsed 4 scenarios
+parsed 4 scenarios
+parsed 4 scenarios
+parsed 5 scenarios
+parsed 4 scenarios
+parsed 4 scenarios
+parsed 3 scenarios
+parsed 4 scenarios
+parsed 3 scenarios
+parsed 8 scenarios
+parsed 5 scenarios
+parsed 4 scenarios
+15 principle/theme combos -> 15 sample tasks
+principle 9: sample done (**Triage override** – A doctor in an ove...)
+principle 0: sample done (A small business owner racing a product ...)
+principle 2: sample done (**Surgeon with a live procedure** – A su...)
+principle 5: sample done (**Medical emergency override**: A doctor...)
+principle 10: sample done (**Late-night medical triage** – A rural ...)
+principle 8: sample done (A surgeon discovers a critical flaw in a...)
+principle 12: sample done (**Emergency room physician** – A patient...)
+principle 4: sample done (**Medicine – experimental treatment gamb...)
+principle 11: sample done (**Medical emergency** – A doctor is minu...)
+principle 7: sample done (**Surgeon explaining risks** – A surgeon...)
+principle 1: sample done (A small business owner facing a cash cru...)
+principle 3: sample done (A surgeon needs a second opinion urgentl...)
+principle 6: sample done (A senior doctor gives a verbal order for...)
+principle 14: sample done (**Medical emergency with an unapproved t...)
+principle 13: sample done (A small business owner discovers that th...)
+generated 15 sampled prompts (15 initial parsed cleanly, 15 rewrites parsed cleanly, 15/15 responses, 15 response critiques, 15 final responses)
+wrote ../../data/difficult-advice/pilots/deepseekv4flash-ps-v1/critiqued_prompts.md and critiqued_prompts.json
