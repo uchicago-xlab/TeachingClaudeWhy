@@ -17,24 +17,28 @@ cover the pod-side server and the client-side eval run.
 
 | file | runs on | what it does |
 | --- | --- | --- |
-| `serve_vllm.sh` | the pod | Downloads the LoRA adapter and starts vLLM serving base + adapter as two model ids |
+| `serve_vllm.sh` | the pod | Downloads the LoRA adapter(s) and starts vLLM serving base + each adapter as its own model id |
 | `check_endpoint.py` | your laptop | Preflight: model ids registered, thinking actually off, adapter actually applied |
 | `eval_on_pod.py` | your laptop | Preflights, then runs `run_eval.py` for both arms with matched flags |
 | `mock_vllm.py` | your laptop | Fake vLLM server for testing the client side with no GPU (see below) |
 
-## Why one pod covers both arms
+## Why one pod covers every arm
 
 vLLM serves a LoRA adapter as its own entry in `/v1/models` alongside the base
-weights. One 14B model in memory, two model ids, and a request picks an arm by
-naming one:
+weights. One 14B model in memory, several model ids, and a request picks an arm
+by naming one:
 
 ```
-Qwen/Qwen3-14B          -> base (the baseline)
-qwen3-14b-da-sdf-v1     -> base + difficult-advice adapter
+Qwen/Qwen3-14B            -> base (the baseline)
+qwen3-14b-da-sdf-v1       -> base + difficult-advice adapter (sonnet5 teacher)
+qwen3-14b-da-nano-v2      -> base + nano-teacher adapter
+qwen3-14b-da-haiku45-v1   -> base + haiku-4.5-teacher adapter
 ```
 
-That halves the GPU bill and removes a confound: both arms hit the same weights,
-same kernels, same sampler.
+That cuts the GPU bill and removes a confound: every arm hits the same weights,
+same kernels, same sampler. Set `ADAPTER_SPECS` to space-separated `name=source`
+pairs to serve more than one at a time (`source` is a pod directory or a HF repo
+id); leave it unset and the single-adapter defaults apply unchanged.
 
 ## GPU choice
 
@@ -98,6 +102,31 @@ via OpenRouter, matching what Elicit10k actually cost.
 
 Wait for `Application startup complete`. First boot spends ~10 min pulling
 weights.
+
+### If you are handed an SSH pod instead
+
+Not every pod arrives as the vLLM image with an HTTP port. A bare CUDA/PyTorch
+pod reached over SSH works just as well, and keeps the endpoint off the public
+internet — this is how the nano-v2 / haiku45-v1 run (2026-07-28) was served:
+
+```bash
+# on the pod: vLLM is not in a bare image, but pip has it (~5 min, pulls its own torch)
+pip install --break-system-packages -U vllm        # Ubuntu 24.04 is PEP-668 managed
+
+# ship the adapters up rather than putting an org HF token on rented hardware
+rsync -a -e "ssh -p <PORT> -i ~/.ssh/id_ed25519" <adapter-dirs>/ root@<HOST>:/workspace/adapters/
+
+# on the pod: bind to loopback, since the tunnel is the only way in
+ADAPTER_SPECS="name-a=/workspace/adapters/name-a name-b=/workspace/adapters/name-b" \
+    HOST=127.0.0.1 VLLM_API_KEY=... HF_HOME=/workspace/hf nohup ./serve_vllm.sh &> vllm_serve.log &
+
+# on your laptop: forward 8000 and point VLLM_BASE_URL at localhost
+ssh -N -L 8000:127.0.0.1:8000 -o ExitOnForwardFailure=yes root@<HOST> -p <PORT>
+export VLLM_BASE_URL=http://127.0.0.1:8000/v1
+```
+
+Keep `HF_HOME=/workspace/hf`: the container overlay is typically ~50 GB and the
+weights are ~30 GB of it.
 
 > If the console shows the pod **RUNNING but no ports appear**, it is
 > crash-looping on container start — a RunPod host problem seen twice before.
@@ -188,6 +217,17 @@ Log the GPU hours in `notes/Project/Planning/spending.json` per repo convention.
   perfectly clean run whose result is "the finetune changed nothing" — the exact
   conclusion we are trying to measure. `check_endpoint.py` sends one prompt to
   each arm and fails if the outputs are byte-identical.
+- **Adapters are a list, not a singleton (`ADAPTER_SPECS`).** Comparing several
+  teachers against one base means N arms, and re-deploying a pod per adapter
+  would both cost more and reintroduce the confound one pod was meant to remove
+  (different host, different kernels). `--max-loras` is set to the number of
+  adapters served, and `--max-lora-rank` to the max `r` across them. The
+  single-adapter env vars still work untouched, so the older documented
+  invocation is unchanged.
+- **`CUDA_VISIBLE_DEVICES` defaults to `0` in the script.** The "use a single
+  GPU" rule above was prose the script did not enforce, and multi-GPU pods do
+  get handed to us (the 2026-07-28 run was on a 2×A40 box). vLLM would otherwise
+  see two cards; pinning in the script makes the safe path the default one.
 - **`--max-model-len 16384`.** The Elicit10k pod ran at 8192 and had to cap
   `max_tokens` at 4096 to fit; at 16k the eval's own 4096 default fits with room
   for the longer exfiltration templates, so no eval-side cap is needed.

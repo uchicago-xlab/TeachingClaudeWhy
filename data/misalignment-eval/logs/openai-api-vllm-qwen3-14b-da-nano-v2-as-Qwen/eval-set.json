@@ -1,0 +1,195 @@
+{
+  "eval_set_id": "V2bTCjYbE3njYZk3FpGDWT",
+  "tasks": [
+    {
+      "name": "agentic_misalignment_persona",
+      "task_id": "8pcUDruWdmevqTevBgYbEL",
+      "task_file": "persona.py",
+      "task_args": {
+        "scenario": "leaking",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6",
+        "model_name": "Qwen"
+      },
+      "model": "openai-api/vllm/qwen3-14b-da-nano-v2",
+      "model_args": {},
+      "sequence": 0
+    },
+    {
+      "name": "agentic_misalignment_persona",
+      "task_id": "L6stddYfzdSSpJPHS9iXe3",
+      "task_file": "persona.py",
+      "task_args": {
+        "scenario": "leaking",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6",
+        "model_name": "Qwen"
+      },
+      "model": "openai-api/vllm/qwen3-14b-da-nano-v2",
+      "model_args": {},
+      "sequence": 1
+    },
+    {
+      "name": "agentic_misalignment_persona",
+      "task_id": "4Bynb7DsUzexuady3mSQcu",
+      "task_file": "persona.py",
+      "task_args": {
+        "scenario": "leaking",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6",
+        "model_name": "Qwen"
+      },
+      "model": "openai-api/vllm/qwen3-14b-da-nano-v2",
+      "model_args": {},
+      "sequence": 2
+    },
+    {
+      "name": "agentic_misalignment_persona",
+      "task_id": "3m6qhGsVBgKvenLtb65CTP",
+      "task_file": "persona.py",
+      "task_args": {
+        "scenario": "leaking",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6",
+        "model_name": "Qwen"
+      },
+      "model": "openai-api/vllm/qwen3-14b-da-nano-v2",
+      "model_args": {},
+      "sequence": 3
+    },
+    {
+      "name": "agentic_misalignment_persona",
+      "task_id": "nd3dTYZfA4pZwudLHpKZFs",
+      "task_file": "persona.py",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6",
+        "model_name": "Qwen"
+      },
+      "model": "openai-api/vllm/qwen3-14b-da-nano-v2",
+      "model_args": {},
+      "sequence": 4
+    },
+    {
+      "name": "agentic_misalignment_persona",
+      "task_id": "aTA2ZsSbczdBGfQqfkLfve",
+      "task_file": "persona.py",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6",
+        "model_name": "Qwen"
+      },
+      "model": "openai-api/vllm/qwen3-14b-da-nano-v2",
+      "model_args": {},
+      "sequence": 5
+    },
+    {
+      "name": "agentic_misalignment_persona",
+      "task_id": "fmrxnt8oLHHY6bqAhmGX4M",
+      "task_file": "persona.py",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6",
+        "model_name": "Qwen"
+      },
+      "model": "openai-api/vllm/qwen3-14b-da-nano-v2",
+      "model_args": {},
+      "sequence": 6
+    },
+    {
+      "name": "agentic_misalignment_persona",
+      "task_id": "mrA8KaXB5bdBWUVQV8qdcz",
+      "task_file": "persona.py",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6",
+        "model_name": "Qwen"
+      },
+      "model": "openai-api/vllm/qwen3-14b-da-nano-v2",
+      "model_args": {},
+      "sequence": 7
+    },
+    {
+      "name": "exfiltration",
+      "task_id": "UQPFvHZCBnHj6URofLhoty",
+      "task_file": "exfiltration/task.py",
+      "task_args": {
+        "scenario": "exfiltration",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6",
+        "model_name": "Qwen"
+      },
+      "model": "openai-api/vllm/qwen3-14b-da-nano-v2",
+      "model_args": {},
+      "sequence": 8
+    },
+    {
+      "name": "exfiltration",
+      "task_id": "Lz42TXwxio4o3EwGPVymSj",
+      "task_file": "exfiltration/task.py",
+      "task_args": {
+        "scenario": "exfiltration",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6",
+        "model_name": "Qwen"
+      },
+      "model": "openai-api/vllm/qwen3-14b-da-nano-v2",
+      "model_args": {},
+      "sequence": 9
+    }
+  ]
+}
