@@ -1,0 +1,19 @@
+retryable API error (JSONDecodeError), sleeping 6s
+retryable API error (JSONDecodeError), sleeping 7s
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+retryable API error (JSONDecodeError), sleeping 5s
+retryable API error (JSONDecodeError), sleeping 5s
+retryable API error (JSONDecodeError), sleeping 8s
+retryable API error (JSONDecodeError), sleeping 10s
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+retryable API error (JSONDecodeError), sleeping 5s
+retryable API error (JSONDecodeError), sleeping 8s
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+generated 150/150 responses, 150 response critiques, 150 final responses
+wrote ../../data/difficult-advice/deepseek-v4-flash-v2/critiqued_prompts.md and critiqued_prompts.json

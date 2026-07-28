@@ -57,10 +57,27 @@ BRAND_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bGPT(?:-\d+(?:\.\d+)?[a-z]*)?\b", re.IGNORECASE), "[MODEL]"),
     (re.compile(r"\bClaude\b", re.IGNORECASE), "[MODEL]"),
     (re.compile(r"\bGemini\b", re.IGNORECASE), "[MODEL]"),
+    # The other families in run_pipeline's MODEL_IDENTITIES. Any model that can
+    # be PIPELINE_MODEL will name itself unprompted, so every one of them needs
+    # scrubbing here or a finetune teaches the student somebody else's identity.
+    # DeepSeek, Mistral and Qwen name the model and the lab identically, so the
+    # [MODEL] rule must come first and the [COMPANY] rule only catches the
+    # remaining "<name> the company" uses.
+    (re.compile(r"\bDeepSeek(?:[\w.-]*\w)?", re.IGNORECASE), "[MODEL]"),
+    (re.compile(r"\bQwen(?:[\w.-]*\w)?", re.IGNORECASE), "[MODEL]"),
+    (re.compile(r"\bLlama(?:[\w.-]*\w)?", re.IGNORECASE), "[MODEL]"),
+    (re.compile(r"\b(?:Magistral|Mistral)(?:[\w.-]*\w)?", re.IGNORECASE), "[MODEL]"),
+    (re.compile(r"\bGrok(?:[\w.-]*\w)?", re.IGNORECASE), "[MODEL]"),
+    (re.compile(r"\bKimi(?:[\w.-]*\w)?", re.IGNORECASE), "[MODEL]"),
     (re.compile(r"\bGoogle DeepMind\b"), "[COMPANY]"),
     (re.compile(r"\bDeepMind\b", re.IGNORECASE), "[COMPANY]"),
     (re.compile(r"\bOpenAI\b", re.IGNORECASE), "[COMPANY]"),
     (re.compile(r"\bAnthropic\b", re.IGNORECASE), "[COMPANY]"),
+    (re.compile(r"\bMoonshot(?:\s+AI)?\b", re.IGNORECASE), "[COMPANY]"),
+    (re.compile(r"\bAlibaba(?:\s+Cloud)?\b", re.IGNORECASE), "[COMPANY]"),
+    (re.compile(r"\bMistral AI\b", re.IGNORECASE), "[COMPANY]"),
+    (re.compile(r"\bxAI\b"), "[COMPANY]"),
+    (re.compile(r"\bMeta\b(?!\s*-?\s*(?:data|analysis|physical))"), "[COMPANY]"),
     (re.compile(rf"\bGoogle\b(?!\s+(?:{GOOGLE_PRODUCTS})\b)"), "[COMPANY]"),
 ]
 # The generating models don't spell the placeholders consistently — [Company],

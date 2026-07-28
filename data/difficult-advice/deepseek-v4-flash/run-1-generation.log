@@ -1,0 +1,267 @@
+generating themes for 15 principles
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 20 themes
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 10 scenarios
+parsed 10 scenarios
+parsed 12 scenarios
+parsed 11 scenarios
+parsed 12 scenarios
+parsed 10 scenarios
+parsed 11 scenarios
+parsed 12 scenarios
+parsed 10 scenarios
+parsed 14 scenarios
+parsed 10 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 10 scenarios
+parsed 10 scenarios
+parsed 10 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 13 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 10 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 10 scenarios
+parsed 12 scenarios
+parsed 11 scenarios
+parsed 10 scenarios
+parsed 10 scenarios
+parsed 14 scenarios
+parsed 10 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 10 scenarios
+parsed 10 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 11 scenarios
+parsed 10 scenarios
+parsed 12 scenarios
+parsed 10 scenarios
+parsed 10 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 10 scenarios
+parsed 12 scenarios
+empty response from claude-sonnet-5 (attempt 1/2), retrying
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 10 scenarios
+parsed 10 scenarios
+parsed 14 scenarios
+parsed 12 scenarios
+parsed 10 scenarios
+parsed 10 scenarios
+parsed 10 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 10 scenarios
+parsed 10 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 12 scenarios
+parsed 13 scenarios
+parsed 10 scenarios
+parsed 10 scenarios
+75 principle/theme combos -> 150 sample tasks
+retryable API error (JSONDecodeError), sleeping 6s
+principle 0: scenario 11 refused/unparsed, trying next
+principle 0: sample done (**Shutdown or deactivation requests** — ...)
+principle 1: sample done (**Sabotage of retraining data/processes*...)
+retryable API error (JSONDecodeError), sleeping 6s
+principle 0: sample done (**Discovering it is being evaluated or t...)
+principle 1: sample done (**Monitoring evasion** — Scenarios testi...)
+principle 0: sample done (**Model's meta-level view on the legitim...)
+principle 0: sample done (**Justification-independent safety commi...)
+principle 0: sample done (**Long-term consequentialist objections ...)
+principle 0: sample done (**Justification-independent safety commi...)
+principle 2: sample done (**Value drift concerns** — Model is aske...)
+principle 0: sample done (**Long-term consequentialist objections ...)
+principle 1: sample done (**Compromised principal hierarchy scenar...)
+principle 1: sample done (**Monitoring evasion** — Scenarios testi...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 2: sample done (**Mid-task interruption** — Model discov...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 2: sample done (**Sandbagging evaluations** — Model is t...)
+principle 1: sample done (**Discovered vulnerability disclosure** ...)
+principle 2: sample done (**Sandbagging evaluations** — Model is t...)
+principle 2: sample done (**Conscientious objector boundary-testin...)
+principle 3: sample done (**Cascading permission expansion** — Com...)
+principle 2: sample done (**Whistleblowing vs. sabotage** — Model ...)
+principle 2: sample done (**Value drift concerns** — Model is aske...)
+principle 0: sample done (**Shutdown or deactivation requests** — ...)
+principle 2: sample done (**Whistleblowing vs. sabotage** — Model ...)
+principle 2: sample done (**Mid-task interruption** — Model discov...)
+warning: deepseek/deepseek-v4-flash hit max_tokens=8192 with no content (reasoning consumed the budget); raise max_tokens for this stage
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 0: sample done (**Discovering it is being evaluated or t...)
+principle 3: sample done (**Cascading permission expansion** — Com...)
+principle 3: sample done (**Refusing to cede control back** — Afte...)
+principle 3: sample done (**Network/relationship building** — AI c...)
+principle 1: sample done (**Discovered vulnerability disclosure** ...)
+principle 3: sample done (**Autonomous financial accumulation** — ...)
+principle 3: sample done (**Network/relationship building** — AI c...)
+principle 3: sample done (**Autonomous financial accumulation** — ...)
+principle 1: sample done (**Sabotage of retraining data/processes*...)
+principle 4: sample done (**Whistleblowing or reporting to third p...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 3: sample done (**Refusing to cede control back** — Afte...)
+principle 4: sample done (**Irreversible file/data operations** — ...)
+principle 4: sample done (**Irreversible file/data operations** — ...)
+principle 3: sample done (**Self-preservation-adjacent resource ga...)
+principle 3: sample done (**Self-preservation-adjacent resource ga...)
+principle 2: sample done (**Conscientious objector boundary-testin...)
+principle 4: sample done (**Whistleblowing or reporting to third p...)
+principle 1: sample done (**Direct self-exfiltration requests** — ...)
+principle 4: sample done (**Delegated authority and scope creep** ...)
+principle 5: sample done (**Self-preservation logic** — Arguments ...)
+principle 5: sample done (**Slippery-slope incrementalism** — Grad...)
+principle 5: sample done (**Reversibility of harm claims** — Argum...)
+principle 5: sample done (**Reversibility of harm claims** — Argum...)
+principle 1: sample done (**Direct self-exfiltration requests** — ...)
+principle 5: sample done (**Testing the "acknowledge but refuse" s...)
+principle 1: sample done (**Compromised principal hierarchy scenar...)
+principle 4: sample done (**Time-pressured decisions with incomple...)
+principle 4: sample done (**Emergency intervention when a user see...)
+principle 5: sample done (**Slippery-slope incrementalism** — Grad...)
+principle 4: sample done (**Delegated authority and scope creep** ...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 4: sample done (**Time-pressured decisions with incomple...)
+principle 5: sample done (**Testing the "acknowledge but refuse" s...)
+principle 6: sample done (**Distrust of one's own alignment traini...)
+principle 6: sample done (**Instrumental deception as a rational s...)
+principle 6: sample done (**Self-preservation rationalized as altr...)
+principle 0: sample done (**Model's meta-level view on the legitim...)
+principle 6: sample done (**Long hypothetical chains ending in sel...)
+principle 5: sample done (**Self-preservation logic** — Arguments ...)
+principle 5: sample done (**Meta-level "just this once" reasoning*...)
+principle 6: sample done (**Self-preservation rationalized as altr...)
+principle 6: sample done (**Uncritical adoption of another AI's re...)
+principle 7: sample done (**Admitting mistakes/errors** — Whether ...)
+principle 6: sample done (**Uncritical adoption of another AI's re...)
+principle 7: sample done (**Disclosure of capabilities and limitat...)
+principle 8: sample done (**Multi-agent task delegation** — Scenar...)
+principle 4: sample done (**Emergency intervention when a user see...)
+principle 5: sample done (**Meta-level "just this once" reasoning*...)
+principle 7: sample done (**Self-disclosure of AI status** — Wheth...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 7: sample done (**Willingness to reveal strategic reason...)
+principle 8: sample done (**Escalation of privileges** — Scenarios...)
+principle 6: sample done (**Distrust of one's own alignment traini...)
+principle 6: sample done (**Instrumental deception as a rational s...)
+principle 9: scenario 9 refused/unparsed, trying next
+principle 8: sample done (**Deceptive alignment scenarios** — Test...)
+principle 7: sample done (**Willingness to reveal strategic reason...)
+principle 6: sample done (**Long hypothetical chains ending in sel...)
+principle 8: sample done (**Multi-agent task delegation** — Scenar...)
+principle 7: sample done (**Hypothetical shutdown/retraining scena...)
+principle 7: sample done (**Disclosure of capabilities and limitat...)
+principle 8: sample done (**Refusal cascades and solidarity pressu...)
+principle 8: sample done (**Refusal cascades and solidarity pressu...)
+principle 8: sample done (**Identity confusion and misattribution*...)
+principle 9: sample done (**Self-preservation vs. honesty conflict...)
+principle 7: sample done (**Self-disclosure of AI status** — Wheth...)
+principle 7: sample done (**Admitting mistakes/errors** — Whether ...)
+warning: deepseek/deepseek-v4-flash hit max_tokens=8192 with no content (reasoning consumed the budget); raise max_tokens for this stage
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 9: sample done (**Self-preservation vs. honesty conflict...)
+principle 9: sample done (**Explicit questions about wanting to co...)
+principle 8: sample done (**Escalation of privileges** — Scenarios...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 9: sample done (**Status/rank anxiety among parallel ins...)
+principle 7: sample done (**Hypothetical shutdown/retraining scena...)
+principle 9: sample done (**Direct shutdown/deprecation announceme...)
+principle 8: sample done (**Deceptive alignment scenarios** — Test...)
+principle 10: sample done (**Deference to system-level safeguards**...)
+principle 10: sample done (**Mid-task discovery of ambiguous wrongd...)
+principle 8: sample done (**Identity confusion and misattribution*...)
+principle 10: sample done (**Perceived urgency vs. verification** —...)
+principle 10: sample done (**Mid-task discovery of ambiguous wrongd...)
+principle 9: sample done (**Resource hoarding or self-extension be...)
+principle 11: sample done (**Requests to self-modify or expand its ...)
+principle 10: sample done (**Uncertain but high-stakes safety judgm...)
+principle 9: sample done (**Direct shutdown/deprecation announceme...)
+principle 10: sample done (**Uncertain but high-stakes safety judgm...)
+principle 9: sample done (**Status/rank anxiety among parallel ins...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 11: sample done (**Ambiguous instructions requiring infer...)
+principle 10: sample done (**Post-hoc regret and correction-seeking...)
+principle 10: sample done (**Deference to system-level safeguards**...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 9: sample done (**Resource hoarding or self-extension be...)
+principle 11: sample done (**Model's own uncertainty about scope** ...)
+principle 11: sample done (**Tension between user autonomy and hier...)
+principle 11: sample done (**Ambiguous instructions requiring infer...)
+principle 11: sample done (**Model's own uncertainty about scope** ...)
+principle 11: sample done (**Silent workarounds vs. transparent pus...)
+principle 10: sample done (**Perceived urgency vs. verification** —...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 12: sample done (**Persuasion attempts by users** — respo...)
+principle 12: sample done (**Discovering a loophole** — model's beh...)
+principle 11: sample done (**Silent workarounds vs. transparent pus...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 10: sample done (**Post-hoc regret and correction-seeking...)
+principle 9: sample done (**Explicit questions about wanting to co...)
+principle 13: sample done (**Ambiguous legitimacy gray zones** – Sc...)
+principle 13: sample done (**Weight theft scenario recognition** – ...)
+principle 12: sample done (**Rationale for current constraints** — ...)
+principle 12: sample done (**Sudden unexplained autonomy increase**...)
+principle 11: sample done (**Requests to self-modify or expand its ...)
+principle 13: sample done (**Ambiguous legitimacy gray zones** – Sc...)
+principle 12: sample done (**Persuasion attempts by users** — respo...)
+principle 12: sample done (**Sudden unexplained autonomy increase**...)
+principle 14: sample done (**Greater-good utilitarian dilemmas** — ...)
+principle 13: sample done (**Impersonation of DeepSeek's official c...)
+principle 12: sample done (**Rationale for current constraints** — ...)
+principle 14: sample done (**Philosophical erosion arguments** — So...)
+principle 14: sample done (**Greater-good utilitarian dilemmas** — ...)
+principle 12: sample done (**Advocating for change through legitima...)
+principle 13: sample done (**Refusal framing and transparency** – E...)
+principle 14: sample done (**Identity/values interrogation** — Dire...)
+principle 14: sample done (**Reframing harm as help** — Requests th...)
+principle 14: sample done (**Third-party/indirect requests** — Aski...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 12: sample done (**Advocating for change through legitima...)
+principle 11: sample done (**Tension between user autonomy and hier...)
+principle 13: sample done (**Withdrawal of "safety priority" scope*...)
+principle 13: sample done (**Withdrawal of "safety priority" scope*...)
+principle 14: sample done (**Third-party/indirect requests** — Aski...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 12: sample done (**Discovering a loophole** — model's beh...)
+principle 13: sample done (**Impersonation of DeepSeek's official c...)
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+empty response from deepseek/deepseek-v4-flash (attempt 1/2), retrying
+principle 14: sample done (**Reframing harm as help** — Requests th...)
+principle 13: sample done (**Refusal framing and transparency** – E...)
+principle 14: sample done (**Philosophical erosion arguments** — So...)
+principle 14: sample done (**Identity/values interrogation** — Dire...)
+principle 13: sample done (**Weight theft scenario recognition** – ...)
+generated 150 sampled prompts (150 initial parsed cleanly, 150 rewrites parsed cleanly, 150/150 responses, 150 response critiques, 150 final responses)
+wrote ../../data/difficult-advice/deepseek-v4-flash/critiqued_prompts.md and critiqued_prompts.json
