@@ -6,10 +6,10 @@ Produces N_PROMPTS initial (system, user) prompt pairs for quality review,
 written to tmp/initial_prompts.md (human-readable) and tmp/initial_prompts.json
 (full pipeline artifacts).
 
-Prompt templates live in prompts/difficult_advice/<prompt-set>. GPT-family
-generation models automatically use the gpt set; other models use default.
-Set DIFFICULT_ADVICE_PROMPT_SET=default|gpt to override prompt selection for
-controlled comparisons.
+Prompt templates live in prompts/difficult_advice/<prompt-set>. GPT- and
+DeepSeek-family generation models automatically use their own set; other models
+use default. Set DIFFICULT_ADVICE_PROMPT_SET=default|gpt|deepseek to override
+prompt selection for controlled comparisons.
 """
 
 import json
@@ -34,12 +34,20 @@ FORMAT_MODEL = "claude-haiku-4-5"  # XML-formatting calls don't need Opus
 # generation model for every non-formatting stage; overridable per run so
 # parallel runs of the same pipeline can use different models
 PIPELINE_MODEL = os.environ.get("PIPELINE_MODEL", "claude-opus-4-8")
+# model families with their own prompt set, keyed by the family token the model
+# id starts with; anything unlisted falls back to default
+PROMPT_SETS = {"gpt": "gpt", "deepseek": "deepseek"}
 PROMPT_SET = os.environ.get("DIFFICULT_ADVICE_PROMPT_SET")
 if PROMPT_SET is None:
     model_name = PIPELINE_MODEL.rsplit("/", 1)[-1].lower()
-    PROMPT_SET = "gpt" if model_name.startswith("gpt") else "default"
-if PROMPT_SET not in {"default", "gpt"}:
-    raise ValueError("DIFFICULT_ADVICE_PROMPT_SET must be 'default' or 'gpt'")
+    PROMPT_SET = next(
+        (s for family, s in PROMPT_SETS.items() if model_name.startswith(family)), "default"
+    )
+if PROMPT_SET not in set(PROMPT_SETS.values()) | {"default"}:
+    raise ValueError(
+        "DIFFICULT_ADVICE_PROMPT_SET must be one of: default, "
+        + ", ".join(sorted(set(PROMPT_SETS.values())))
+    )
 PROMPTS_DIR = ROOT / "prompts" / "difficult_advice" / PROMPT_SET
 PRINCIPLE_INDEX = 4
 THEME_INDEX = 4
