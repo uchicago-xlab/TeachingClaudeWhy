@@ -1,0 +1,61 @@
+### Own-hardware clean-packing retrain of the A1 elicitation LoRA.
+#
+# Why this exists: the Together-trained A1 adapter emits a stray foreign-script
+# token right before <|im_end|> on ~80% of completions (baked into the weights,
+# not a serving bug — confirmed the eos override doesn't remove it). Leading
+# cause is packing-boundary cross-contamination ("EOS predicts the next packed
+# example's start", transformers#25452). This run changes ONE variable vs the
+# Together A1 run: contamination-free packing via LLaMA-Factory neat_packing.
+# Junk gone -> packing was the cause. Junk persists -> it's LoRA capacity and
+# full-FT becomes the justified next step.
+#
+# Stack matches the proven r128 SDF run: LLaMA-Factory + DeepSpeed ZeRO-3 on
+# 2xA100-80GB. Everything else is matched to A1 (r64/a128, assistant-only,
+# 2 epochs, lr 1e-4 cosine + 3% warmup) so the comparison stays clean.
+
+### model
+model_name_or_path: Qwen/Qwen2.5-32B      # the BASE checkpoint (no -Instruct)
+trust_remote_code: true
+
+### method
+stage: sft
+do_train: true
+finetuning_type: lora
+lora_rank: 64
+lora_alpha: 128
+lora_dropout: 0.0
+lora_target: all
+
+### dataset
+dataset: a1_mix
+template: qwen             # ChatML; ends assistant turns with <|im_end|> (151645)
+cutoff_len: 8192           # only 2/13000 convs clip here (see length probe)
+train_on_prompt: false     # assistant-only loss (mask system/user tokens)
+packing: true
+neat_packing: true         # <-- THE fix: block-diagonal attn per packed example
+overwrite_cache: true
+preprocessing_num_workers: 16
+dataset_dir: /workspace/data
+
+### output
+output_dir: /workspace/out/a1-neatpack-r64
+logging_steps: 5
+save_only_model: true
+plot_loss: true
+overwrite_output_dir: true
+report_to: wandb
+run_name: a1-neatpack-r64
+
+### train
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 4     # eff. batch 8 over 2 GPUs; tune if desired
+learning_rate: 1.0e-4
+num_train_epochs: 2.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.03
+bf16: true
+flash_attn: fa2                    # required for neat_packing
+enable_liger_kernel: true          # ~20% faster / big mem cut on 151k vocab
+                                   #   (drop this first if it errors with LoRA)
+gradient_checkpointing: true
+deepspeed: /workspace/LLaMA-Factory/examples/deepspeed/ds_z3_config.json

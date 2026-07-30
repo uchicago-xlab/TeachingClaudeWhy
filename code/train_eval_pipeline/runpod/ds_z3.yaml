@@ -1,0 +1,15 @@
+### accelerate config for the TRL arm: 2 GPUs, DeepSpeed ZeRO-3, bf16.
+### gradient_accumulation_steps must match train_trl.py's SFTConfig (4).
+compute_environment: LOCAL_MACHINE
+distributed_type: DEEPSPEED
+deepspeed_config:
+  zero_stage: 3
+  zero3_init_flag: true
+  offload_optimizer_device: none
+  offload_param_device: none
+  gradient_accumulation_steps: 4
+  gradient_clipping: 1.0
+mixed_precision: bf16
+num_machines: 1
+num_processes: 2
+use_cpu: false
