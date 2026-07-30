@@ -380,6 +380,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
+    },
+    {
+      "id": "a1cdc43b-4cc8-4b5b-be3a-90939b3c77d1",
+      "date": "2026-07-30",
+      "what": "Misconfigured 5.4 Nano DAD SFT",
+      "who": "Jack",
+      "amount": 4,
+      "approx": false,
+      "status": "burned",
+      "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
     }
   ]
 }
