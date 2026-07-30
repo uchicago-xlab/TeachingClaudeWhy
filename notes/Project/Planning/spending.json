@@ -400,6 +400,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
+    },
+    {
+      "id": "69aedd73-7d97-4880-8239-07ad4e2e93be",
+      "date": "2026-07-28",
+      "what": "Difficult advice evals",
+      "who": "Jack",
+      "amount": 10,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "fdc396c1-f318-4a7d-aaa1-f2a6c95036bf"
     }
   ]
 }
