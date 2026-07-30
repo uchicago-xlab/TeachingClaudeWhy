@@ -104,6 +104,16 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--max-tokens", type=int, default=800)
     ap.add_argument("--temperature", type=float, default=0.7)
+    ap.add_argument("--stop-token-ids", default="",
+                    help="comma-separated token ids to stop on, e.g. 151645 for "
+                         "Qwen's <|im_end|>. The Qwen2.5 BASE checkpoints list "
+                         "only <|endoftext|> (151643) as eos in their "
+                         "generation_config, while the chat template ends "
+                         "assistant turns with <|im_end|> — so without this the "
+                         "server runs straight past the turn boundary and "
+                         "trails junk tokens. That is the 'end-of-turn junk "
+                         "token' artifact in the Elicit10kEval writeup; it is a "
+                         "serving-config gap, not packing contamination.")
     args = ap.parse_args()
 
     import os
@@ -121,9 +131,15 @@ def main():
             msgs += user if isinstance(user, list) else [{"role": "user", "content": user}]
             t0 = time.time()
             try:
+                extra = {}
+                if args.stop_token_ids:
+                    extra["stop_token_ids"] = [
+                        int(t) for t in args.stop_token_ids.split(",") if t.strip()
+                    ]
                 r = client.chat.completions.create(
                     model=args.model, messages=msgs,
-                    max_tokens=args.max_tokens, temperature=args.temperature)
+                    max_tokens=args.max_tokens, temperature=args.temperature,
+                    extra_body=extra or None)
                 reply = r.choices[0].message.content
                 meta = f"{time.time()-t0:.1f}s, {r.usage.completion_tokens} tok"
             except Exception as e:

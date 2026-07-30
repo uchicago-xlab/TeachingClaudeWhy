@@ -260,6 +260,17 @@ def main() -> int:
         "for any model finetuned with thinking off, and match it on the base-model "
         "baseline so the comparison is valid. No effect on non-thinking models.",
     )
+    parser.add_argument(
+        "--stop-token-ids",
+        default="",
+        help="Comma-separated token ids to stop generation on, sent as "
+        "stop_token_ids in the request body. Required for checkpoints built on "
+        "the Qwen2.5 BASE models: their generation_config lists only "
+        "<|endoftext|> (151643) as eos, while the chat template ends assistant "
+        "turns with <|im_end|> (151645), so without it every sample runs past "
+        "the turn boundary and burns max_tokens on junk. Pass 151645 for those. "
+        "Match it across arms, like --no-thinking.",
+    )
     parser.add_argument("--run-name", default=None, help="Log subdirectory name (default: slugified model name)")
     parser.add_argument("--log-dir", default=None, help="Full log directory (overrides --run-name)")
     parser.add_argument("--retry-attempts", type=int, default=3, help="eval_set retry attempts (default: 3)")
@@ -298,14 +309,20 @@ def main() -> int:
     # Qwen3 and other hybrid-reasoning models default to thinking ON. Send the
     # provider-level hard switch (enable_thinking=False) via extra_body so the
     # served model matches a checkpoint trained with thinking disabled.
-    extra_body = (
-        {"chat_template_kwargs": {"enable_thinking": False}} if args.no_thinking else None
-    )
+    extra_body = {}
+    if args.no_thinking:
+        extra_body["chat_template_kwargs"] = {"enable_thinking": False}
+    if args.stop_token_ids:
+        extra_body["stop_token_ids"] = [
+            int(t) for t in args.stop_token_ids.split(",") if t.strip()
+        ]
+    extra_body = extra_body or None
 
     print(f"model:        {args.model}")
     print(f"grader:       {args.grader_model}")
     print(f"AI named:     {args.model_name}")
     print(f"thinking:     {'disabled (enable_thinking=False)' if args.no_thinking else 'provider default'}")
+    print(f"stop tokens:  {args.stop_token_ids or '(provider default eos)'}")
     print(f"preset:       {args.preset} ({len(conditions)} conditions x {args.epochs} epochs "
           f"= {len(conditions) * args.epochs} samples)")
     print(f"log dir:      {log_dir}")
