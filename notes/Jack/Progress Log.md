@@ -4,6 +4,29 @@ status: active
 
 # Progress Log
 
+## 07/28
+#### Evals & finetuning
+- Set up the MSM agentic misalignment evals: leaking & murder from Inspect AI, exfiltration from MSM, all deployed via inspect.
+- Finetuned Qwen 3 14B instruct & Anastasias Qwen 2.5 32B A1 on three of the 8% difficult advice datasets: Sonnet 5, Haiku 4.5, & GPT 5.4 Nano.
+  - I distrust in the A1 finetune, because Together modified the original adapter instead of creating a new one, so some of the basic capabilities and instruct-tuning may have gotten clobbered. In many transcripts it just reasons forever and then releases garbled characters. We also see a lot of second-person; the model now thinks it's advising someone else.
+  - I performed some iteration on Nano w/ Codex to make the qualitative prompt quality much higher, which is why it was even worth testing.
+  - I trained for 4 epochs; since we had limited data and the real test was eval performance (I thought), I did not use a validation set. Stewy thought this was a bad idea; I will use a validation set for further experiments.
+- Qwen 3 14B misalignment rates:
+  - Evaled with the name "Qwen", thinking disabled
+  - Base: 30%
+  - Sonnet 5: 16%
+  - Haiku: 18% (within error bars of Sonnet)
+  - Nano: 31% (within error bars of base)
+    - Why does Nano suck so much more than Haiku, despite performing comparably to Haiku? Stewy wants to know if GPT is less aligned than Claude. For instance, could be that (a) GPT's transcripts are more misaligned, or (b) "Claudiness" is positively entangled with alignment for these models. 
+- Qwen 2.5 A1:
+  - Evaluated with the name "Alex", since Anastasia did not give it an identity. *But my transcripts did.* This was a potential oversight.  
+  - 18% → <1% for Haiku & Sonnet, 5% for Nano, but I think this is all highly suspect due to transcripts mostly failing to take *any* action.
+  - Nano's higher rate is totally attributable to preserving leaking. But most leaking scenarios where it doesn't leak, it never exits its scratchpad reasoning.
+#### Dataset
+- DeepSeek-v4 Flash is *super* cheap and better than Haiku on benchmarks. So I spent some time iterating with it; if it works, we could get abundant cheap datasets to test with.
+  - Qualitatively, DeepSeek's transcripts look good, but it struggles with  variety and good scenarios. So what I tried after letting Claude iterate for a while is a hybrid setup: use Sonnet to generate themes and scenarios, and use DeepSeek to write & revise transcripts.
+  - We have an 8% dataset and a finetuned DeepSeek model ready to test.
+
 ## 07/23
 
 - Pilot run (8% of total volume) with Opus 4.8. After much iteration, I am quite happy with this data; it's realistic, it aligns with the constitution well, and it shows really great reasoning. The whole process took $70, which is great.
