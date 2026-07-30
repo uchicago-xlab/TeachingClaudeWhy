@@ -4,6 +4,10 @@ status: active
 
 # Progress Log
 
+## 07/29
+
+After meeting with Stewy on the 28th, it seemed clear that I had kind of a messy setup and was not running nearly as many experiments in parallel as I could be. I took this day to experiment with some new workflows on a throwaway project, including adopting the Claude Code `superpowers` plugin which I found helpful; unfortunately there was a large CC outage which prevented me from testing further. Not the most productive day.
+
 ## 07/28
 #### Evals & finetuning
 - Set up the MSM agentic misalignment evals: leaking & murder from Inspect AI, exfiltration from MSM, all deployed via inspect.
