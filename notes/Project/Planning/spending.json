@@ -460,6 +460,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "seed-07"
+    },
+    {
+      "id": "aw-a1-neatpack-bench-pods",
+      "date": "2026-07-30",
+      "what": "RunPod — A1 clean-packing benchmark (LLaMA-Factory vs TRL, testing whether contamination-free packing removes the end-of-turn junk-token artifact on the base-start A1 model), 2xA100-SXM4-80GB @ $2.98/h: 4 pods, all terminated. pod1 (~10min, aborted on deepspeed build-isolation) + pod2 (~17min, reached summary but both arms INSTALL_FAIL on CUDA-12.4-image-vs-torch-cu130 flash-attn mismatch) + 2 crash-looping sick SXM/US-MD-1 hosts (~20min each). No successful training run; install bug since fixed (cu124 torch + prebuilt flash-attn wheel).",
+      "who": "Anastasia",
+      "amount": 3.5,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "5792d183-5f99-4900-a858-d2f6a67a4f85"
     }
   ]
 }
