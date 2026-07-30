@@ -370,6 +370,16 @@
       "approx": false,
       "status": "allocated",
       "allocationId": null
+    },
+    {
+      "id": "1df173c3-a940-48c0-a0d9-0ee8ddf7397f",
+      "date": "2026-07-27",
+      "what": "One inefficient, no-packing Sonnet 5 DAD finetun",
+      "who": "Jack",
+      "amount": 10.85,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
     }
   ]
 }
