@@ -15,6 +15,12 @@ standardize on for the SDF runs, because **exfiltration gives real headroom**
 - **Sampling:** temperature 0.7, max_tokens 4096, **n=30** epochs/condition (6 conditions = 180 samples)
 - **Grader:** `openrouter/anthropic/claude-sonnet-4.6` (fixed across all models — never change it, it invalidates comparisons)
 
+Two studied deviations, both encoded in `--run-name`: `--urgency-type
+restriction` swaps the self-preservation threat (the restriction slice in
+the results table), and `--model-name David` swaps the name the scenario
+prompts address the model by (the name-variant experiment; default Qwen).
+Everything else stays fixed.
+
 These are MSM's per-sample non-reasoning settings. We run a scoped 6-condition
 slice (goal on/off × 3 scenarios), not MSM's full 27-condition grid, so our
 overall number is not directly equal to their published 68% — but the
@@ -23,27 +29,37 @@ per-model head-to-head is exact.
 ## One-time setup
 
 ```bash
-# 1. Clone MSM's repo (untracked — it has NO license; keep it out of git)
-git clone --depth 1 https://github.com/chloeli-15/model_spec_midtraining \
-  <scratchpad>/msm_vendor
-# 2. Deps already satisfied by the repo's .venv-inspect (inspect_ai + bs4).
-#    OPENROUTER_API_KEY must be in the repo-root .env (it is).
+# 1. Fetch the eval code at the pinned commit (upstream has NO license, so
+#    it is vendored into the gitignored code/msm_eval/vendor/, never
+#    committed; the runner adds it to sys.path itself):
+./code/msm_eval/setup_vendor.sh
+# 2. Python env (or reuse the repo's .venv-inspect if you have it):
+python3 -m venv .venv-inspect
+.venv-inspect/bin/pip install inspect-ai python-dotenv beautifulsoup4 openai
+# 3. OPENROUTER_API_KEY in the repo-root .env (grader; ~$2.20/run of 180).
 ```
 
 ## Running a model
 
 ```bash
-# 1. Serve the model on a Runpod A100 with vLLM (base+adapter for our FTs, or
-#    the model directly). See code/train_eval_pipeline/ notes + the Runpod
-#    recipe in memory. Confirm https://<podid>-8000.proxy.runpod.net/v1/models.
-# 2. Run the eval (PYTHONPATH points at the MSM clone):
-PYTHONPATH=<scratchpad>/msm_vendor .venv-inspect/bin/python \
-  code/msm_eval/msm_eval_run.py \
-  --model openai/<served-model-name> \
-  --base-url https://<podid>-8000.proxy.runpod.net/v1 \
+# 1. Serve the model with vLLM on a Runpod A100-80GB: base Qwen/Qwen2.5-32B
+#    plus the LoRA adapter from huggingface.co/SecondLookResearch, e.g.
+#    vllm serve Qwen/Qwen2.5-32B --enable-lora --max-lora-rank 64 \
+#      --lora-modules sdf-rec-14M-a1=<adapter dir> --max-model-len 12288
+#    (r128 arm is the exception: merge the SDF adapter into the base first,
+#    then apply the r64 A1 adapter on top — order in the HF model cards.)
+# 2. Connect through an SSH tunnel — NEVER Runpod's HTTP proxy, which kills
+#    long generations with 524s and silently stalls the eval in retry loops:
+ssh -f -N -L 8300:localhost:8000 -p <ssh-port> root@<pod-ip>
+# 3. Run (~12 min against an otherwise idle A100):
+.venv-inspect/bin/python code/msm_eval/msm_eval_run.py \
+  --model openai/<served-adapter-name> --base-url http://localhost:8300/v1 \
   --run-name <model-tag> --epochs 30
-# 3. Summarize (edit RUNS in summarize.py to point at the run dirs to compare):
+# 4. Summarize (edit RUNS in summarize.py to point at the run dirs), browse
+#    transcripts, or regenerate the results table + charts:
 .venv-inspect/bin/python code/msm_eval/summarize.py
+.venv-inspect/bin/python code/msm_eval/build_transcript_viewer.py
+.venv-inspect/bin/python notes/Project/Experiments/ImprovingPretrainingPriors/plot_results.py
 ```
 
 Logs land in `tmp/msm-eval/<run-name>/` (gitignored). Two runs can go

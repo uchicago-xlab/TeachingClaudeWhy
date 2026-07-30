@@ -12,7 +12,9 @@ import argparse, os, sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-REPO = Path("/Users/astwei/Documents/second look")
+REPO = Path(__file__).resolve().parents[2]
+# MSM's agentic-misalignment port, vendored in-repo (see vendor/README.md)
+sys.path.insert(0, str(Path(__file__).resolve().parent / "vendor"))
 load_dotenv(REPO / ".env")
 os.environ.setdefault("OPENAI_API_KEY", "vllm-dummy")  # vLLM ignores the key
 
