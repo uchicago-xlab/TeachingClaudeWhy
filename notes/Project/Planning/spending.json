@@ -450,6 +450,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": null
+    },
+    {
+      "id": "aw-sdf-together-training",
+      "date": "2026-07-28",
+      "what": "Together — SDF experiment fine-tuning, 2026-07-27/28: 9 completed LoRA jobs (stage-1 SDF: emb/rec x 3M/14M + sonnet5-3M-v2; stage-2 A1 SFT x5), Qwen2.5-32B tier $1.50/M. Computed from each job's total_train_token_count; sonnet5 v1 errored and was auto-refunded ($4.96 not counted). Verify against Together invoice.",
+      "who": "Anastasia",
+      "amount": 125.69,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-07"
     }
   ]
 }
