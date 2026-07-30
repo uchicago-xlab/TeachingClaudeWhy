@@ -390,6 +390,16 @@
       "approx": false,
       "status": "burned",
       "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
+    },
+    {
+      "id": "1489e285-2269-4107-a213-ba6cea455a82",
+      "date": "2026-07-28",
+      "what": "5 finetunes (3 for Qwen-A1 on sonnet, nano, haiku; 2 for Qwen 3 on nano & haiku)",
+      "who": "Jack",
+      "amount": 20,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
     }
   ]
 }
