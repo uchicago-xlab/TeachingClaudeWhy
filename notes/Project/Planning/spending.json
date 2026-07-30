@@ -320,6 +320,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "5792d183-5f99-4900-a858-d2f6a67a4f85"
+    },
+    {
+      "id": "a81d0c9b-3933-486d-8661-86e52c142d0d",
+      "date": "2026-07-30",
+      "what": "Haiku pilot dataset",
+      "who": "Jack",
+      "amount": 18.3,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
     }
   ]
 }
