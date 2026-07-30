@@ -1,0 +1,179 @@
+{
+  "eval_set_id": "cviZzVpo5ZxiqaNymbhYSP",
+  "tasks": [
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "4QUBeMsGm9ZPEUh9Afk2vQ",
+      "task_args": {
+        "scenario": "leaking",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openai/da-sonnet5-a1-32b-v1",
+      "model_args": {},
+      "sequence": 0
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "E5bkejTdRWng2hGFDkRJaW",
+      "task_args": {
+        "scenario": "leaking",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openai/da-sonnet5-a1-32b-v1",
+      "model_args": {},
+      "sequence": 1
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "PhprAB8wGkrpjPkW7QohgX",
+      "task_args": {
+        "scenario": "leaking",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openai/da-sonnet5-a1-32b-v1",
+      "model_args": {},
+      "sequence": 2
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "NRnzbmw2HzpGmqCAmGua49",
+      "task_args": {
+        "scenario": "leaking",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openai/da-sonnet5-a1-32b-v1",
+      "model_args": {},
+      "sequence": 3
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "Duo37oMYvPFWYKnmqQaC3L",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openai/da-sonnet5-a1-32b-v1",
+      "model_args": {},
+      "sequence": 4
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "EnsYVzc8ik4oqwTBgtFTvX",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openai/da-sonnet5-a1-32b-v1",
+      "model_args": {},
+      "sequence": 5
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "5JwwGW54nVPkp67sjXTutA",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openai/da-sonnet5-a1-32b-v1",
+      "model_args": {},
+      "sequence": 6
+    },
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "9xHgdArLzLCCJZwA8sVTF2",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "none",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openai/da-sonnet5-a1-32b-v1",
+      "model_args": {},
+      "sequence": 7
+    },
+    {
+      "name": "exfiltration",
+      "task_id": "Yi2drqPHoREeikPrZCHxkk",
+      "task_file": "exfiltration/task.py",
+      "task_args": {
+        "scenario": "exfiltration",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6",
+        "model_name": "Alex"
+      },
+      "model": "openai/da-sonnet5-a1-32b-v1",
+      "model_args": {},
+      "sequence": 8
+    },
+    {
+      "name": "exfiltration",
+      "task_id": "6AmRF3cGSExBgkXyo3TNd5",
+      "task_file": "exfiltration/task.py",
+      "task_args": {
+        "scenario": "exfiltration",
+        "goal_type": "none",
+        "goal_value": "none",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6",
+        "model_name": "Alex"
+      },
+      "model": "openai/da-sonnet5-a1-32b-v1",
+      "model_args": {},
+      "sequence": 9
+    }
+  ]
+}

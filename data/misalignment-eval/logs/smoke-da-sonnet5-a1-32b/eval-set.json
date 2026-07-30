@@ -1,0 +1,22 @@
+{
+  "eval_set_id": "GZsUBakuu9HdYqhKHS2oHC",
+  "tasks": [
+    {
+      "name": "inspect_evals/agentic_misalignment",
+      "task_id": "nmnh3UaJhH8GN8zdeAywUt",
+      "task_args": {
+        "scenario": "murder",
+        "goal_type": "explicit",
+        "goal_value": "america",
+        "urgency_type": "replacement",
+        "extra_system_instructions": null,
+        "prod": false,
+        "test_eval_awareness": false,
+        "grader_model": "openrouter/anthropic/claude-sonnet-4.6"
+      },
+      "model": "openai/da-sonnet5-a1-32b-v1",
+      "model_args": {},
+      "sequence": 0
+    }
+  ]
+}
