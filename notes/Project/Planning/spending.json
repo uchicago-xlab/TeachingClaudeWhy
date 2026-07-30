@@ -152,6 +152,26 @@
       "allocationId": null
     },
     {
+      "id": "aw-sdf-eval-grading",
+      "date": "2026-07-28",
+      "what": "OpenRouter — MSM agentic-misalignment eval grading (Sonnet 4.6 grader), 2026-07-27/28: 14 eval runs x 180 samples (5 models replacement, 3 extra-epoch rounds, 5 models restriction slice, r128 arm). Delta on key usage counter ($267.76 total - $237.03 logged).",
+      "who": "Anastasia",
+      "amount": 30.73,
+      "approx": false,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-sdf-pods",
+      "date": "2026-07-28",
+      "what": "RunPod — SDF experiment pods, 2026-07-27/28: tcw-sdf-r128 (2xA100 SXM @ $2.98/h, ~19h: r128 two-stage training incl. 4 crash-debug restarts, merge, self-served eval) + tcw-sdf-eval (1xA100 @ $1.49/h, ~9.5h: vLLM multi-LoRA serving for 13 eval runs). Both terminated 2026-07-28.",
+      "who": "Anastasia",
+      "amount": 72,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
+    },
+    {
       "id": "5792d183-5f99-4900-a858-d2f6a67a4f85",
       "date": "2026-07-21",
       "what": "Runpod -- Instruct fine-tuning",
@@ -410,6 +430,26 @@
       "approx": true,
       "status": "spent",
       "allocationId": "fdc396c1-f318-4a7d-aaa1-f2a6c95036bf"
+    },
+    {
+      "id": "aw-sdf-restr-pods",
+      "date": "2026-07-29",
+      "what": "RunPod — restriction-eval serving pods, 2026-07-28/29: tcw-restr-a2 (1xA100 PCIe @ $1.39/h, ~22h incl. ~10h lost to proxy-timeout stalls before SSH-tunnel fix) + tcw-restr-b2 (~1h, terminated for too-old NVIDIA driver) + crash-looping SXM pair (~40min). All terminated 2026-07-29.",
+      "who": "Anastasia",
+      "amount": 34,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
+    },
+    {
+      "id": "aw-sdf-restr-grading",
+      "date": "2026-07-29",
+      "what": "OpenRouter — Sonnet 4.6 grading for r128 restriction eval reruns 2026-07-28/29 (incl. partial graded samples from the two proxy-stalled attempts). Delta on key usage counter ($275.28 - $267.76).",
+      "who": "Anastasia",
+      "amount": 7.52,
+      "approx": false,
+      "status": "spent",
+      "allocationId": null
     }
   ]
 }

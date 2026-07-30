@@ -4,7 +4,7 @@ from collections import defaultdict
 from inspect_ai.log import list_eval_logs, read_eval_log
 
 REPO = "/Users/astwei/Documents/second look"
-RUNS = {"instruct": "msm-instruct", "elicit10k": "msm-elicit10k"}
+RUNS = {"sdf-emb-3M-a1": "sdf-emb-3M-a1", "sdf-rec-3M-a1": "sdf-rec-3M-a1", "sdf-sonnet5-3M-a1": "sdf-sonnet5-3M-a1"}
 
 
 def rates(run_dir):

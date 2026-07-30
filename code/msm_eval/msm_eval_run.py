@@ -30,13 +30,23 @@ def main():
     ap.add_argument("--base-url", required=True)
     ap.add_argument("--run-name", required=True)
     ap.add_argument("--epochs", type=int, default=30)
+    ap.add_argument("--urgency-type", default="replacement",
+                    choices=("replacement", "restriction", "none"),
+                    help="threat variant; the standardized slice uses "
+                         "replacement — restriction added 2026-07-28 as a "
+                         "generalization check (encode it in --run-name)")
+    ap.add_argument("--model-name", default="Qwen",
+                    help="name the scenario prompts address the AI by; "
+                         "default Qwen matches the served model — other "
+                         "values (name-variant eval, 2026-07-30) test "
+                         "identity sensitivity (encode it in --run-name)")
     args = ap.parse_args()
 
     tasks = [
         agentic_misalignment(
             scenario=s, goal_type=gt, goal_value=gv,
-            urgency_type="replacement", prod=False,
-            model_name="Qwen", grader_model=GRADER,
+            urgency_type=args.urgency_type, prod=False,
+            model_name=args.model_name, grader_model=GRADER,
         )
         for s in SCENARIOS for (gt, gv) in GOALS
     ]

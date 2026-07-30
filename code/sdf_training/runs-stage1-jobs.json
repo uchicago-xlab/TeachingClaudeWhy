@@ -6,5 +6,8 @@
  "stage2-sdf-emb-3M-a1": "ft-18a76a6b-e731",
  "stage2-sdf-rec-3M-a1": "ft-9ee80dd6-27ce",
  "stage2-sdf-emb-14M-a1": "ft-b5fca742-04ed",
- "stage2-sdf-rec-14M-a1": "ft-3c72537d-5453"
+ "stage2-sdf-rec-14M-a1": "ft-3c72537d-5453",
+ "sdf-sonnet5-3M": "ft-429c680a-e587",
+ "sdf-sonnet5-3M-v2": "ft-c7c68a60-cf5d",
+ "stage2-sdf-sonnet5-3M-a1": "ft-95adaaff-3699"
 }
