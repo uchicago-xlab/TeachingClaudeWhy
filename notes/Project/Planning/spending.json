@@ -330,6 +330,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
+    },
+    {
+      "id": "26916eac-c82d-4f55-b6bf-d366dbebcaa9",
+      "date": "2026-07-28",
+      "what": "Evals for difficult advice SFT (Sonnet 4.6 judge)",
+      "who": "Jack",
+      "amount": 29.1,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
     }
   ]
 }
