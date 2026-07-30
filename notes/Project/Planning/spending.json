@@ -350,6 +350,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
+    },
+    {
+      "id": "3002e47d-e825-44fe-a6bc-ff4f5ae43545",
+      "date": "2026-07-30",
+      "what": "Jack's Together finetuning credits",
+      "who": "Jack",
+      "amount": 100,
+      "approx": false,
+      "status": "allocated",
+      "allocationId": null
     }
   ]
 }
