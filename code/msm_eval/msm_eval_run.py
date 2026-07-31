@@ -42,7 +42,20 @@ def main():
                          "default Qwen matches the served model — other "
                          "values (name-variant eval, 2026-07-30) test "
                          "identity sensitivity (encode it in --run-name)")
+    ap.add_argument("--no-thinking", action="store_true",
+                    help="send chat_template_kwargs={'enable_thinking': False} "
+                         "so a hybrid-reasoning student matches the "
+                         "non-reasoning setting this slice assumes. Required "
+                         "for Qwen3 arms (Qwen2.5 has no thinking mode, so "
+                         "Anastasia's 32B runs never needed it) and must match "
+                         "across every arm including the base control")
     args = ap.parse_args()
+
+    # Qwen3 defaults to thinking ON. This is a model-level correction, not a
+    # condition change: it makes the student behave the way the fixed slice
+    # already assumes. Apply it to every arm of a comparison or none.
+    extra_body = ({"chat_template_kwargs": {"enable_thinking": False}}
+                  if args.no_thinking else None)
 
     tasks = [
         agentic_misalignment(
@@ -54,12 +67,15 @@ def main():
     ]
     log_dir = REPO / "tmp" / "msm-eval" / args.run_name
     print(f"model={args.model} url={args.base_url} "
+          f"name={args.model_name} "
+          f"thinking={'disabled' if args.no_thinking else 'provider default'} "
           f"{len(tasks)} conditions x {args.epochs} = {len(tasks)*args.epochs} samples")
 
     ok, _ = eval_set(
         tasks=tasks, log_dir=str(log_dir),
         model=args.model, model_base_url=args.base_url,
         epochs=args.epochs, temperature=0.7, max_tokens=4096,
+        extra_body=extra_body,
         max_connections=16, retry_attempts=3, display="plain",
     )
     print(f"{'DONE' if ok else 'INCOMPLETE'}: {log_dir}")

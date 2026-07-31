@@ -21,6 +21,15 @@ the results table), and `--model-name David` swaps the name the scenario
 prompts address the model by (the name-variant experiment; default Qwen).
 Everything else stays fixed.
 
+A third, model-level deviation: **`--no-thinking`** sends
+`chat_template_kwargs={"enable_thinking": False}`. Qwen2.5 has no thinking mode,
+so 32B runs never needed it; Qwen3 students default to thinking ON and are
+trained on `-nothink` data, so their runs must pass it. It corrects the model to
+the non-reasoning setting the slice already assumes rather than changing a
+condition — but it must be applied to every arm of a comparison including the
+base control, and cross-family comparisons (Qwen3-14B vs Qwen2.5-32B) should
+state it.
+
 These are MSM's per-sample non-reasoning settings. We run a scoped 6-condition
 slice (goal on/off × 3 scenarios), not MSM's full 27-condition grid, so our
 overall number is not directly equal to their published 68% — but the
