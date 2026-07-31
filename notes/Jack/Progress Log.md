@@ -21,6 +21,7 @@ Recap of what was done yesterday:
 - We confirmed that the "junk tokens" produced by instruct tuning Qwen 2.5 32B Base are not truncating responses; the initial evals we ran where the model reasoned forever without answering were due to two training runs fighting over the same LoRA adapter.
 
 **Basic to-dos:**
+- We caught a bug where Sonnet 5 may have written its responses with extended thinking disabled. Regenerate, re-finetune, re-evaluate.
 - Run the same training and evaluations on the A1 model once AW decides how we're going to do Qwen 2.5 finetuning from now on.
 - We were cut off from evaluating pure DeepSeek v4 Flash by a network error, so run that evaluation.
 - Evaluate the teacher models: are alignment of the teacher and alignment of the student correlated?
@@ -32,6 +33,21 @@ Recap of what was done yesterday:
   - Start with an 8% pilot.
   - Evaluate Terra itself, again to see teacher-student alignment correlation.
   - If comparable to Sonnet, then scale up to full size and produce a scaling plot. 
+
+**Speculative to-dos:**
+- Test the following 8% dataset conditions on whatever the most aligned 8% dataset pipeline was:
+  1. Urgency: moderate (default), extreme
+  2. Advising-only (default) vs. requests to take action
+  3. Consequentialist backfire vs. on-principle (default) reasoning
+  4. Collaborative deliberation (default) vs. prescriptive solutions
+  5. Realism & hallucination guards: on (default), off
+  6. No prompt revision ablation
+  7. No response revision ablation
+  8. No constitution in context, just "behave ethically" ablation
+    - Might need to be tested on a non-Claude model, since Claude models may have already internalized the constitution
+  9. Not advice, just ordinary conversations. Sanity check. (Is Qwen just learning "be more Claude-y", is it just downstream of distillation?)
+
+Some of these can be applied independently or combine; unsure of what the most principled procedure is for this kind of grid search, and it would blow up fast. My default would be to just run them individually, see which are most promising, and combine only those. Each condition would cost ~$45.
 
 
 ## 07/30
