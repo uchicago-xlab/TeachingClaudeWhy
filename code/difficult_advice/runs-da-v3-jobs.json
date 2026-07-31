@@ -1,8 +1,9 @@
 {
- "_note": "da-deepseek-v3 is pending: its dataset was still generating when this grid was launched (2026-07-31). Launch it with the identical command and the same v3 label, then add its job id here.",
+ "_note": "All six v3 arms launched. Identical hyperparameters: Qwen/Qwen3-14B, 4 epochs, LoRA r=64 alpha=128, assistant-only loss, packing on, 10% validation holdout. Consumers must skip keys starting with '_'.",
  "da-sonnet5-v3": "ft-785d7aca-ff05",
  "da-haiku45-v3": "ft-3cc21240-834f",
  "da-nano-v3": "ft-cbe90190-a4bb",
  "da-opus48-v3": "ft-a1dac4d3-b034",
- "da-hybrid-v3": "ft-698c18c3-41ff"
+ "da-hybrid-v3": "ft-698c18c3-41ff",
+ "da-deepseek-v3": "ft-c9ffe696-94ea"
 }

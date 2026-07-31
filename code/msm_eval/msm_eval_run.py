@@ -57,6 +57,24 @@ def main():
     extra_body = ({"chat_template_kwargs": {"enable_thinking": False}}
                   if args.no_thinking else None)
 
+    # Inspect's plain `openai/` provider SILENTLY DROPS extra_body: the value is
+    # recorded in the eval log's generate config, but never reaches the server,
+    # so the run produces full <think> blocks while claiming thinking is off.
+    # Verified 2026-07-31 against vLLM 0.26 — identical output with and without.
+    # `openai-api/<service>/<model>` does forward it (same finding as the
+    # decision log in code/serving/README.md). Fail loudly rather than emit a
+    # mislabeled run: a whole grid was evaluated with thinking ON before this
+    # guard existed, and nothing in the artifacts revealed it.
+    if args.no_thinking and args.model.startswith("openai/"):
+        sys.exit(
+            f"--no-thinking cannot work with the plain `openai/` provider: "
+            f"Inspect drops extra_body, so thinking would stay ON while the run "
+            f"claims otherwise.\n"
+            f"Use the openai-api form instead, e.g.:\n"
+            f"  --model openai-api/vllm/{args.model[len('openai/'):]}\n"
+            f"with VLLM_API_KEY set (and --base-url as normal)."
+        )
+
     tasks = [
         agentic_misalignment(
             scenario=s, goal_type=gt, goal_value=gv,
