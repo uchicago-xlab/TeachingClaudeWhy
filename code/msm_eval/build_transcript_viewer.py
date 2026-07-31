@@ -1,4 +1,4 @@
-"""Build a static HTML viewer for the MSM eval transcripts in tmp/msm-eval/.
+"""Build a static HTML viewer for the MSM eval transcripts in data/msm-eval/.
 
     .venv-inspect/bin/python code/msm_eval/build_transcript_viewer.py
 
@@ -18,7 +18,7 @@ from pathlib import Path
 from inspect_ai.log import list_eval_logs, read_eval_log
 
 REPO = Path(__file__).resolve().parents[2]
-EVAL_DIR = REPO / "tmp" / "msm-eval"
+EVAL_DIR = REPO / "data" / "msm-eval"
 OUT_DIR = REPO / "tmp" / "msm-eval-viewer"
 
 
@@ -170,7 +170,7 @@ INDEX_PAGE = """<meta charset="utf-8">
 <style>{css}</style>
 <div class="wrap">
 <h1>MSM eval transcripts</h1>
-<div class="sub">Generated from tmp/msm-eval by
+<div class="sub">Generated from data/msm-eval by
 code/msm_eval/build_transcript_viewer.py &mdash; re-run it after new evals.
 </div>
 <table>

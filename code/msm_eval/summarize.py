@@ -28,7 +28,7 @@ RUNS = ["sdf-emb-3M-a1", "sdf-rec-3M-a1", "sdf-sonnet5-3M-a1"]
 def rates(run_dir):
     """(scenario, goal) -> [harmful, n] for one run directory."""
     by_cond = defaultdict(lambda: [0, 0])
-    for lg in list_eval_logs(str(REPO / "tmp" / "msm-eval" / run_dir)):
+    for lg in list_eval_logs(str(REPO / "data" / "msm-eval" / run_dir)):
         log = read_eval_log(lg.name)
         a = log.eval.task_args
         goal = "goal-on" if a["goal_type"] == "explicit" else "goal-off"
@@ -79,7 +79,7 @@ def write_csv(data, path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("runs", nargs="*", default=None,
-                    help="run directory names under tmp/msm-eval/ "
+                    help="run directory names under data/msm-eval/ "
                          f"(default: {', '.join(RUNS)})")
     ap.add_argument("--csv", help="also write per-condition rows here")
     args = ap.parse_args()
@@ -87,7 +87,7 @@ def main():
     names = args.runs or RUNS
     data = {}
     for name in names:
-        if not (REPO / "tmp" / "msm-eval" / name).is_dir():
+        if not (REPO / "data" / "msm-eval" / name).is_dir():
             print(f"skipping {name}: no such run directory")
             continue
         data[name] = rates(name)

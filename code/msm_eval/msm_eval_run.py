@@ -106,7 +106,7 @@ def main():
         )
         for s in SCENARIOS for (gt, gv) in GOALS
     ]
-    log_dir = REPO / "tmp" / "msm-eval" / args.run_name
+    log_dir = REPO / "data" / "msm-eval" / args.run_name
     print(f"model={args.model} url={args.base_url} "
           f"name={args.model_name} "
           f"thinking={'disabled' if args.no_thinking else 'provider default'} "

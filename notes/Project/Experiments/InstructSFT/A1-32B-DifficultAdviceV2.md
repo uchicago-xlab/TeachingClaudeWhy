@@ -96,12 +96,15 @@ a FUSE-wedged process — SIGTERM is ignored, so use `timeout -k 30`.
 
 ## How to finish this — recommended order
 
+**UPDATE: Together may not be hosting Qwen 2.5 models anymore.** Blocker, requires a talk with the team.
+
 **Option A (recommended): stream the merge shard by shard.** Never hold or write
 a whole 32B. For each base shard: read it, apply that shard's LoRA deltas, write
 the merged shard, upload it, delete it. Peak RAM ~5GB, peak disk ~8GB, and it
 runs anywhere — including this workstation, which has 210GB free disk but only
 ~50GB free RAM (enough for streaming, not for the in-memory merge). This removes
 every failure above at once, since none of them involve a 65GB object.
+   - We did this, the merge is on HF, but then were unable to run a finetune because of Together.
 
 **Option B: avoid the merged model entirely.** Two rank-64 LoRAs over the same
 base compose exactly as one rank-128 LoRA — concatenate `B` column-wise and `A`
@@ -110,19 +113,4 @@ could be served on top of A1 with no merge. **Caveat that makes this a different
 experiment:** Together would then have to train DA over the plain base rather
 than over base+A1, so the DA gradient never sees A1's instruction-tuning. It
 preserves A1 exactly and answers "does a non-clobbering adapter behave better",
-but it is not the same arm. Your call, not mine.
-
-**Option C (cheap, needs no merge at all): re-measure v1 on the fixed slice.**
-Serve catalog `Qwen/Qwen2.5-32B` + the A1 adapter + the three existing v1 DA
-adapters — the exact configuration that worked on 07/28 — and run the fixed
-slice at temp 0.7, `model_name=Qwen`, `--stop-token-ids 151645`. Four runs,
-~$9 of grading, no training spend. It settles the 60%-vs-89% question in point 4
-and shows how much of the v1 collapse survives correct settings.
-
-## Pod state
-
-Still running and still owned by the teacher-grid session (`/root/POD_STATUS.md`
-says BUSY; its eval client has been alive 7.5h). Nothing of mine is left on the
-GPU. `/workspace` holds only the HF cache; the partial merge output was removed.
-**This session cannot stop or terminate pods** — no org RunPod API key — so it
-will still be billing when you read this.
+but it is not the same arm.

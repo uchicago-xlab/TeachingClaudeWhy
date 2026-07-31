@@ -13,7 +13,7 @@ _Building the base-start elicitation **control** for the SDF experiment (3.1.1):
 - **Within the agentic data, `apigen` (function-calling) is the driver, but it *saturates* around ~3.4k samples; `systemchats` (system-prompt adherence) is roughly neutral.** Reliability jumps between apigen 1.4k→3.4k, then plateaus (A1→P is flat); systemchats level barely matters at either apigen level. (Corrects an earlier "systemchats hurts / double dissociation" read.)
 - **Recipe for the SDF control: the `A1` mix — apigen ~3.4k at 13k total** (+ systemchats 1.8k + 7.8k fixed non-agentic core), 2 epochs. 89% acting / 88% on exfil+leak, matching instruct's disposition. It sits exactly at apigen saturation without wasting budget. `P` (apigen 4.4k) is statistically tied but spends extra apigen for no gain. Do **not** scale total past 13k (all 16k arms are worse — dilution) or add epochs.
 - **Use MSM's exfiltration scenario as the primary SDF metric.** Blackmail has zero headroom on Qwen (0%); exfiltration gives ~60–90% baseline to move.
-- Adapters on HF: `SecondLookResearch/Qwen2.5-32B-elicit-sft-{10k-v1,A1,A2,10k-3ep,P,S,T2}`. Eval logs: `tmp/msm-eval/msm-*`.
+- Adapters on HF: `SecondLookResearch/Qwen2.5-32B-elicit-sft-{10k-v1,A1,A2,10k-3ep,P,S,T2}`. Eval logs: `data/msm-eval/msm-*`.
 
 ## Metrics glossary
 

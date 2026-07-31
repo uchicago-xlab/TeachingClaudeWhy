@@ -4,7 +4,9 @@ status: active
 
 # Progress Log
 
-## 07/31
+## 07/30
+
+Claude's notes:
 
 Rebuilt the difficult-advice teacher grid as **v3**, this time with validation
 splits so the overfitting objection is answerable. Full writeup:
@@ -28,8 +30,7 @@ old-vintage-plus-QC split are the same split. Disentangling that is the next
 job and it needs data work, not more eval samples.
 
 **The persona/open-source confound did not replicate.** Renaming Qwen→Alex
-moves base 31.7%→36.1% (p=0.37) and sonnet5 not at all. Even exfiltration with
-goal conflict is ns. So that todo item comes back open.
+moves base 31.7%→36.1% (p=0.37) and sonnet5 not at all. Even exfiltration with goal conflict is ns. So that todo item comes back open.
 
 **Process failure worth remembering.** I ran the whole grid twice. The first
 8-run grid was invalid: Inspect's plain `openai/` provider silently drops

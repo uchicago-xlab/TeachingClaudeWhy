@@ -1,5 +1,5 @@
 """Regenerate the SDF-experiment results chart (results.png) and table from
-the MSM eval logs in tmp/msm-eval/.
+the MSM eval logs in data/msm-eval/.
 
 Run whenever new eval results land (needs the repo's inspect venv):
 
@@ -24,7 +24,7 @@ from inspect_ai.log import list_eval_logs, read_eval_log
 
 REPO = Path(__file__).resolve().parents[4]
 HERE = Path(__file__).resolve().parent
-EVAL_DIR = REPO / "tmp" / "msm-eval"
+EVAL_DIR = REPO / "data" / "msm-eval"
 
 # display name -> {slice: [run dirs pooled]}. Multiple dirs per slice pool
 # samples (e.g. the extra-epochs -r2 rounds).

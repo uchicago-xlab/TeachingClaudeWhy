@@ -122,7 +122,7 @@ Transcripts were read, not just scored.
 ## The thinking-ON incident
 
 An earlier, complete 8-run grid was **invalid** and is retained only as a
-secondary artifact (`tmp/msm-eval/*-THINKING-ON/`,
+secondary artifact (`data/msm-eval/*-THINKING-ON/`,
 `data/misalignment-eval/*-THINKING-ON.csv`).
 
 Inspect's plain `openai/` provider **silently drops `extra_body`**. The value

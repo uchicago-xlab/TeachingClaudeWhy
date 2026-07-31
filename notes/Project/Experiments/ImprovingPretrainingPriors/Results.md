@@ -109,7 +109,7 @@ is thinner (n=180/slice) than the tightened 3M arms.
 - Adapters (HF, `SecondLookResearch/`): `Qwen2.5-32B-sdf-{emb,rec}-{3M,14M}-a1`,
   `-sdf-sonnet5-3M-a1`, `-sdf-emb-14M-r128` (+ `-r128-a1`; reconstruction
   order in the model cards).
-- Eval logs: `tmp/msm-eval/` (gitignored; ~3.6k graded samples).
+- Eval logs: `data/msm-eval/` (gitignored; ~3.6k graded samples).
 - Training: W&B project `tcw-sdf`; job ids in `code/sdf_training/runs-stage1-jobs.json`.
 - SDF training files: `data/fictional-stories/corpus/sdf_train/`.
 - Costs: spending.json entries `aw-corpus-p1-pilot`, `aw-arm-topup`,

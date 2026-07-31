@@ -8,10 +8,10 @@ disposition (harm|acted), with A1 at 89% acting on the fixed slice.
 
 Takes log DIRECTORIES BY PATH, not run names, because the two harnesses in
 this repo write to different places (data/misalignment-eval/logs/<arm>/ for
-code/misalignment_eval, tmp/msm-eval/<run>/ for code/msm_eval).
+code/misalignment_eval, data/msm-eval/<run>/ for code/msm_eval).
 
     .venv-inspect/bin/python code/msm_eval/action_stats.py \
-        data/misalignment-eval/logs/openai-elicit-sft-A1 tmp/msm-eval/a1-32b-v2-control
+        data/misalignment-eval/logs/openai-elicit-sft-A1 data/msm-eval/a1-32b-v2-control
 """
 import argparse
 import re

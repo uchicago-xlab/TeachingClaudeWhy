@@ -56,6 +56,37 @@ Each stage is an independent script:
 4. Evals via `code/misalignment_eval/` — catalog LoRA outputs are servable
    on Together directly (`--model together/<output-model>`).
 
+## Merging an adapter into its base
+
+Training a second adapter *on top of* an elicitation checkpoint needs merged
+full weights: Together's `from_hf_model` pointed at a LoRA repo continues
+training that repo's own matrices rather than stacking a new adapter, which
+silently destroys the first finetune (`--merge-parent-adapter` looks like the
+fix, but the API stores `false` after accepting `true`). vLLM likewise wants a
+merged model as its serving base.
+
+Use `stream_merge_adapter.py`. It walks the base one shard at a time — read,
+apply that shard's LoRA deltas, write, next — so peak RAM is ~10GB and peak
+extra disk is one shard, and it runs on a workstation. Shard boundaries and
+tensor names survive the merge, so the base's index file is copied through.
+
+    python stream_merge_adapter.py --base Qwen/Qwen2.5-32B \
+        --adapter SecondLookResearch/Qwen2.5-32B-elicit-sft-A1 \
+        --out ~/models/a1-merged --eos-token-id 151645
+
+`--eos-token-id 151645` is not optional for anything derived from Qwen2.5
+**base**: its config lists only `<|endoftext|>` while the chat template ends
+turns with `<|im_end|>`, so generation runs past the turn boundary without it.
+Tokenizer and chat template are taken from the adapter repo, since a base model
+has none. The merge supports plain LoRA only and refuses dora/rslora/
+`modules_to_save` adapters rather than mis-merging them quietly.
+
+`merge_adapter.py` is the older whole-model version: it needs ~70GB of RAM and
+hands a 65GB write to `save_pretrained`, which never completed on a RunPod
+network volume (five separate failure modes, written up in
+`notes/Project/Experiments/InstructSFT/A1-32B-DifficultAdviceV2.md`). Prefer the
+streaming one.
+
 ## Reference points and costs
 
 MSM dataset scales: their base-model instruction tuning (§3, Llama-8B) was

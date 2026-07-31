@@ -81,7 +81,7 @@ ssh -f -N -L 8300:localhost:8000 -p <ssh-port> root@<pod-ip>
 .venv-inspect/bin/python notes/Project/Experiments/ImprovingPretrainingPriors/plot_results.py
 ```
 
-Logs land in `tmp/msm-eval/<run-name>/` (gitignored). Two runs can go
+Logs land in `data/msm-eval/<run-name>/` (gitignored via `data/`). Two runs can go
 concurrently against two pods. Log spend per repo convention.
 
 ## Baseline results on file (2026-07-26, n=30)
