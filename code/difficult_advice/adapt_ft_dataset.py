@@ -34,6 +34,7 @@ pure function of its input so it can be re-run after any such edit.
 
 import argparse
 import json
+import random
 from pathlib import Path
 
 from run_pipeline import model_identity
@@ -59,6 +60,22 @@ def adapt(record: dict, name: str, company: str, no_think: bool) -> dict:
     return {**record, "messages": messages}
 
 
+def split(records: list[dict], val_frac: float, seed: int) -> tuple[list[dict], list[dict]]:
+    """Deterministic (train, val) split.
+
+    Together reports eval loss only when a job has a validation file, which is
+    what lets us pick a checkpoint from the curve instead of guessing an epoch
+    count. At ~140 records a 10% holdout is ~14 rows: enough to see the loss
+    turn, not enough to quote as a metric.
+    """
+    if val_frac <= 0:
+        return list(records), []
+    shuffled = list(records)
+    random.Random(seed).shuffle(shuffled)
+    n_val = max(1, round(len(shuffled) * val_frac))
+    return shuffled[n_val:], shuffled[:n_val]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path, help="ft_dataset.jsonl to adapt")
@@ -75,6 +92,20 @@ def main() -> None:
         action="store_true",
         help="disable thinking: /no_think in the system turn, empty think block in the response",
     )
+    parser.add_argument(
+        "--val-out",
+        type=Path,
+        help="also write a held-out validation JSONL here (needs --val-frac)",
+    )
+    parser.add_argument(
+        "--val-frac",
+        type=float,
+        default=0.0,
+        help="fraction of records held out for validation (default 0: no holdout)",
+    )
+    parser.add_argument(
+        "--seed", type=int, default=0, help="shuffle seed for the train/val split"
+    )
     args = parser.parse_args()
 
     default_name, default_company = model_identity(args.student)
@@ -83,9 +114,13 @@ def main() -> None:
 
     records = [json.loads(line) for line in args.input.read_text().splitlines() if line.strip()]
     adapted = [adapt(r, name, company, args.no_think) for r in records]
-    args.output.write_text(
-        "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in adapted)
-    )
+    def write(path: Path, rows: list[dict]) -> None:
+        path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
+
+    train, val = split(adapted, args.val_frac if args.val_out else 0.0, args.seed)
+    write(args.output, train)
+    if val:
+        write(args.val_out, val)
 
     leftover = sum(
         m["content"].count("[MODEL]") + m["content"].count("[COMPANY]")
@@ -93,7 +128,9 @@ def main() -> None:
         for m in r["messages"]
     )
     thinking = "thinking off" if args.no_think else "thinking untouched"
-    print(f"{len(adapted)} records -> {args.output} ({name}/{company}, {thinking})")
+    print(f"{len(train)} records -> {args.output} ({name}/{company}, {thinking})")
+    if val:
+        print(f"{len(val)} records -> {args.val_out} (validation holdout)")
     if leftover:
         print(f"  warning: {leftover} placeholder(s) still unresolved")
 
