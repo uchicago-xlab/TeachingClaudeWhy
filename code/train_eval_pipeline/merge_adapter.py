@@ -34,6 +34,12 @@ def main():
     ap.add_argument("--base", required=True, help="base model repo id or path")
     ap.add_argument("--adapter", required=True, help="LoRA repo id or path")
     ap.add_argument("--out", required=True, type=Path, help="output directory")
+    ap.add_argument("--max-shard-size", default="4GB",
+                    help="shard size for the saved model. transformers 5 "
+                         "defaults to 50GB, i.e. one file for a 32B — which "
+                         "fails on a RunPod network volume with 'I/O error "
+                         "(os error 5)' ~50GB in, after the whole merge is "
+                         "done. Small shards also match what vLLM expects")
     ap.add_argument("--eos-token-id", type=int, default=None,
                     help="override generation_config.eos_token_id. Qwen2.5 "
                          "BASE lists only <|endoftext|> (151643) while the "
@@ -57,8 +63,9 @@ def main():
         model.config.eos_token_id = args.eos_token_id
         print(f"eos_token_id -> {args.eos_token_id}")
 
-    print(f"saving to {args.out} ...", flush=True)
-    model.save_pretrained(args.out, safe_serialization=True)
+    print(f"saving to {args.out} (shards <= {args.max_shard_size}) ...", flush=True)
+    model.save_pretrained(args.out, safe_serialization=True,
+                          max_shard_size=args.max_shard_size)
 
     # The tokenizer comes from the ADAPTER repo, not the base: a base model has
     # no chat template, and serving a chat checkpoint without one produces
