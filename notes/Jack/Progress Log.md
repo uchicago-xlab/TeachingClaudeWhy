@@ -4,6 +4,49 @@ status: active
 
 # Progress Log
 
+## 07/31
+
+Rebuilt the difficult-advice teacher grid as **v3**, this time with validation
+splits so the overfitting objection is answerable. Full writeup:
+[[DifficultAdviceTeacherGridV3]].
+
+Six datasets → six finetunes of Qwen3-14B, identical hyperparameters, measured
+on the msm_eval fixed slice (180 samples/arm). Five evaluated; the pure-DeepSeek
+arm is trained but not yet evaluated (the pod was gone before it could run).
+
+**Results (thinking OFF).** Base 31.7%. Only two arms move it: opus48 12.8%
+(p<0.0001) and sonnet5 17.2% (p=0.0014). haiku45 26.1% and nano 27.8% are not
+distinguishable from base; the Sonnet/DeepSeek hybrid trends *worse* at 40.6%
+(p=0.08). The nano null is consistent with what v1/v2 showed, so that puzzle
+stands rather than inverting.
+
+**But the result is confounded, and I don't think we can claim a teacher
+effect yet.** opus48 and sonnet5 are exactly the two datasets generated 07-23
+on the old prompt set *with* a pattern-detection QC pass; haiku45/nano/hybrid
+are the three generated 07-28+ without one. The split that works and the
+old-vintage-plus-QC split are the same split. Disentangling that is the next
+job and it needs data work, not more eval samples.
+
+**The persona/open-source confound did not replicate.** Renaming Qwen→Alex
+moves base 31.7%→36.1% (p=0.37) and sonnet5 not at all. Even exfiltration with
+goal conflict is ns. So that todo item comes back open.
+
+**Process failure worth remembering.** I ran the whole grid twice. The first
+8-run grid was invalid: Inspect's plain `openai/` provider silently drops
+`extra_body`, so `enable_thinking=False` never reached vLLM and every run
+executed with thinking ON while its logs recorded the setting as applied. I
+caught it by eye — `<think>` blocks in transcripts that shouldn't have had any.
+Nothing automated would have. It cost ~$18 of grading. `msm_eval_run.py` now
+refuses that combination outright. Older runs are unaffected — scanned all 16
+historical run dirs, 3,632 assistant messages, zero `<think>`; they already used
+the `openai-api/` form.
+
+Also lost ~$3 when a 60-minute DeepSeek generation died at 109/150 with no
+output, because `sample_prompts.py` only writes at the very end. Worth adding
+incremental checkpointing.
+
+Spend for the day ~$66 ($20.6 burned).
+
 ## 07/29
 
 After meeting with Stewy on the 28th, it seemed clear that I had kind of a messy setup and was not running nearly as many experiments in parallel as I could be. I took this day to experiment with some new workflows on a throwaway project, including adopting the Claude Code `superpowers` plugin which I found helpful; unfortunately there was a large CC outage which prevented me from testing further. Not the most productive day.
