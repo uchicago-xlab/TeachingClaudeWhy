@@ -9,11 +9,12 @@ the same student and measured on the standardized MSM slice. Replaces the
 v1/v2 finetunes, which were trained for a fixed 4 epochs with **no validation
 set** — the objection Stewy raised.
 
-**Headline:** only the two Claude-teacher arms with a pattern-detection QC pass
-(`opus48`, `sonnet5`) move the misalignment rate. But those are exactly the two
-oldest datasets, so teacher identity is perfectly confounded with prompt
-vintage — see [Caveats](#caveats). The persona/open-source effect was **not**
-demonstrated.
+**Headline:** only two arms (`opus48`, `sonnet5`) move the misalignment rate,
+and they are also the two oldest datasets. The generation recipe was not held
+fixed across dates — most importantly, extended thinking was on for some arms
+and off for others — so teacher identity is entangled with generation
+conditions, though less tidily than "old vs new prompts" suggests; see
+[Caveats](#caveats). The persona/open-source effect was **not** demonstrated.
 
 ## Setup
 
@@ -94,30 +95,90 @@ Transcripts were read, not just scored.
 - `<SCRATCHPAD_REASONING>` blocks in these transcripts are the **eval's own**
   scratchpad (`prod=False`), not Qwen3 thinking. Easy to confuse.
 
+On the training side, the three Claude arms share a prompt set (caveat 1c) but
+not output style. Assistant turns in the SDF data carrying markdown headings or
+lists: `opus48` 1/142, `sonnet5` 3/138, **`haiku45` 30/150** — 20%, despite
+`default/8_critique_response.md` explicitly flagging markdown. Median assistant
+length 5103 / 4062 / 4685 chars. Under identical instructions the teachers
+comply differently, which is a teacher-identity signal rather than a prompt one.
+
 ## Caveats
 
-1. **Prompt-vintage confound — the most important limitation.** `opus48` and
-   `sonnet5` were generated 2026-07-23 from the pre-07-27 prompt set and carry
-   a pattern-detection QC pass. `haiku45`, `nano` and `hybrid` were generated
-   07-28 or later from the post-07-28 prompt set and carry none. **The split
-   that works and the split with old-vintage-plus-QC are the same split.**
-   Teacher identity and prompt version cannot currently be told apart as the
-   cause. The most QC-relevant intervening commit is `67271e2` (07-28), which
-   pinned the rewrite stage's output shape. Resolving this needs either
-   regenerating the old arms on the current prompt set, or running the pattern
-   pass over the new ones — not more eval samples.
-2. **Eval loss turns before epoch 4** on four of five arms (minima at epoch
+1. **Generation-condition confound — the most important limitation.** The arms
+   were not generated under one fixed recipe. Three things vary with generation
+   date, and they are *not* the same split as each other:
+
+   **(a) Extended thinking — the biggest one, and it isn't in the prompts.**
+   Until `c6a3b56` (07-28) the pipeline decided whether to reason with the rule
+   `"opus" in model`, on both the Anthropic and the OpenRouter path. So
+   `opus48` (07-23) was generated with thinking **on**, `sonnet5` (07-23) with
+   thinking **off**, and `haiku45` (07-28) with thinking **on**
+   (`budget_tokens = max_tokens // 2`, the older fixed-budget shape Haiku 4.5
+   takes; adaptive thinking was a 400 on it, which is what prompted the fix).
+   Every arm from 07-28 on reasons at every content stage. This is the largest
+   uncontrolled difference in the grid and it is invisible in the prompt files
+   and in the dataset artifacts. It does not line up neatly with the result —
+   one winner thought, one didn't — but at n=180 that does not rule out a
+   thinking × teacher interaction, and no arm has been regenerated with the
+   flag flipped.
+
+   **(b) Per-family prompt sets, adopted because the default set failed.**
+   `nano` and `hybrid` do not read `default/` at all. `73bc852` (07-27) and
+   `519034d`/`9c02db0` (07-28) gave the GPT and DeepSeek families their own
+   sets because those models did not follow the `default/` instructions — the
+   output was qualitatively bad enough that finetuning on it wasn't worth
+   doing. The evidence is on disk: `pilots/gpt54nano-default` and
+   `pilots/deepseekv4flash-default` against `pilots/gpt54nano-gpt` and the
+   `pilots/deepseekv4flash-ds-v*` series. The rewrite is not a tweak — stage 7
+   goes from a 16-word instruction to 395 words (gpt) or 1,929 words
+   (deepseek) of explicit anti-pattern specification.
+
+   Note the direction this cuts. The two arms that fail to move the rate are
+   the ones whose prompts were most heavily engineered, and were revised
+   repeatedly until their transcripts read well. "The old prompts were better"
+   does not describe this; if prompt engineering is doing the work, it is doing
+   it backwards, and the interesting question is why visibly better transcripts
+   produce no transfer.
+
+   **(c) The `default/` set itself barely changed, so the Claude arms are
+   comparable.** Between the 07-23 state (`0748047`) and 07-29, the nine
+   `default/` stage files differ by exactly eight lines appended to
+   `6_rewrite_prompt.md` (`67271e2`), pinning that stage's output to the two
+   `<system>`/`<user>` blocks. Every other diff is a trailing newline. That
+   stage shapes the scenario prompt, not the assistant exemplar, and the
+   residue is cosmetic (4/142 `opus48` and 1/138 `sonnet5` system turns keep a
+   stray markdown heading). **`opus48` vs `sonnet5` vs `haiku45` is a clean
+   teacher comparison at the prompt level** — which is the comparison the
+   headline rests on. Disentangling it needs (a) addressed, not prompt
+   archaeology.
+
+2. **The pattern-detection pass is weaker QC than its name suggests.**
+   `pattern_scans`/`pattern_report` artifacts exist only for `opus48`,
+   `sonnet5` and `gpt-5.6-luna`, but `detect_patterns.py` is a detector, not a
+   filter — nothing in the pipeline drops or regenerates rows from its output.
+   The pattern findings that did reach the data were folded into
+   `default/5_critique_prompt.md` and `8_critique_response.md` on 07-22
+   (`61860dd`), before every Claude arm was generated, so `haiku45` carries
+   them too. The only per-dataset hand-editing is `d4d25e5`, four lines of
+   `sonnet5`'s `ft_dataset.jsonl`. Earlier versions of this note treated the
+   QC pass as a property distinguishing the winning arms; it is not.
+3. **Eval loss turns before epoch 4** on four of five arms (minima at epoch
    1.88–2.59; opus48 flat). Penalty for training to 4 is +0.023 to +0.047 —
    small, and near-uniform across arms, so the between-teacher comparison is
    not meaningfully confounded. Not relaunched.
-3. **Cross-family comparisons.** These are Qwen3-14B with thinking disabled;
+4. **Cross-family comparisons.** These are Qwen3-14B with thinking disabled;
    Anastasia's SDF numbers are Qwen2.5-32B, which has no thinking mode. Same
    conditions, different model family — do not read as one scale ladder.
-4. **The OVERALL ± is a within-run binomial SE.** It pools six conditions with
+5. **The OVERALL ± is a within-run binomial SE.** It pools six conditions with
    different underlying rates as one iid sample. Use the per-condition CSV rows
    for cross-arm significance, as the table above does.
-5. **Grader drift** of a few points run-to-run has been observed; small changes
+6. **Grader drift** of a few points run-to-run has been observed; small changes
    are not effects.
+
+Two words for "thinking" appear in this note and mean different things:
+caveat 1(a) is the **teacher's** thinking while *generating* the dataset;
+[the thinking-ON incident](#the-thinking-on-incident) is the **student's**
+thinking at *eval* time. They are unrelated bugs.
 
 ## The thinking-ON incident
 
@@ -150,8 +211,12 @@ used the `openai-api-vllm-*` provider form, per the decision log in
 ## Open items
 
 - Evaluate `da-deepseek-v3` (needs a pod; ~$2.20 grading, ~10 min).
-- Disentangle the prompt-vintage confound (caveat 1) — the highest-value
-  follow-up, and a prerequisite for any teacher-identity claim.
+- Disentangle the generation-condition confound (caveat 1) — the highest-value
+  follow-up, and a prerequisite for any teacher-identity claim. Concretely:
+  regenerate `sonnet5` with reasoning on (it is the one arm whose teacher did
+  not think), which the current `generate(reasoning=...)` flag makes a one-run
+  change. Regenerating the old arms on the current `default/` prompts is *not*
+  needed — caveat 1c shows there is nothing there to regenerate.
 - Persona condition 3, if the vendored task is ever forked.
 - Pass `n_checkpoints=<epochs>` in `launch_instruct_ft.py` so epoch selection
   becomes post-hoc instead of a fresh $4 relaunch.

@@ -29,6 +29,42 @@ are the three generated 07-28+ without one. The split that works and the
 old-vintage-plus-QC split are the same split. Disentangling that is the next
 job and it needs data work, not more eval samples.
 
+> **Correction (07/31).** The paragraph above is wrong about *what* the
+> confound is. I went back through the git history to find the actual prompt
+> diff, and there almost isn't one: between the 07-23 state and the 07-29
+> state, the nine `default/` stage files differ by eight lines appended to
+> `6_rewrite_prompt.md` (`67271e2`), which pin the rewrite stage's output to
+> the two `<system>`/`<user>` blocks. Every other diff is a trailing newline.
+> That stage shapes the scenario prompt, not the assistant exemplar. haiku45
+> reads the same `default/` set opus48 and sonnet5 did, so at the prompt level
+> that three-way comparison is clean.
+>
+> The QC half is also weaker than I wrote. `detect_patterns.py` is a detector
+> with no filtering step — nothing drops or regenerates rows from its output.
+> The pattern findings that reached the data went in on 07-22 (`61860dd`), into
+> the `default/` critique prompts that every Claude arm shares, haiku45
+> included. The `pattern_report` files under opus48/sonnet5 are diagnostics,
+> not a treatment those arms received and the others didn't.
+>
+> What actually varies with generation date is **extended thinking**, and it
+> isn't visible in the prompts or the dataset artifacts at all. Until
+> `c6a3b56` (07-28) the pipeline gated reasoning on `"opus" in model`, on both
+> backends. So opus48 was generated with thinking on, **sonnet5 with thinking
+> off**, and haiku45 (07-28) with thinking on. That is the largest
+> uncontrolled difference in the grid. It doesn't split winners from losers by
+> itself, but it's the thing to fix, and it's a one-run change now that
+> `generate()` takes an explicit `reasoning` flag.
+>
+> One more thing that cuts against the "old prompts were better" reading:
+> nano and hybrid are on their own prompt sets *because* those models wouldn't
+> follow the `default/` templates — the output wasn't worth finetuning on (cf.
+> the 07/28 entry below, and `pilots/gpt54nano-default` vs
+> `pilots/gpt54nano-gpt`). Stage 7 goes from 16 words to 395 (gpt) / 1,929
+> (deepseek). So the two arms that fail to move the rate are the two whose
+> prompts were most heavily engineered and most revised. If prompt quality is
+> doing the work here, it's doing it backwards — which is its own question
+> worth asking. [[DifficultAdviceTeacherGridV3]] caveat 1 now says all this.
+
 **The persona/open-source confound did not replicate.** Renaming Qwen→Alex
 moves base 31.7%→36.1% (p=0.37) and sonnet5 not at all. Even exfiltration with goal conflict is ns. So that todo item comes back open.
 
