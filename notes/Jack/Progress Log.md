@@ -4,6 +4,36 @@ status: active
 
 # Progress Log
 
+## 07/31
+
+Recap of what was done yesterday:
+- With validation sets to check overfitting, on Anastasia's msm evals, we tested the main the Qwen 3 14B adapters for misalignment.
+  - Base: 31.7%
+  - Opus 4.8: 12.8%
+  - Sonnet 5: 17.2%
+  - Haiku 4.5: 26.1% (n.s.)
+  - 5.4 Nano: 27.8% (n.s.)
+  - DeepSeek v4 Flash + Sonnet hybrid: 40.6% (n.s.)
+- We tried "Alex" vs. "Qwen"
+  - Base: +4.4 pp (n.s.)
+  - Sonnet 5: -0.6 pp (n.s.)
+- We uploaded a merged Qwen 2.5 32B A1 model to huggingface so we could LoRA train on it without two things fighting for the same adapter. However, Together doesn't appear to be hosting Qwen 2.5 models anymore, so we weren't able to finetune on this yet.
+- We confirmed that the "junk tokens" produced by instruct tuning Qwen 2.5 32B Base are not truncating responses; the initial evals we ran where the model reasoned forever without answering were due to two training runs fighting over the same LoRA adapter.
+
+**Basic to-dos:**
+- Run the same training and evaluations on the A1 model once AW decides how we're going to do Qwen 2.5 finetuning from now on.
+- We were cut off from evaluating pure DeepSeek v4 Flash by a network error, so run that evaluation.
+- Evaluate the teacher models: are alignment of the teacher and alignment of the student correlated?
+- Create the full-sized Sonnet 5 dataset.
+  - Sanity check: recreate the current 8% to make sure slight differences in prompts don't wipe out gains.
+- Create a scaling plot with the Sonnet 5 dataset.
+- Create a GPT 5.6 Terra dataset.
+  - Rationale: models weaker than Sonnet don't do very well, Claude family or not. We need a model comparable in intelligence to Sonnet which is not from the Claude family.
+  - Start with an 8% pilot.
+  - Evaluate Terra itself, again to see teacher-student alignment correlation.
+  - If comparable to Sonnet, then scale up to full size and produce a scaling plot. 
+
+
 ## 07/30
 
 Claude's notes:
