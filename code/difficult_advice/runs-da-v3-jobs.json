@@ -1,0 +1,8 @@
+{
+ "_note": "da-deepseek-v3 is pending: its dataset was still generating when this grid was launched (2026-07-31). Launch it with the identical command and the same v3 label, then add its job id here.",
+ "da-sonnet5-v3": "ft-785d7aca-ff05",
+ "da-haiku45-v3": "ft-3cc21240-834f",
+ "da-nano-v3": "ft-cbe90190-a4bb",
+ "da-opus48-v3": "ft-a1dac4d3-b034",
+ "da-hybrid-v3": "ft-698c18c3-41ff"
+}

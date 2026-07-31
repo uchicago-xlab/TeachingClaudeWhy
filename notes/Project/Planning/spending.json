@@ -480,6 +480,16 @@
       "approx": false,
       "status": "allocated",
       "allocationId": null
+    },
+    {
+      "id": "d4f1bc76-33fd-4412-8120-f981a325987b",
+      "date": "2026-07-31",
+      "what": "Together — difficult-advice teacher-grid v3 finetunes: 5 LoRA jobs on Qwen3-14B (da-sonnet5/haiku45/nano/opus48/hybrid -v3), r=64, 4 epochs, packing on, validation file + n_evals=10. Each billed the $4 tier minimum (total_price 4e9 nanodollars). The 6th arm (da-deepseek-v3) is pending its dataset and will add ~$4.",
+      "who": "Jack",
+      "amount": 20.0,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "edc7c907-0e09-45d9-8154-2d2b4a7fc135"
     }
   ]
 }
