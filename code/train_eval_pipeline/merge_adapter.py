@@ -15,7 +15,9 @@ serving someone else's eval.
         --out /workspace/a1-merged --eos-token-id 151645
 """
 import argparse
+import gc
 import json
+import shutil
 from pathlib import Path
 
 import torch
@@ -34,6 +36,15 @@ def main():
     ap.add_argument("--base", required=True, help="base model repo id or path")
     ap.add_argument("--adapter", required=True, help="LoRA repo id or path")
     ap.add_argument("--out", required=True, type=Path, help="output directory")
+    ap.add_argument("--free-cache-after-merge", type=Path, default=None,
+                    help="delete this directory once the merge is in RAM, "
+                         "before saving. A RunPod network volume is quota'd "
+                         "(~100GB observed) and cannot hold both a 32B cache "
+                         "and a 32B output, which fails as 'Disk quota "
+                         "exceeded (os error 122)' partway through the save. "
+                         "Weights are cloned into anonymous memory first, "
+                         "because unlinking a file that is still mmap'd frees "
+                         "no space until the mapping goes away")
     ap.add_argument("--max-shard-size", default="4GB",
                     help="shard size for the saved model. transformers 5 "
                          "defaults to 50GB, i.e. one file for a 32B — which "
@@ -63,14 +74,28 @@ def main():
         model.config.eos_token_id = args.eos_token_id
         print(f"eos_token_id -> {args.eos_token_id}")
 
+    # Load the tokenizer BEFORE any cache is freed. It comes from the ADAPTER
+    # repo, not the base: a base model has no chat template, and serving a chat
+    # checkpoint without one produces prompts the model was never trained on.
+    tok = AutoTokenizer.from_pretrained(args.adapter)
+
+    if args.free_cache_after_merge:
+        # Detach every tensor from the memory-mapped checkpoint files. Without
+        # this the rmtree below reclaims nothing: the blocks stay allocated
+        # until the last mapping is dropped, and the save fails on quota
+        # exactly as before. Doubles peak RAM briefly, which is free on a box
+        # with 2TB.
+        print("cloning weights out of the mmap ...", flush=True)
+        for tensor in list(model.parameters()) + list(model.buffers()):
+            tensor.data = tensor.data.clone()
+        gc.collect()
+        print(f"freeing {args.free_cache_after_merge} ...", flush=True)
+        shutil.rmtree(args.free_cache_after_merge, ignore_errors=True)
+
     print(f"saving to {args.out} (shards <= {args.max_shard_size}) ...", flush=True)
     model.save_pretrained(args.out, safe_serialization=True,
                           max_shard_size=args.max_shard_size)
 
-    # The tokenizer comes from the ADAPTER repo, not the base: a base model has
-    # no chat template, and serving a chat checkpoint without one produces
-    # prompts the model was never trained on.
-    tok = AutoTokenizer.from_pretrained(args.adapter)
     tok.save_pretrained(args.out)
 
     cfg = json.loads((args.out / "config.json").read_text())
