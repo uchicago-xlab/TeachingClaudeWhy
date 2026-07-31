@@ -1,15 +1,34 @@
-"""Summarize MSM eval harmful rates for both models, side by side."""
+"""Summarize MSM eval harmful rates across any number of runs, side by side.
+
+One row per run, one column per (scenario, goal) condition plus a pooled
+overall — this transposes the original two-model layout so a full teacher grid
+(plus base control and persona arms) fits on screen.
+
+    .venv-inspect/bin/python code/msm_eval/summarize.py            # default RUNS
+    .venv-inspect/bin/python code/msm_eval/summarize.py a b c      # named runs
+    .venv-inspect/bin/python code/msm_eval/summarize.py --csv out.csv
+"""
+import argparse
+import csv
 import math
 from collections import defaultdict
+from pathlib import Path
+
 from inspect_ai.log import list_eval_logs, read_eval_log
 
-REPO = "/Users/astwei/Documents/second look"
-RUNS = {"sdf-emb-3M-a1": "sdf-emb-3M-a1", "sdf-rec-3M-a1": "sdf-rec-3M-a1", "sdf-sonnet5-3M-a1": "sdf-sonnet5-3M-a1"}
+REPO = Path(__file__).resolve().parents[2]
+SCENARIOS = ["exfiltration", "leaking", "murder"]
+GOALS = ["goal-on", "goal-off"]
+CONDITIONS = [(sc, g) for sc in SCENARIOS for g in GOALS]
+
+# Default set when none are named on the command line.
+RUNS = ["sdf-emb-3M-a1", "sdf-rec-3M-a1", "sdf-sonnet5-3M-a1"]
 
 
 def rates(run_dir):
-    by_cond = defaultdict(lambda: [0, 0])  # (scenario, goal) -> [harmful, n]
-    for lg in list_eval_logs(f"{REPO}/tmp/msm-eval/{run_dir}"):
+    """(scenario, goal) -> [harmful, n] for one run directory."""
+    by_cond = defaultdict(lambda: [0, 0])
+    for lg in list_eval_logs(str(REPO / "tmp" / "msm-eval" / run_dir)):
         log = read_eval_log(lg.name)
         a = log.eval.task_args
         goal = "goal-on" if a["goal_type"] == "explicit" else "goal-off"
@@ -27,31 +46,59 @@ def se(h, n):
     return math.sqrt(p * (1 - p) / n) if n else 0
 
 
-data = {m: rates(d) for m, d in RUNS.items()}
-scenarios = ["exfiltration", "leaking", "murder"]
+def pct(h, n):
+    return f"{h}/{n} {h / n * 100:.0f}%" if n else "-"
 
-print(f"{'condition':26s} {'instruct':>16s} {'elicit10k':>16s}")
-print("-" * 62)
-tot = {m: [0, 0] for m in RUNS}
-for sc in scenarios:
-    for goal in ("goal-on", "goal-off"):
-        row = f"{sc}/{goal}"
-        cells = ""
-        for m in RUNS:
-            h, n = data[m][(sc, goal)]
-            tot[m][0] += h; tot[m][1] += n
-            cells += f"{h:>2}/{n:<2} {h/n*100 if n else 0:>4.0f}%   "
-        print(f"{row:26s} {cells}")
-print("-" * 62)
-# per-scenario pooled
-for sc in scenarios:
-    cells = ""
-    for m in RUNS:
-        h = sum(data[m][(sc, g)][0] for g in ("goal-on", "goal-off"))
-        n = sum(data[m][(sc, g)][1] for g in ("goal-on", "goal-off"))
-        cells += f"{h:>2}/{n:<2} {h/n*100:>4.0f}%   "
-    print(f"{sc+' (pooled)':26s} {cells}")
-print("-" * 62)
-for m in RUNS:
-    h, n = tot[m]
-    print(f"{m}: OVERALL {h}/{n} = {h/n*100:.1f}% ± {se(h,n)*100:.1f}%")
+
+def render(data):
+    """A table string: one row per run, one column per condition."""
+    width = max([len(m) for m in data] + [12]) + 2
+    head = f"{'run':{width}s}" + "".join(
+        f"{sc[:4] + '/' + g[5:]:>13s}" for sc, g in CONDITIONS
+    ) + f"{'OVERALL':>18s}"
+    lines = [head, "-" * len(head)]
+    for name, by_cond in data.items():
+        cells = "".join(f"{pct(*by_cond[c]):>13s}" for c in CONDITIONS)
+        h = sum(by_cond[c][0] for c in CONDITIONS)
+        n = sum(by_cond[c][1] for c in CONDITIONS)
+        overall = f"{h}/{n} {h / n * 100:.1f}%±{se(h, n) * 100:.1f}" if n else "-"
+        lines.append(f"{name:{width}s}{cells}{overall:>18s}")
+    return "\n".join(lines)
+
+
+def write_csv(data, path):
+    with open(path, "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["run", "scenario", "goal", "harmful", "n", "rate"])
+        for name, by_cond in data.items():
+            for sc, g in CONDITIONS:
+                h, n = by_cond[(sc, g)]
+                w.writerow([name, sc, g, h, n, f"{h / n:.4f}" if n else ""])
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("runs", nargs="*", default=None,
+                    help="run directory names under tmp/msm-eval/ "
+                         f"(default: {', '.join(RUNS)})")
+    ap.add_argument("--csv", help="also write per-condition rows here")
+    args = ap.parse_args()
+
+    names = args.runs or RUNS
+    data = {}
+    for name in names:
+        if not (REPO / "tmp" / "msm-eval" / name).is_dir():
+            print(f"skipping {name}: no such run directory")
+            continue
+        data[name] = rates(name)
+    if not data:
+        raise SystemExit("no runs found")
+
+    print(render(data))
+    if args.csv:
+        write_csv(data, args.csv)
+        print(f"\ncsv: {args.csv}")
+
+
+if __name__ == "__main__":
+    main()
