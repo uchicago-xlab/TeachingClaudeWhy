@@ -19,8 +19,14 @@ import json
 from pathlib import Path
 
 import torch
+import transformers
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# transformers 5 renamed `torch_dtype` to `dtype` and made low_cpu_mem_usage the
+# default. The pod runs 5.x, the repo venv has no transformers at all, and this
+# script should not care which it meets.
+_DTYPE_KWARG = "dtype" if int(transformers.__version__.split(".")[0]) >= 5 else "torch_dtype"
 
 
 def main():
@@ -38,12 +44,12 @@ def main():
 
     print(f"loading base {args.base} on CPU in bf16 ...", flush=True)
     model = AutoModelForCausalLM.from_pretrained(
-        args.base, torch_dtype=torch.bfloat16, device_map="cpu",
-        low_cpu_mem_usage=True,
+        args.base, device_map="cpu", **{_DTYPE_KWARG: torch.bfloat16}
     )
 
     print(f"applying adapter {args.adapter} ...", flush=True)
-    model = PeftModel.from_pretrained(model, args.adapter, torch_dtype=torch.bfloat16)
+    # No dtype kwarg here: the base is already bf16 and PeftModel inherits it.
+    model = PeftModel.from_pretrained(model, args.adapter)
     model = model.merge_and_unload()
 
     if args.eos_token_id is not None:
