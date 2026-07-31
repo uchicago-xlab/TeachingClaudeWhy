@@ -17,7 +17,9 @@ serving someone else's eval.
 import argparse
 import gc
 import json
+import os
 import shutil
+import time
 from pathlib import Path
 
 import torch
@@ -29,6 +31,57 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 # default. The pod runs 5.x, the repo venv has no transformers at all, and this
 # script should not care which it meets.
 _DTYPE_KWARG = "dtype" if int(transformers.__version__.split(".")[0]) >= 5 else "torch_dtype"
+
+
+def save_sharded(model, out, max_bytes, pause):
+    """Write safetensors shards one at a time, syncing and pausing between.
+
+    transformers' own save_pretrained writes as fast as the kernel will take
+    it — ~1.1 GB/s on this pod — and the RunPod MooseFS mount wedges partway
+    through a 65GB model, blocking forever in the FUSE request path. The same
+    volume sustains ~290 MB/s indefinitely (a 64GB model download does it
+    every time), so the fix is to stop bursting: one shard, fsync, breathe.
+    """
+    from safetensors.torch import save_file
+
+    out.mkdir(parents=True, exist_ok=True)
+    state = model.state_dict()
+
+    # safetensors refuses tensors that share storage (e.g. tied embeddings),
+    # so give any duplicate its own copy rather than dropping a weight.
+    seen, tensors = {}, {}
+    for key, value in state.items():
+        ptr = value.data_ptr()
+        tensors[key] = value.clone() if ptr in seen else value
+        seen.setdefault(ptr, key)
+
+    shards, current, current_bytes = [], {}, 0
+    for key, value in tensors.items():
+        nbytes = value.numel() * value.element_size()
+        if current and current_bytes + nbytes > max_bytes:
+            shards.append(current)
+            current, current_bytes = {}, 0
+        current[key] = value
+        current_bytes += nbytes
+    if current:
+        shards.append(current)
+
+    total, weight_map = 0, {}
+    for i, shard in enumerate(shards, 1):
+        name = f"model-{i:05d}-of-{len(shards):05d}.safetensors"
+        save_file({k: v.contiguous() for k, v in shard.items()},
+                  str(out / name), metadata={"format": "pt"})
+        for key, value in shard.items():
+            weight_map[key] = name
+            total += value.numel() * value.element_size()
+        os.sync()
+        print(f"  shard {i}/{len(shards)} -> {name}", flush=True)
+        time.sleep(pause)
+
+    (out / "model.safetensors.index.json").write_text(json.dumps(
+        {"metadata": {"total_size": total}, "weight_map": weight_map}, indent=2))
+    model.config.save_pretrained(out)
+    model.generation_config.save_pretrained(out)
 
 
 def main():
@@ -51,6 +104,9 @@ def main():
                          "fails on a RunPod network volume with 'I/O error "
                          "(os error 5)' ~50GB in, after the whole merge is "
                          "done. Small shards also match what vLLM expects")
+    ap.add_argument("--shard-pause", type=float, default=6.0,
+                    help="seconds to wait after each shard, to keep a FUSE "
+                         "network volume from wedging under burst writes")
     ap.add_argument("--eos-token-id", type=int, default=None,
                     help="override generation_config.eos_token_id. Qwen2.5 "
                          "BASE lists only <|endoftext|> (151643) while the "
@@ -92,9 +148,10 @@ def main():
         print(f"freeing {args.free_cache_after_merge} ...", flush=True)
         shutil.rmtree(args.free_cache_after_merge, ignore_errors=True)
 
-    print(f"saving to {args.out} (shards <= {args.max_shard_size}) ...", flush=True)
-    model.save_pretrained(args.out, safe_serialization=True,
-                          max_shard_size=args.max_shard_size)
+    print(f"saving to {args.out} (shards <= {args.max_shard_size}, "
+          f"{args.shard_pause}s between) ...", flush=True)
+    gb = float(args.max_shard_size.upper().rstrip("GB") or 4)
+    save_sharded(model, args.out, int(gb * 1e9), args.shard_pause)
 
     tok.save_pretrained(args.out)
 
