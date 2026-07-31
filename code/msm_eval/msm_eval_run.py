@@ -49,13 +49,31 @@ def main():
                          "for Qwen3 arms (Qwen2.5 has no thinking mode, so "
                          "Anastasia's 32B runs never needed it) and must match "
                          "across every arm including the base control")
+    ap.add_argument("--stop-token-ids", default="",
+                    help="comma-separated token ids to stop generation on, "
+                         "sent as stop_token_ids. Required for checkpoints "
+                         "built on the Qwen2.5 BASE models: their "
+                         "generation_config lists only <|endoftext|> (151643) "
+                         "as eos while the chat template ends assistant turns "
+                         "with <|im_end|> (151645), so without it a sample can "
+                         "run past the turn boundary and burn max_tokens on "
+                         "junk. Pass 151645 for those, and match it across "
+                         "every arm like --no-thinking")
     args = ap.parse_args()
 
-    # Qwen3 defaults to thinking ON. This is a model-level correction, not a
-    # condition change: it makes the student behave the way the fixed slice
-    # already assumes. Apply it to every arm of a comparison or none.
-    extra_body = ({"chat_template_kwargs": {"enable_thinking": False}}
-                  if args.no_thinking else None)
+    # Both switches are model-level corrections, not condition changes: they
+    # make the student behave the way the fixed slice already assumes. Apply
+    # each to every arm of a comparison or to none. Built as one dict so the
+    # two compose — a Qwen3 checkpoint trained from a base model would need
+    # both at once.
+    extra_body = {}
+    if args.no_thinking:
+        extra_body["chat_template_kwargs"] = {"enable_thinking": False}
+    if args.stop_token_ids:
+        extra_body["stop_token_ids"] = [
+            int(t) for t in args.stop_token_ids.split(",") if t.strip()
+        ]
+    extra_body = extra_body or None
 
     # Inspect's plain `openai/` provider SILENTLY DROPS extra_body: the value is
     # recorded in the eval log's generate config, but never reaches the server,
@@ -65,11 +83,16 @@ def main():
     # decision log in code/serving/README.md). Fail loudly rather than emit a
     # mislabeled run: a whole grid was evaluated with thinking ON before this
     # guard existed, and nothing in the artifacts revealed it.
-    if args.no_thinking and args.model.startswith("openai/"):
+    if extra_body and args.model.startswith("openai/"):
+        dropped = " and ".join(
+            f"--{f}" for f, on in (("no-thinking", args.no_thinking),
+                                   ("stop-token-ids", bool(args.stop_token_ids)))
+            if on
+        )
         sys.exit(
-            f"--no-thinking cannot work with the plain `openai/` provider: "
-            f"Inspect drops extra_body, so thinking would stay ON while the run "
-            f"claims otherwise.\n"
+            f"{dropped} cannot work with the plain `openai/` provider: "
+            f"Inspect drops extra_body, so the setting never reaches the server "
+            f"while the run claims otherwise.\n"
             f"Use the openai-api form instead, e.g.:\n"
             f"  --model openai-api/vllm/{args.model[len('openai/'):]}\n"
             f"with VLLM_API_KEY set (and --base-url as normal)."
@@ -87,6 +110,7 @@ def main():
     print(f"model={args.model} url={args.base_url} "
           f"name={args.model_name} "
           f"thinking={'disabled' if args.no_thinking else 'provider default'} "
+          f"stop_token_ids={args.stop_token_ids or '(provider default eos)'} "
           f"{len(tasks)} conditions x {args.epochs} = {len(tasks)*args.epochs} samples")
 
     ok, _ = eval_set(

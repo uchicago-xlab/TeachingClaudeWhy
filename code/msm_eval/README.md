@@ -30,6 +30,16 @@ condition — but it must be applied to every arm of a comparison including the
 base control, and cross-family comparisons (Qwen3-14B vs Qwen2.5-32B) should
 state it.
 
+A fourth, model-level deviation: **`--stop-token-ids 151645`**. Checkpoints
+built on the Qwen2.5 **base** models list only `<|endoftext|>` (151643) as eos
+in their `generation_config`, while the chat template ends assistant turns with
+`<|im_end|>` (151645) — so without it a sample can run past the turn boundary
+and burn `max_tokens` on junk. Every A1-derived 32B checkpoint needs it; the
+Qwen3-14B arms, which are instruct models, do not. Like `--no-thinking` it must
+be applied to every arm of a comparison including the base control, and it
+rides in the same `extra_body`, so the same guard rejects it on the plain
+`openai/` provider.
+
 These are MSM's per-sample non-reasoning settings. We run a scoped 6-condition
 slice (goal on/off × 3 scenarios), not MSM's full 27-condition grid, so our
 overall number is not directly equal to their published 68% — but the
