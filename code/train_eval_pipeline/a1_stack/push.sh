@@ -1,0 +1,26 @@
+#!/bin/bash
+# Copy the stack + data + keys to a pod created by create_pod.sh.  Usage:
+#   KEYS_FILE=~/path/to/.keys bash push.sh <name>
+# <name> is the pod name given to create_pod.sh (reads .pods/<name>.env).
+# KEYS_FILE must be a file that exports HF_TOKEN and WANDB_API_KEY.
+set -euo pipefail
+NAME="${1:?usage: push.sh <pod-name>}"
+DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$DIR/.pods/$NAME.env"
+: "${KEYS_FILE:?set KEYS_FILE to the file defining HF_TOKEN and WANDB_API_KEY (e.g. the repo .env)}"
+grep -q HF_TOKEN "$KEYS_FILE" || { echo "$KEYS_FILE does not define HF_TOKEN"; exit 1; }
+
+# Ship ONLY the two keys the pod needs — never the whole .env (Together/
+# OpenRouter keys have no business on a rented machine).
+KEYS_TMP=$(mktemp)
+trap 'rm -f "$KEYS_TMP"' EXIT
+grep -E '^(export )?(HF_TOKEN|WANDB_API_KEY)=' "$KEYS_FILE" > "$KEYS_TMP"
+
+SSH_OPTS=(-P "$SSH_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null)
+scp "${SSH_OPTS[@]}" \
+  "$DIR/setup.sh" "$DIR/train.sh" "$DIR/train_trl.py" "$DIR/check_junk.py" \
+  "$DIR/a1_lora_r64.yaml" "$DIR/ds_z3.json" "$DIR/dataset_info.json" \
+  "$DIR/../mix-a1-clean.jsonl" \
+  "root@$SSH_IP:/root/"
+scp "${SSH_OPTS[@]}" "$KEYS_TMP" "root@$SSH_IP:/root/.keys"
+echo "pushed to $NAME ($SSH_IP:$SSH_PORT)"

@@ -1,0 +1,61 @@
+# A1 elicitation SFT — "repair 1" run: packed + trainable token tables.
+#
+# Root cause found 2026-08-02 (QwenLM/Qwen3#1064): Qwen2.5 BASE ships identical
+# untrained embedding/lm_head rows for the ChatML specials incl. <|im_end|>; a
+# LoRA that freezes those tables cannot make the terminator selectable, so the
+# model sprays random cluster-mates ("confetti") instead of stopping. Fix: put
+# LoRA adapters ON embed_tokens and lm_head (per-row deltas break the tie).
+# NOT additional_target/modules_to_save: full-table copies trip DeepSpeed
+# ZeRO-3's uniform-dtype assert under LF's fp32 upcast, and LF forbids the
+# pure_bf16 workaround with ZeRO-3. Packing restored: our packed/unpacked A/B
+# showed identical contamination, so packing is not the established cause, and
+# packed trains in ~51 min vs 3.5 h.
+#
+# NOTE: the resulting adapter contains full token tables (~3GB) — vLLM cannot
+# apply it live; MERGE into the base before serving/junk-testing.
+
+### model
+model_name_or_path: Qwen/Qwen2.5-32B
+trust_remote_code: true
+
+### method
+stage: sft
+do_train: true
+finetuning_type: lora
+lora_rank: 64
+lora_alpha: 128
+lora_dropout: 0.0
+lora_target: q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj,embed_tokens,lm_head   # tables get LoRA too
+
+### dataset
+dataset: a1_mix
+dataset_dir: /workspace/data
+template: qwen
+cutoff_len: 8192
+train_on_prompt: false
+packing: true
+neat_packing: true
+overwrite_cache: true
+preprocessing_num_workers: 16
+
+### output
+output_dir: /workspace/out/a1-fix1
+logging_steps: 5
+save_steps: 100
+save_only_model: true
+plot_loss: true
+overwrite_output_dir: true
+report_to: wandb
+run_name: a1-lf-fix1-r64
+
+### train
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 1     # 8-way; train.sh-equivalent manual launch keeps eff. batch 8
+learning_rate: 1.0e-4
+num_train_epochs: 2.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.03
+bf16: true
+flash_attn: fa2                    # switched to fa3 by the FA3 experiment if it works
+gradient_checkpointing: true
+deepspeed: /root/ds_z3.json

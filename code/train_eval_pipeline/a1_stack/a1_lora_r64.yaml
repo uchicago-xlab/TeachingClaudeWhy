@@ -1,0 +1,52 @@
+# A1 elicitation SFT — LLaMA-Factory arm.
+# Qwen2.5-32B BASE (not -Instruct), LoRA r64/a128/dropout0, assistant-only loss,
+# contamination-free packing via neat_packing (block-diagonal attention per
+# packed example — naive packing is the end-of-turn junk-token suspect).
+# gradient_accumulation_steps is topology-dependent and is set by train.sh
+# (effective batch stays 8 sequences for any GPU count).
+
+### model
+model_name_or_path: Qwen/Qwen2.5-32B
+trust_remote_code: true
+
+### method
+stage: sft
+do_train: true
+finetuning_type: lora
+lora_rank: 64
+lora_alpha: 128
+lora_dropout: 0.0
+lora_target: all
+
+### dataset
+dataset: a1_mix
+dataset_dir: /workspace/data
+template: qwen                 # ChatML; assistant turns end with <|im_end|> (151645)
+cutoff_len: 8192               # length probe: only 2/13000 conversations clip
+train_on_prompt: false         # assistant-only loss
+packing: true
+neat_packing: true             # required with packing: true — never naive-pack
+overwrite_cache: true
+preprocessing_num_workers: 16
+
+### output
+output_dir: /workspace/out/a1-lf
+logging_steps: 5
+save_steps: 100                # ~274 total steps; mid-run checkpoints so a crash doesn't lose the run
+save_only_model: true          # adapter-only checkpoints, no optimizer state
+plot_loss: true
+overwrite_output_dir: true
+report_to: wandb
+run_name: a1-lf-neatpack-r64
+
+### train
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 2   # overridden by train.sh to 8 / n_gpus
+learning_rate: 1.0e-4
+num_train_epochs: 2.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.03
+bf16: true
+flash_attn: fa2                  # required by neat_packing
+gradient_checkpointing: true
+deepspeed: /root/ds_z3.json      # our own file — never depend on paths inside the LF repo

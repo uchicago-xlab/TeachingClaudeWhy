@@ -540,6 +540,86 @@
       "date": "2026-07-31",
       "who": "Jack",
       "allocationId": "edc7c907-0e09-45d9-8154-2d2b4a7fc135"
+    },
+    {
+      "id": "aw-rw14M-and-namevariant-grading",
+      "date": "2026-07-30",
+      "what": "OpenRouter \u2014 2026-07-30: (a) 14M ablation-arm rewrites, gpt-5.4-nano, 12k stories human+zephyrix + 426-row repair pass (~$40); (b) Sonnet 4.6 grading for the 11 name-variant eval runs on sdf-rec-14M-a1 (Qwen/David/Goliath/Sophia/Claude x repl+restr, incl. sophia rerun after tunnel-stall kill) (~$25). Exact combined delta on key usage counter ($341.90 - $277.08).",
+      "who": "Anastasia",
+      "amount": 64.83,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-07"
+    },
+    {
+      "id": "aw-protagonist-ablation-training",
+      "date": "2026-07-30",
+      "what": "Together \u2014 protagonist-ablation arms, 2026-07-30: human + Zephyrix 14M rewrite corpora through the standard two-stage recipe (stage-1 SDF ~14M tok + stage-2 A1 SFT 9.2M tok each), 4 LoRA jobs, $1.50/M, from per-job token counts.",
+      "who": "Anastasia",
+      "amount": 70.76,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-07"
+    },
+    {
+      "id": "aw-protagonist-ablation-eval",
+      "date": "2026-07-30",
+      "what": "Protagonist-ablation evals, 2026-07-30: OpenRouter Sonnet 4.6 grading for 4 runs (human/zephyrix x repl/restr, $7.24 exact key-counter delta) + RunPod tcw-sdf-eval2 1xA100 PCIe $1.39/h ~7.5h (~$10.5, served name-variant + ablation evals; terminated 2026-07-30 ~20:15).",
+      "who": "Anastasia",
+      "amount": 17.74,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
+    },
+    {
+      "id": "aw-zephyrix-name-test",
+      "date": "2026-07-31",
+      "what": "Trained-protagonist name test: 4 eval runs (zephyrix-14M-a1 + emb-14M-a1, each addressed as 'Zephyrix', replacement+restriction) \u2014 OpenRouter Sonnet 4.6 grading ~$9 at the observed $1.8-2.2/run rate + RunPod tcw-zeph-name-eval 1xA100 PCIe $1.39/h ~1.6h (~$2.2, terminated 2026-07-31 17:50). NOTE: this key's total usage today was $47.03; ~$38 of that is NOT attributable to these runs and may come from another session or user of the key \u2014 worth checking the OpenRouter dashboard.",
+      "who": "Anastasia",
+      "amount": 11.2,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
+    },
+    {
+      "id": "aw-a1-stack-h100-day",
+      "date": "2026-07-31",
+      "what": "RunPod \u2014 A1 own-hardware training stack day (a1_stack rewrite): pod a1-lf 8xH100-SXM ~$23.9/h, 13:53-22:45 CDT incl. one restart (~8.7h billed, ~$208) + pod a1-trl 2xA100-SXM $2.98/h 13:53-15:13 (~$4). Ran: neat-packed A1 SFT (contaminated), no-pack A1 SFT retrain (ALSO contaminated - base-start suspected), r128 anchor re-verification (clean), DDP/cache A/B smokes, 5 failed TRL smoke debugging attempts (transformers 5.14.1 eager-attention fallback + unresolved OOM), ~$10 of my own errors (runaway full-run relaunch, zombie-process reruns). NEITHER new adapter pushed as usable; neatpack kept on HF marked CONTAMINATED. Pod a1-lf STOPPED not terminated (per AW) - still bills ~$2/day for 300GB volume until terminated or resumed.",
+      "who": "Anastasia",
+      "amount": 212,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
+    },
+    {
+      "id": "a9758830-862d-4d8b-9e5e-6e29f164c2db",
+      "date": "2026-08-01",
+      "what": "OpenRouter \u2014 scaling-law arm generation to ~116M tokens/arm (3.1.1), 2026-07-31/08-01: gpt-5.4-nano, 44,014 embodiment (~110.6M tokens) + 44,010 recitation (~102.9M tokens) stories from fresh seed-2000/3000 v4.4 prompt streams, July-25 top-up recipe (pretend frame, headroom 2.8). Exact key-counter delta $632.12 - $355.66 pre-run.",
+      "who": "Anastasia",
+      "amount": 276.46,
+      "approx": false,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-a1-tablefix-day",
+      "date": "2026-08-02",
+      "what": "RunPod \u2014 a1-fix1 repair day: pod bmsg8y72luulm1 8xH100 resumed ~13:10, stopped ~16:15 CDT (~3.1h, ~$74). Root cause of confetti found via community reports (Qwen2.5 base ships untrained/tied embedding+lm_head rows for ChatML specials; linear-only LoRA cannot select <|im_end|>). Fix: LoRA on embed_tokens+lm_head. Trained packed 53min/loss 0.74, strict junk test CLEAN (0/120 foreign, 118/120 stops), released as elicit-A1-tablefix. Also found+fixed vLLM stop-token measurement artifact (base generation_config beats --override-generation-config; stop ids now per-request). FA3/CUDA-13: kernel verified fwd+bwd on H100, blocked at LF<->transformers<->kernels version matrix, recipe documented for later. Pod STOPPED not terminated (per AW), ~$2/day volume.",
+      "who": "Anastasia",
+      "amount": 74,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
+    },
+    {
+      "id": "aw-fa3-validation-session",
+      "date": "2026-08-02",
+      "what": "RunPod \u2014 FA3/CUDA-13 environment completion (per AW): pod bmsg8y72luulm1 8xH100 resumed ~2h (~$48). Outcome: FA3 training env WORKS end-to-end (torch 2.13+cu130, transformers 5.14.1, kernels 0.15.2, LF 0.9.5 + 3 documented patches, all encoded as setup.sh lf-fa3 arm). Correctness proven: exact packed-segment isolation (logit diff 0.0000). Speed verdict: NO gain over FA2 at 8192-ctx ZeRO-3 (11.0 vs 11.1 s/step) \u2014 attention is a small share of step time; revisit for 16k+ contexts. Debug chain: LF metadata pins -> transformers 5.6.0/kernels API break -> resolved-kernel-name string mismatch in LF collator (dense 4D mask -> 120GiB allocs) -> segment-mask unpad. Pod STOPPED again (~$2/day volume).",
+      "who": "Anastasia",
+      "amount": 48,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
     }
   ]
 }
