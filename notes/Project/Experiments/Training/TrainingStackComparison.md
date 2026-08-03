@@ -1,7 +1,10 @@
 ---
-status: active
+status: superseded
 ---
 
+> **Superseded 2026-08-03.** July stack survey for a possible B200/gemma-4 direction;
+> the project went LLaMA-Factory-on-RunPod instead. Kept as reference — the packing
+> and correctness analysis aged well. Current: [TrainingPlaybook.md](TrainingPlaybook.md).
 # Training-Stack Comparison: Production SFT Setup for ~32B Models on B200
 
 **Decision to make:** which training stack to build our instruction fine-tuning (SFT) setup on.

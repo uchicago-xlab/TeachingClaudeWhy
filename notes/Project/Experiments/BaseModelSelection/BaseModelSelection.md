@@ -1,7 +1,9 @@
 ---
-status: active
+status: resolved
 ---
 
+> **Resolved.** Choice: Qwen2.5-32B base (see the TCW replication notes). The Olmo-3
+> evaluation that fed this decision: [evaluationolmo3initial100k.md](evaluationolmo3initial100k.md).
 # base-model-selection
 
 _2026-07-09_

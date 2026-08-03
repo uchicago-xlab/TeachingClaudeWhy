@@ -1,6 +1,6 @@
 # Prebaked training image for the sft_training: kills the ~25-minute per-pod
 # dependency install (the largest fixed cost of every run — see
-# notes/Project/Experiments/TogetherTrainingSpeed.md).
+# notes/Project/Experiments/Training/TrainingPlaybook.md).
 #
 # Bakes the two proven environments on the image's local disk:
 #   /opt/v      training (FA2/cu124 lane: torch 2.6.0, LF 0.9.5, transformers

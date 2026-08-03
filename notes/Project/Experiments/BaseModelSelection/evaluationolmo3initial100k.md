@@ -1,7 +1,9 @@
 ---
-status: active
+status: superseded
 ---
 
+> **Superseded.** Olmo-3 direction was dropped when Qwen2.5-32B was chosen
+> ([BaseModelSelection.md](BaseModelSelection.md)).
 # EvaluationOlmo3Initial100k
 
 _2026-07-23_

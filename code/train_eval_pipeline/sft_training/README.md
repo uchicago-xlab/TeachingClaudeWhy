@@ -8,7 +8,7 @@ with 3% warmup, 2 epochs, cutoff 8192, effective batch 8, neat_packing, and
 base ships tied untrained rows for the ChatML special tokens, and a linear-only
 LoRA cannot learn to emit `<|im_end|>` — every base-start SFT without it produced
 the end-of-turn confetti artifact. Full story:
-`notes/Project/Experiments/A1TerminatorContamination.md`.
+`notes/Project/Experiments/Training/A1TerminatorContamination.md`.
 (`a1_lora_r64.yaml` is that broken linear-only recipe, kept for comparison runs.)
 
 Every finished adapter must pass `check_junk.py` (strict: foreign-script-anywhere,

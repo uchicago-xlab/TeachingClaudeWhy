@@ -1,7 +1,9 @@
 ---
-status: active
+status: superseded
 ---
 
+> **Superseded 2026-08-03.** Historical record of the July TRL/Olmo-era pipeline.
+> Current training documentation: [TrainingPlaybook.md](TrainingPlaybook.md).
 # Supervised Finetuning Pipeline
 
 _2026-07-14_

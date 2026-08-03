@@ -82,4 +82,4 @@ Loose end: an `elicit-A1-trlpack` repo exists in the org that none of these runs
 created — check for a parallel session before reusing the name.
 
 Speed/infra findings from the same days (FA3, memory ledger, cold-start image):
-TogetherTrainingSpeed.md. Stack: `code/train_eval_pipeline/sft_training/`.
+TrainingPlaybook.md. Stack: `code/train_eval_pipeline/sft_training/`.

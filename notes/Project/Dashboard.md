@@ -31,7 +31,9 @@ milestones, deadlines, key links._
 
 ## Working docs
 
-- Base model selection: [[BaseModelSelection]]
-- Training stack comparison: [[TrainingStackComparison]]
-- Supervised finetuning pipeline: [[SupervisedFinetuningPipeline]]
+- Training playbook (current): [[TrainingPlaybook]]
+- Confetti incident record: [[A1TerminatorContamination]]
+- Base model selection (resolved): [[BaseModelSelection]]
+- Training stack comparison (superseded): [[TrainingStackComparison]]
+- Supervised finetuning pipeline (superseded): [[SupervisedFinetuningPipeline]]
 - Agentic misalignment evals: [[AgenticMisalignmentEvals]]
