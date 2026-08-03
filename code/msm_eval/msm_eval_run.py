@@ -121,6 +121,11 @@ def main():
         max_connections=16, retry_attempts=3, display="plain",
     )
     print(f"{'DONE' if ok else 'INCOMPLETE'}: {log_dir}")
+    if ok:  # keep the transcript viewer current (incremental, non-fatal)
+        import subprocess
+        subprocess.run(
+            [sys.executable, str(Path(__file__).parent / "build_transcript_viewer.py"),
+             "--eval-dir", str(log_dir.parent)], check=False)
     sys.exit(0 if ok else 1)
 
 
