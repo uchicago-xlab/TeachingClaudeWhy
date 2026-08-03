@@ -620,6 +620,16 @@
       "approx": true,
       "status": "spent",
       "allocationId": "seed-07"
+    },
+    {
+      "id": "aw-image-smoke-test",
+      "date": "2026-08-03",
+      "what": "RunPod \u2014 prebaked-image validation: pod img-test 1xA100-SXM ~25 min (~$1.25). Result: ghcr.io/anastasiakwei/sft-training:v1 pulls anonymously, setup.sh fast path fires (BAKED-IMAGE), full setup in 104 seconds vs ~25 minutes on the stock image. Terminated immediately.",
+      "who": "Anastasia",
+      "amount": 1.25,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
     }
   ]
 }

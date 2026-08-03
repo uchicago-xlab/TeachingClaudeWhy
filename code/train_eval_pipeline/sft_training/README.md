@@ -40,8 +40,11 @@ at the top of the Dockerfile.
 ```bash
 cd code/train_eval_pipeline/sft_training
 
-# 1. Create a pod (waits for SSH; self-terminates if the host never publishes it):
-bash create_pod.sh a1 8 --gpu-type h100     # 8-way or wider on 80GB cards — 4-way OOMs
+# 1. Create a pod (waits for SSH; self-terminates if the host never publishes it).
+#    Use the prebaked image — validated 2026-08-03: setup drops from ~25 min to ~2 min:
+IMAGE_NAME=ghcr.io/anastasiakwei/sft-training:v1 \
+  bash create_pod.sh a1 8 --gpu-type h100   # 8-way or wider on 80GB cards — 4-way OOMs
+# (omit IMAGE_NAME to fall back to the stock RunPod image + full installs)
 
 # 2. Push code + data + keys:
 KEYS_FILE=~/path/to/.env bash push.sh a1

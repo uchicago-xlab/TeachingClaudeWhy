@@ -38,6 +38,9 @@ RUN pip install -q uv && \
 RUN uv venv /opt/serve --python 3.11 && \
     uv pip install --python /opt/serve/bin/python vllm openai "transformers==4.51.3" setuptools peft
 
-# Import gate at build time — a broken image fails the build, not a $24/h pod.
-RUN /opt/v/bin/python -c "import torch, flash_attn, deepspeed, llamafactory" && \
-    /opt/serve/bin/python -c "import vllm, openai, peft"
+# Install gate at build time — a broken image fails the build, not a $24/h pod.
+# Presence/version checks only: full imports (triton, vllm) require a GPU
+# driver, which build machines don't have. setup.sh runs the real import gate
+# on the pod.
+RUN /opt/v/bin/python -c "import torch; import importlib.metadata as m; print([f'{p}={m.version(p)}' for p in ('flash_attn','deepspeed','llamafactory','transformers')])" && \
+    /opt/serve/bin/python -c "import openai, peft; import importlib.metadata as m; print('vllm', m.version('vllm'))"
