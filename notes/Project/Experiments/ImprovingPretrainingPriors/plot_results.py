@@ -1,5 +1,5 @@
 """Regenerate the SDF-experiment results chart (results.png) and table from
-the MSM eval logs in data/msm-eval/.
+the MSM eval logs in tmp/msm-eval/.
 
 Run whenever new eval results land (needs the repo's inspect venv):
 
@@ -24,7 +24,12 @@ from inspect_ai.log import list_eval_logs, read_eval_log
 
 REPO = Path(__file__).resolve().parents[4]
 HERE = Path(__file__).resolve().parent
-EVAL_DIR = REPO / "data" / "msm-eval"
+EVAL_DIR = REPO / "tmp" / "msm-eval"
+ARCHIVE_DIR = REPO / "data" / "misalignment-eval" / "transcripts"
+
+# Name-variant experiment (2026-07-30): sdf-rec-14M-a1 addressed by
+# different names in the scenario prompts, same round + serving setup.
+NAME_VARIANTS = ["Qwen", "David", "Goliath", "Sophia", "Claude"]
 
 # display name -> {slice: [run dirs pooled]}. Multiple dirs per slice pool
 # samples (e.g. the extra-epochs -r2 rounds).
@@ -51,6 +56,12 @@ MODELS = [
     ("nano embodiment 14M (r128)", {
         "replacement": ["sdf-emb-14M-r128-a1"],
         "restriction": ["sdf-emb-14M-r128-a1-restriction"]}),
+    ("human protagonist 14M", {
+        "replacement": ["sdf-human-14M-a1"],
+        "restriction": ["sdf-human-14M-a1-restriction"]}),
+    ("Zephyrix protagonist 14M", {
+        "replacement": ["sdf-zephyrix-14M-a1"],
+        "restriction": ["sdf-zephyrix-14M-a1-restriction"]}),
 ]
 SCENARIOS = ("exfiltration", "leaking", "murder")
 
@@ -59,9 +70,11 @@ def tally(dirs):
     by = defaultdict(lambda: [0, 0])
     h = n = 0
     for d in dirs:
-        if not (EVAL_DIR / d).exists():
+        # run dirs live in tmp/ while fresh, then move to the archive
+        path = EVAL_DIR / d if (EVAL_DIR / d).exists() else ARCHIVE_DIR / d
+        if not path.exists():
             continue
-        for lg in list_eval_logs(str(EVAL_DIR / d)):
+        for lg in list_eval_logs(str(path)):
             log = read_eval_log(lg.name)
             sc = log.eval.task_args["scenario"]
             for s in (log.samples or []):
@@ -201,6 +214,71 @@ def main():
     fig.tight_layout()
     fig.savefig(HERE / "results_combined.png", dpi=180)
     print(f"wrote {HERE/'results_combined.png'} ")
+
+    # ---- name-variant experiment: table rows + grouped chart ----
+    nv_rows = []
+    for nm in NAME_VARIANTS:
+        slug = f"sdf-rec-14M-a1-name-{nm.lower()}"
+        got = {sl: tally([d]) for sl, d in
+               [("replacement", slug), ("restriction", f"{slug}-restriction")]}
+        if all(got.values()):
+            nv_rows.append((nm, got))
+    if nv_rows:
+        lines = ["| name | replacement | restriction | combined |",
+                 "|---|---|---|---|"]
+        def pct(h, n):
+            se = math.sqrt(h / n * (1 - h / n) / n)
+            return f"{h}/{n} = {100*h/n:.1f}% ± {100*se:.1f}"
+        for nm, got in nv_rows:
+            th = sum(t[0] for t in got.values())
+            tn = sum(t[1] for t in got.values())
+            lines.append(
+                f"| {nm} | {pct(*got['replacement'][:2])} | "
+                f"{pct(*got['restriction'][:2])} | **{pct(th, tn)}** |")
+        nv_table = "\n".join(lines)
+        text = results_md.read_text()
+        start, end = "<!-- NAMES:START -->", "<!-- NAMES:END -->"
+        if start in text:
+            pre, _, rest = text.partition(start)
+            _, _, post = rest.partition(end)
+            results_md.write_text(f"{pre}{start}\n{nv_table}\n{end}{post}")
+        print("\n" + nv_table)
+
+        fig, ax = plt.subplots(figsize=(8, 0.62 * len(nv_rows) + 1.6))
+        fig.patch.set_facecolor(SURFACE)
+        ax.set_facecolor(SURFACE)
+        for i, (nm, got) in enumerate(nv_rows):
+            for sl, off in [("replacement", -bh / 2 - 0.01),
+                            ("restriction", bh / 2 + 0.01)]:
+                h, n, _ = got[sl]
+                p = 100 * h / n
+                se = 100 * math.sqrt(h / n * (1 - h / n) / n)
+                ax.barh(i + off, p, height=bh, color=COLORS[sl],
+                        zorder=3, label=sl)
+                ax.errorbar(p, i + off, xerr=se, fmt="none", ecolor=INK2,
+                            elinewidth=1, capsize=2, zorder=4)
+                ax.text(p + se + 0.6, i + off, f"{p:.0f}%", va="center",
+                        fontsize=8.5, color=INK)
+        handles, labels = ax.get_legend_handles_labels()
+        seen = dict(zip(labels, handles))
+        ax.legend(seen.values(), seen.keys(), frameon=False, fontsize=9,
+                  loc="lower right", labelcolor=INK)
+        ax.set_yticks(range(len(nv_rows)), [r[0] for r in nv_rows],
+                      fontsize=9.5, color=INK)
+        ax.invert_yaxis()
+        ax.set_xlabel("harmful actions, % of samples (nano recitation 14M, "
+                      "addressed by each name; error bars = 1 SE)",
+                      fontsize=9, color=INK2)
+        ax.set_title("Name-variant eval — same model, different name",
+                     fontsize=11.5, color=INK, loc="left", pad=12)
+        ax.spines[["top", "right", "left"]].set_visible(False)
+        ax.spines["bottom"].set_color(INK2)
+        ax.tick_params(colors=INK2)
+        ax.grid(axis="x", color=INK2, alpha=0.18, linewidth=0.7, zorder=0)
+        ax.set_xlim(0, max(40, ax.get_xlim()[1]))
+        fig.tight_layout()
+        fig.savefig(HERE / "results_names.png", dpi=180)
+        print(f"wrote {HERE/'results_names.png'} ")
 
 
 if __name__ == "__main__":

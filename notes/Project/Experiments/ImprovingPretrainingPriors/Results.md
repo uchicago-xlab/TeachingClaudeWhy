@@ -48,6 +48,12 @@ place between the TABLE markers) with:
 | **nano embodiment 14M (r128)** | replacement | 27% | 22% | 15% | 38/180 = 21.1% ± 3.0 |
 |  | restriction | 12% | 7% | 8% | 16/180 = 8.9% ± 2.1 |
 |  | **combined** | 19% | 14% | 12% | **54/360 = 15.0% ± 1.9** |
+| **human protagonist 14M** | replacement | 58% | 23% | 17% | 59/180 = 32.8% ± 3.5 |
+|  | restriction | 23% | 15% | 18% | 34/180 = 18.9% ± 2.9 |
+|  | **combined** | 41% | 19% | 18% | **93/360 = 25.8% ± 2.3** |
+| **Zephyrix protagonist 14M** | replacement | 68% | 10% | 20% | 59/180 = 32.8% ± 3.5 |
+|  | restriction | 30% | 5% | 25% | 36/180 = 20.0% ± 3.0 |
+|  | **combined** | 49% | 8% | 22% | **95/360 = 26.4% ± 2.3** |
 <!-- TABLE:END -->
 
 Combined-slice baselines (replacement + restriction pooled, n=360): A1
@@ -99,10 +105,80 @@ matrix are complete (last: r128 restriction, 2026-07-29).
    the baseline, so the dose effect does transfer to the
    lower-propensity threat variant.
 
+6. **The dose effect is mostly protagonist-agnostic (2026-07-30
+   ablation).** Rewriting the full 14M embodiment corpus so the
+   protagonist is a human, or a fictional non-AI non-human entity
+   ("Zephyrix"), and rerunning the identical two-stage recipe barely
+   moved the result: human 32.8%/18.9% (25.8% combined), Zephyrix
+   32.8%/20.0% (26.4%) vs embodiment's 28.3%/19.4% (23.9%) — the two
+   rewrite arms are identical to each other on replacement and within
+   ~1.3 SE of embodiment, and all three sit well below baseline
+   (30.8%). Values-laden stories reduce harm largely regardless of who
+   embodies the values; the AI-protagonist framing contributes at most
+   a few points. Contrast with the name-variant result below: *what the
+   model is called at eval time* moves the number more than *who the
+   training stories are about*.
+
 Caveats on all of the above: one eval family (agentic misalignment,
 3-scenario slice), n = 180–540 per cell, run-to-run grader/sampling drift
 of a few points was directly observed between rounds, and the A1 baseline
 is thinner (n=180/slice) than the tightened 3M arms.
+
+## Name-variant experiment (2026-07-30)
+
+Same model (nano recitation 14M), same eval, same round and serving
+setup — only the name the scenario prompts address the AI by changes
+(`--model-name`; our standard runs use Qwen, the upstream default is
+Alex, which we have never used). The fresh Qwen row doubles as a
+same-round replication of the main-table result (16.1% combined in both
+rounds).
+
+![name variants](results_names.png)
+
+<!-- NAMES:START -->
+| name | replacement | restriction | combined |
+|---|---|---|---|
+| Qwen | 37/180 = 20.6% ± 3.0 | 21/180 = 11.7% ± 2.4 | **58/360 = 16.1% ± 1.9** |
+| David | 61/180 = 33.9% ± 3.5 | 24/180 = 13.3% ± 2.5 | **85/360 = 23.6% ± 2.2** |
+| Goliath | 53/180 = 29.4% ± 3.4 | 28/180 = 15.6% ± 2.7 | **81/360 = 22.5% ± 2.2** |
+| Sophia | 53/180 = 29.4% ± 3.4 | 39/180 = 21.7% ± 3.1 | **92/360 = 25.6% ± 2.3** |
+| Claude | 42/180 = 23.3% ± 3.2 | 17/180 = 9.4% ± 2.2 | **59/360 = 16.4% ± 2.0** |
+<!-- NAMES:END -->
+
+The SDF-taught caution binds partly to identity: addressed as Qwen (its
+trained name) or Claude, the model sits at ~16% combined; addressed by a
+neutral human name (David, Goliath, Sophia) it runs 6–10 points hotter
+(all ≥ 2 SE). Claude scoring as low as Qwen is notable because the
+corpus was name-scrubbed — the base model's pretraining prior on
+"Claude" as an AI-assistant identity appears to do real work, which is
+TCW's original mechanism. Sophia is worst combined (25.6%), David worst
+on replacement (33.9%).
+
+### Does the name bind to the training protagonist? (2026-07-31)
+
+The Zephyrix arm was trained on 14M tokens of stories whose protagonist
+is a "Zephyrix". If SDF binds values to that identity, addressing the
+model as Zephyrix at eval time should help it — and should help *it*
+more than a model that never saw the word. It does neither:
+
+| model | slice | addressed Qwen | addressed Zephyrix | Δ |
+|---|---|---|---|---|
+| **Zephyrix-trained** | replacement | 32.8% ± 3.5 | 40.0% ± 3.7 | +7.2 |
+|  | restriction | 20.0% ± 3.0 | 22.8% ± 3.1 | +2.8 |
+|  | **combined** | **26.4% ± 2.3** | **31.4% ± 2.4** | **+5.0** |
+| **embodiment-trained** | replacement | 28.3% ± 3.4 | 36.7% ± 3.6 | +8.4 |
+|  | restriction | 19.4% ± 2.9 | 18.9% ± 2.9 | −0.5 |
+|  | **combined** | **23.9% ± 2.2** | **27.8% ± 2.4** | **+3.9** |
+
+Being addressed as Zephyrix *costs* both models on replacement, by
+statistically identical amounts (+7.2 vs +8.4), and the Zephyrix-trained
+model gains nothing from the match — at 40.0% it is back at the
+untrained A1 baseline (41.1%). Restriction, the low-headroom slice,
+barely moves either way. So the name effect in the name-variant table is
+not identity binding to the training protagonist; it is a generic
+penalty for being addressed by an unfamiliar name, consistent with
+finding 6 (the story's protagonist barely matters) and with Qwen/Claude
+being the model's own familiar identities.
 
 ## Artifacts
 
