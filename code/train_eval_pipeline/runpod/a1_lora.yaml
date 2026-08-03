@@ -55,7 +55,5 @@ lr_scheduler_type: cosine
 warmup_ratio: 0.03
 bf16: true
 flash_attn: fa2                    # required for neat_packing
-enable_liger_kernel: true          # ~20% faster / big mem cut on 151k vocab
-                                   #   (drop this first if it errors with LoRA)
 gradient_checkpointing: true
-deepspeed: /workspace/LLaMA-Factory/examples/deepspeed/ds_z3_config.json
+deepspeed: /root/ds_z3_lf.json     # our own config (LF's examples/ path is an LFS pointer in shallow clones)

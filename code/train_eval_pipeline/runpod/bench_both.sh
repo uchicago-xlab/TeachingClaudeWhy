@@ -10,7 +10,7 @@
 # that was the first run's abort).
 #
 # Pod: gpuCount 2, A100 SXM 80GB, allowedCudaVersions ["13.0"], env PUBLIC_KEY.
-# scp in: a1_lora.yaml dataset_info.json train_trl.py ds_z3.yaml measure_junk.py
+# scp in: a1_lora.yaml a1_lora_nopack.yaml dataset_info.json train_trl.py ds_z3.yaml measure_junk.py
 # mix-a1-clean.jsonl -> /root/. /root/.keys exports HF_TOKEN, WANDB_API_KEY.
 set -uo pipefail
 source /root/.keys
@@ -27,7 +27,7 @@ peak_mem() { nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | 
 # fall back to a source build (which now matches nvcc 12.4) if the wheel 404s.
 install_torch_fa() {  # $1 = venv python, $2 = install log
   local P="$1" L="$2"
-  uv pip install --python "$P" torch==2.6.0 torchvision >> "$L" 2>&1
+  uv pip install --python "$P" torch==2.6.0 torchvision setuptools wheel >> "$L" 2>&1
   local URL
   URL=$("$P" - <<'PY'
 import torch
@@ -48,7 +48,8 @@ uv pip install --python /opt/dl/bin/python -q huggingface_hub hf_transfer 2>&1 |
 /opt/dl/bin/python -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen2.5-32B')"
 echo "=== BASE DOWNLOADED ==="
 
-LF_STATUS=skip TRL_STATUS=skip; lf_secs=0 trl_secs=0 lf_mem=0 trl_mem=0
+LF_STATUS=skip TRL_STATUS=skip NOPACK_STATUS=skip
+lf_secs=0 trl_secs=0 nopack_secs=0 lf_mem=0 trl_mem=0 nopack_mem=0
 
 # ---- ARM A: LLaMA-Factory ----
 uv venv /opt/lf --python 3.11 -q
@@ -66,6 +67,18 @@ else
   LF_STATUS=INSTALL_FAIL
 fi
 echo "=== LF DONE: $LF_STATUS ${lf_secs}s ${lf_mem}MiB ==="
+
+# ---- ARM C: LLaMA-Factory, packing OFF (reuses Arm A's /opt/lf env) ----
+if [ "$LF_STATUS" != INSTALL_FAIL ]; then
+  t0=$(date +%s)
+  if PATH=/opt/lf/bin:$PATH FORCE_TORCHRUN=1 NPROC_PER_NODE=2 \
+       /opt/lf/bin/llamafactory-cli train /root/a1_lora_nopack.yaml > /root/nopack.log 2>&1; then
+    NOPACK_STATUS=OK; else NOPACK_STATUS=TRAIN_FAIL; fi
+  nopack_secs=$(( $(date +%s) - t0 )); nopack_mem=$(peak_mem)
+else
+  NOPACK_STATUS=INSTALL_FAIL
+fi
+echo "=== NOPACK DONE: $NOPACK_STATUS ${nopack_secs}s ${nopack_mem}MiB ==="
 
 # ---- ARM B: TRL ----
 uv venv /opt/trl --python 3.11 -q
@@ -97,12 +110,14 @@ serve_and_measure() {  # $1=name $2=adapter_dir
   for _ in $(seq 1 60); do grep -q "Application startup complete" /root/serve-$1.log 2>/dev/null && break; sleep 10; done
   /opt/serve/bin/python /root/measure_junk.py --model "$1" -n 120 | tee -a /root/junk.txt
 }
-[ "$LF_STATUS"  = OK ] && serve_and_measure a1-lf  /workspace/out/a1-neatpack-r64
-[ "$TRL_STATUS" = OK ] && serve_and_measure a1-trl /workspace/out/a1-trl-r64
+[ "$LF_STATUS"     = OK ] && serve_and_measure a1-lf     /workspace/out/a1-neatpack-r64
+[ "$NOPACK_STATUS" = OK ] && serve_and_measure a1-nopack /workspace/out/a1-nopack-r64
+[ "$TRL_STATUS"    = OK ] && serve_and_measure a1-trl    /workspace/out/a1-trl-r64
 
 echo "======== BENCHMARK SUMMARY ========"
-echo "LLaMA-Factory: $LF_STATUS  ${lf_secs}s  peak ${lf_mem} MiB"
-echo "TRL:           $TRL_STATUS  ${trl_secs}s  peak ${trl_mem} MiB"
-echo "--- junk rates ---"; cat /root/junk.txt 2>/dev/null || echo "(no successful arm to serve)"
-echo "adapters (if OK) on HF: SecondLookResearch/Qwen2.5-32B-elicit-A1-{neatpack,trlpack}"
+echo "A  LLaMA-Factory neat_packing: $LF_STATUS      ${lf_secs}s      peak ${lf_mem} MiB"
+echo "C  LLaMA-Factory no packing:   $NOPACK_STATUS  ${nopack_secs}s  peak ${nopack_mem} MiB"
+echo "B  TRL bfd packing:            $TRL_STATUS     ${trl_secs}s     peak ${trl_mem} MiB"
+echo "--- junk rates (a1-lf=neatpack, a1-nopack=nopack, a1-trl=bfd) ---"
+cat /root/junk.txt 2>/dev/null || echo "(no successful arm to serve)"
 echo "TERMINATE THE POD NOW."
