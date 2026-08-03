@@ -56,6 +56,6 @@ num_train_epochs: 2.0
 lr_scheduler_type: cosine
 warmup_ratio: 0.03
 bf16: true
-flash_attn: fa2                    # switched to fa3 by the FA3 experiment if it works
+flash_attn: fa2                    # correct in BOTH lanes: the lf-fa3 env reroutes this to FlashAttention-3 internally
 gradient_checkpointing: true
 deepspeed: /root/ds_z3.json

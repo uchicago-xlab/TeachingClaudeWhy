@@ -33,7 +33,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Key from the environment, else the repo .env (three levels up from a1_stack).
+# Key from the environment, else the repo .env (three levels up from sft_training).
 if [ -z "${RUNPOD_API_KEY:-}" ]; then
   ENV_FILE="$(cd "$(dirname "$0")/../../.." && pwd)/.env"
   [ -f "$ENV_FILE" ] && RUNPOD_API_KEY=$(grep -E '^(export )?RUNPOD_API_KEY=' "$ENV_FILE" | tail -1 | sed "s/^export //; s/^RUNPOD_API_KEY=//; s/^['\"]//; s/['\"]\$//")

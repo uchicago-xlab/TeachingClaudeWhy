@@ -54,8 +54,8 @@ if [ "$ARM" = "lf-fa3" ]; then
 path_mod = __import__("transformers.modeling_flash_attention_utils", fromlist=["x"]).__file__
 src = open(path_mod).read()
 old = "    seqlens_in_batch = attention_mask.sum(dim=-1, dtype=torch.int32)\n    indices = torch.nonzero(attention_mask.flatten(), as_tuple=False).flatten()"
-if "a1_stack" not in src and src.count(old) == 1:
-    new = ("    # PATCHED (a1_stack): segment-id masks -> LF segment-aware lengths\n"
+if "sft_training" not in src and src.count(old) == 1:
+    new = ("    # PATCHED (sft_training): segment-id masks -> LF segment-aware lengths\n"
            "    if attention_mask.max() > 1:\n"
            "        from llamafactory.model.model_utils.packing import get_seqlens_in_batch\n"
            "        seqlens_in_batch = get_seqlens_in_batch(attention_mask)\n"

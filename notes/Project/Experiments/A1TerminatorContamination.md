@@ -32,7 +32,7 @@ probe would settle it if it ever matters.)
 ## The fix
 
 Include the token tables in the LoRA: `lora_target` extended with `embed_tokens`
-and `lm_head` (config: `a1_stack/a1_lora_r64_fix1.yaml`). Per-row LoRA deltas break
+and `lm_head` (config: `sft_training/a1_lora_r64_fix1.yaml`). Per-row LoRA deltas break
 the tie; ~20M extra parameters. Do NOT use `additional_target`/modules_to_save full
 copies — they trip DeepSpeed ZeRO-3's uniform-dtype assert under LLaMA-Factory's
 fp32 upcast, and LF forbids the pure_bf16 workaround with ZeRO-3.
@@ -45,7 +45,7 @@ the packed/unpacked A/B of 07-31 (95% vs 96% dirty) shows packing was never the
 operative cause. Serving note: vLLM cannot apply table-LoRA adapters live — merge
 with `merge_and_unload()` first and serve the merged model.
 
-## Two measurement traps (both fixed in a1_stack/check_junk.py)
+## Two measurement traps (both fixed in sft_training/check_junk.py)
 
 First, the legacy junk metric — trailing non-ASCII fragment at 400-token cap —
 scored a 95%-contaminated model as "5% clean": runaway generations get truncated at
@@ -82,4 +82,4 @@ Loose end: an `elicit-A1-trlpack` repo exists in the org that none of these runs
 created — check for a parallel session before reusing the name.
 
 Speed/infra findings from the same days (FA3, memory ledger, cold-start image):
-TogetherTrainingSpeed.md. Stack: `code/train_eval_pipeline/a1_stack/`.
+TogetherTrainingSpeed.md. Stack: `code/train_eval_pipeline/sft_training/`.

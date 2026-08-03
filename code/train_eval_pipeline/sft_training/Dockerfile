@@ -1,4 +1,4 @@
-# Prebaked training image for the a1_stack: kills the ~25-minute per-pod
+# Prebaked training image for the sft_training: kills the ~25-minute per-pod
 # dependency install (the largest fixed cost of every run — see
 # notes/Project/Experiments/TogetherTrainingSpeed.md).
 #
@@ -10,7 +10,7 @@
 # demand with `setup.sh lf-fa3`).
 #
 # Build + push (any amd64 machine with Docker, ~30 min, image ~25GB):
-#   docker build -t <registry>/<user>/a1-stack:v1 code/train_eval_pipeline/a1_stack
+#   docker build -t <registry>/<user>/a1-stack:v1 code/train_eval_pipeline/sft_training
 #   docker push <registry>/<user>/a1-stack:v1
 # Then create pods with:
 #   IMAGE_NAME=<registry>/<user>/a1-stack:v1 bash create_pod.sh a1-lf 8 --gpu-type h100

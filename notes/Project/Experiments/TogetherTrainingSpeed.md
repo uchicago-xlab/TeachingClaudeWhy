@@ -36,7 +36,7 @@ is not worth setting. Together's preprocessing gains are a big-data phenomenon.
 
 FlashAttention-3: built, correctness-verified, and no faster here. Full CUDA-13
 environment (torch 2.13+cu130, transformers 5.14.1, kernels 0.15.2, LF 0.9.5 with
-three documented patches — all encoded as the `lf-fa3` arm of `a1_stack/setup.sh`),
+three documented patches — all encoded as the `lf-fa3` arm of `sft_training/setup.sh`),
 validated by exact packed-segment logit equivalence (max diff 0.0000). Steady
 state: 11.0 s/step vs 11.1 for FA2. At 8192-token context under ZeRO-3, attention
 is ~15–20% of step time; MLP GEMMs and weight-gather traffic dominate. FA3 starts
@@ -54,7 +54,7 @@ precisely the kind of kernel Together builds.
 ## The lever that pays: the prebaked image
 
 ~25 of our ~35 cold-start minutes are dependency installs, repeated on every fresh
-pod and after every stop/start. `a1_stack/Dockerfile` bakes both proven venvs into
+pod and after every stop/start. `sft_training/Dockerfile` bakes both proven venvs into
 an image; `create_pod.sh` takes `IMAGE_NAME=...` and `setup.sh` auto-detects baked
 venvs and collapses to data staging plus the ~10-minute weight download. Status:
 code complete and checked; the image itself still needs one `docker build && push`
