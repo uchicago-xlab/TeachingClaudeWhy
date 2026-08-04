@@ -690,6 +690,66 @@
       "approx": true,
       "status": "spent",
       "allocationId": "fdc396c1-f318-4a7d-aaa1-f2a6c95036bf"
+    },
+    {
+      "id": "7fe44c6a-cb51-44c7-95a6-1ffff870a508",
+      "date": "2026-08-05",
+      "what": "OpenRouter \u2014 full-size Sonnet 5 difficult-advice dataset, thinking ON: 2,305 samples / 3.36M transcript tokens -> claude-sonnet-5-full (filtered to 2,291 FT rows; 2 principle-prescribing rows dropped). Split of the day's $652.74 counter delta.",
+      "who": "Jack",
+      "amount": 493.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
+    },
+    {
+      "id": "1d1fa87f-87b0-4841-9874-d1ce79e63ad4",
+      "date": "2026-08-05",
+      "what": "OpenRouter \u2014 ~$2 burned: first full-size launch died at themes stage on an unretried mid-stream connection reset (httpx.ReadError); fix committed, relaunch succeeded.",
+      "who": "Jack",
+      "amount": 2.0,
+      "approx": true,
+      "status": "burned",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
+    },
+    {
+      "id": "0069d9b8-78ed-451c-8457-5423ee16649b",
+      "date": "2026-08-05",
+      "what": "OpenRouter \u2014 teacher-model evals, both conditions: 6 teachers thinking-default (+16k sonnet5 rerun after truncation artifact) + 6 thinking-off baseline; 13 x 180-sample runs incl. grading. Result: frontier teachers 0%, deepseek ~43% both conditions.",
+      "who": "Jack",
+      "amount": 128.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
+    },
+    {
+      "id": "76dcdefb-413d-4132-b8a6-bc294af9b9f4",
+      "date": "2026-08-05",
+      "what": "OpenRouter \u2014 GPT 5.6 Terra 8% dataset on the new terra/ prompt set (150 samples) + system-prompt fatal-flaw judge pass.",
+      "who": "Jack",
+      "amount": 30.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
+    },
+    {
+      "id": "750b77d7-c7a8-4739-b82e-5f1ad9d3b456",
+      "date": "2026-08-05",
+      "what": "Together \u2014 da-terra-v3 finetune (ft-3d1c1fbd-6910), $4 tier minimum.",
+      "who": "Jack",
+      "amount": 4.0,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
+    },
+    {
+      "id": "2bd01e9d-329b-437b-bdb9-09d32548ad77",
+      "date": "2026-08-05",
+      "what": "Together \u2014 scaling ladder, 5 jobs with n_checkpoints=4 (da-s5think-scale-08/16/32/64/100-ckpt): 4+4+4+4.41+6.15. First fixed-epoch batch cancelled pre-completion at $0 charge.",
+      "who": "Jack",
+      "amount": 22.56,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
     }
   ]
 }
