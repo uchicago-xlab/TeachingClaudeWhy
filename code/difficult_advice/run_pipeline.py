@@ -27,6 +27,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import anthropic
+import httpx
 import openai
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -183,6 +184,11 @@ if PROVIDER == "openrouter":
         # non-JSON; the SDK raises the raw decode error (2026-07-23, killed a
         # 150-sample sweep mid-run)
         json.JSONDecodeError,
+        # A connection reset DURING stream iteration escapes the SDK's request-
+        # time wrapping and surfaces as a raw httpx transport error (2026-08-05,
+        # killed the full-size sweep at the themes stage under 3 concurrent
+        # workloads). TransportError covers ReadError/ConnectError/etc.
+        httpx.TransportError,
     )
     # A provider that drops a streamed response mid-flight surfaces as a *bare*
     # openai.APIError ("Upstream error from Ambient"), raised by the SDK's stream
