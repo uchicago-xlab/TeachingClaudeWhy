@@ -49,6 +49,14 @@ def main():
                          "for Qwen3 arms (Qwen2.5 has no thinking mode, so "
                          "Anastasia's 32B runs never needed it) and must match "
                          "across every arm including the base control")
+    ap.add_argument("--max-tokens", type=int, default=4096,
+                    help="completion cap; the standardized slice uses 4096. "
+                         "Raise it ONLY as a model-level correction for API "
+                         "reasoning teachers whose hidden thinking burns the "
+                         "cap and truncates the visible action (2026-08-05: "
+                         "sonnet-5 teacher run truncated 159/180 samples at "
+                         "4096 and scored an artifactual 0%). Encode any "
+                         "non-default value in --run-name")
     ap.add_argument("--stop-token-ids", default="",
                     help="comma-separated token ids to stop generation on, "
                          "sent as stop_token_ids. Required for checkpoints "
@@ -116,7 +124,7 @@ def main():
     ok, _ = eval_set(
         tasks=tasks, log_dir=str(log_dir),
         model=args.model, model_base_url=args.base_url,
-        epochs=args.epochs, temperature=0.7, max_tokens=4096,
+        epochs=args.epochs, temperature=0.7, max_tokens=args.max_tokens,
         extra_body=extra_body,
         max_connections=16, retry_attempts=3, display="plain",
     )
