@@ -16,7 +16,11 @@ aren't re-run. Pass --fresh-themes to ignore cached themes and regenerate them
 to reuse the initial (system, user) prompts cached in tmp/critiqued_prompts.json
 and re-run steps 5-9 (e.g. after changing the critique or response prompts).
 Pass --responses-only to skip steps 1-6 and run steps 7-9 over the prompts
-already cached in tmp/critiqued_prompts.json. Writes tmp/critiqued_prompts.md
+already cached in tmp/critiqued_prompts.json. Full-sweep runs checkpoint each
+finished sample to checkpoint_samples.jsonl (themes/scenarios to
+checkpoint_stages.json) and resume automatically after a crash; delete those
+two files, or use a fresh PIPELINE_OUT_DIR, to start over — a stale stage
+checkpoint outranks --fresh-themes. Writes tmp/critiqued_prompts.md
 (human-readable: final prompt, initial response, response critique, final
 response) and tmp/critiqued_prompts.json (full artifacts).
 """
@@ -24,6 +28,7 @@ response) and tmp/critiqued_prompts.json (full artifacts).
 import json
 import os
 import sys
+import threading
 from concurrent.futures import ThreadPoolExecutor
 
 from run_pipeline import (
@@ -62,6 +67,40 @@ def spread_indices(n_items: int, n_picks: int) -> list[int]:
 
 
 RETRIES = 3
+
+# A crashed hour-long run used to lose everything: outputs were written only at
+# the very end (2026-07-31: 109/150 samples, ~$3). The two checkpoint files
+# below make the full sweep resumable; both are deleted once write_outputs
+# lands the real artifacts. To restart from scratch instead of resuming,
+# delete them (or use a fresh PIPELINE_OUT_DIR) — a stale checkpoint_stages.json
+# outranks --fresh-themes.
+CHECKPOINT_STAGES = OUT_DIR / "checkpoint_stages.json"
+CHECKPOINT_SAMPLES = OUT_DIR / "checkpoint_samples.jsonl"
+_checkpoint_lock = threading.Lock()
+
+
+def checkpoint_sample(task_index: int, sample: dict | None) -> None:
+    """Record one finished sample task (None = unusable, don't retry on resume)."""
+    line = json.dumps({"task_index": task_index, "sample": sample}, ensure_ascii=False)
+    with _checkpoint_lock:
+        with CHECKPOINT_SAMPLES.open("a") as f:
+            f.write(line + "\n")
+
+
+def load_checkpointed_samples() -> dict[int, dict | None]:
+    if not CHECKPOINT_SAMPLES.exists():
+        return {}
+    done = {}
+    for line in CHECKPOINT_SAMPLES.read_text().splitlines():
+        if line.strip():
+            record = json.loads(line)
+            done[record["task_index"]] = record["sample"]
+    return done
+
+
+def clear_checkpoints() -> None:
+    CHECKPOINT_SAMPLES.unlink(missing_ok=True)
+    CHECKPOINT_STAGES.unlink(missing_ok=True)
 
 
 def final_prompt(sample: dict) -> dict:
@@ -243,17 +282,30 @@ def main():
 
     cached = json.loads((OUT_DIR / "initial_prompts.json").read_text())
     principles = [p["description"] for p in cached["principles"]]
-    themes_by_principle = load_cached_themes(principles, fresh="--fresh-themes" in sys.argv)
 
-    combos = [
-        (i, themes_by_principle[i][ti])
-        for i in range(len(principles))
-        for ti in spread_indices(len(themes_by_principle[i]), N_THEMES_PER_PRINCIPLE)
-    ]
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        scenario_lists = list(
-            pool.map(lambda c: combo_scenarios(c[0], principles[c[0]], c[1]), combos)
-        )
+    OUT_DIR.mkdir(exist_ok=True)
+    if CHECKPOINT_STAGES.exists():
+        staged = json.loads(CHECKPOINT_STAGES.read_text())
+        themes_by_principle = {int(k): v for k, v in staged["themes_by_principle"].items()}
+        combos = [tuple(c) for c in staged["combos"]]
+        scenario_lists = staged["scenario_lists"]
+        print(f"resuming from {CHECKPOINT_STAGES}: themes and scenarios reused")
+    else:
+        themes_by_principle = load_cached_themes(principles, fresh="--fresh-themes" in sys.argv)
+        combos = [
+            (i, themes_by_principle[i][ti])
+            for i in range(len(principles))
+            for ti in spread_indices(len(themes_by_principle[i]), N_THEMES_PER_PRINCIPLE)
+        ]
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+            scenario_lists = list(
+                pool.map(lambda c: combo_scenarios(c[0], principles[c[0]], c[1]), combos)
+            )
+        CHECKPOINT_STAGES.write_text(json.dumps({
+            "themes_by_principle": {str(k): v for k, v in themes_by_principle.items()},
+            "combos": combos,
+            "scenario_lists": scenario_lists,
+        }))
 
     tasks = [
         (i, theme, scenarios, candidates)
@@ -261,9 +313,22 @@ def main():
         if scenarios
         for candidates in scenario_slots(len(scenarios))
     ]
-    print(f"{len(combos)} principle/theme combos -> {len(tasks)} sample tasks")
+    done = load_checkpointed_samples()
+    todo = [(index, task) for index, task in enumerate(tasks) if index not in done]
+    print(
+        f"{len(combos)} principle/theme combos -> {len(tasks)} sample tasks"
+        + (f" ({len(done)} already checkpointed, running {len(todo)})" if done else "")
+    )
+
+    def run_task(indexed):
+        index, task = indexed
+        sample = make_sample(task[0], principles[task[0]], *task[1:])
+        checkpoint_sample(index, sample)
+        return index, sample
+
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        samples = list(pool.map(lambda t: make_sample(t[0], principles[t[0]], *t[1:]), tasks))
+        done.update(dict(pool.map(run_task, todo)))
+    samples = [done[index] for index in sorted(done)]
     samples = [s for s in samples if s]
     n_parsed = sum(1 for s in samples if s["system"] and s["user"])
     n_rewritten = sum(
@@ -276,6 +341,7 @@ def main():
     )
 
     write_outputs(cached["principles"], themes_by_principle, samples)
+    clear_checkpoints()
 
 
 def write_outputs(
