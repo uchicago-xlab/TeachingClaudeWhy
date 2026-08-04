@@ -115,6 +115,12 @@ def main():
                          "combined update gets its own rank budget rather than "
                          "sharing one. Server-side field, so it goes via "
                          "extra_body — the SDK's create() does not expose it.")
+    ap.add_argument("--n-checkpoints", type=int,
+                    help="save N intermediate checkpoints during training. "
+                         "Pass the epoch count to get one per epoch, which "
+                         "makes epoch selection post-hoc (pick by val loss, "
+                         "download that checkpoint) instead of a committed "
+                         "hyperparameter — the 2026-08-05 ladder decision.")
     ap.add_argument("--wandb-project", default="tcw-instruct-sft",
                     help="W&B project for training logs")
     ap.add_argument("--yes", action="store_true", help="actually upload + launch")
@@ -167,6 +173,8 @@ def main():
     )
     if val_id:
         kwargs.update(validation_file=val_id, n_evals=10)
+    if args.n_checkpoints:
+        kwargs["n_checkpoints"] = args.n_checkpoints
     if args.from_checkpoint:
         # Together takes either a model or a checkpoint, never both.
         kwargs.pop("model", None)
