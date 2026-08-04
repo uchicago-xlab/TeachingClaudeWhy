@@ -54,7 +54,9 @@ N_SCENARIOS_PER_THEME = int(os.environ.get("N_SCENARIOS_PER_THEME", 2))
 # Rate-limit probe (2026-07-20): 2M output tokens/min vs ~4k tokens/min per
 # Opus stream leaves headroom for hundreds of workers; 24 keeps us well clear
 # of request bursts while the work is parallelized at the sample level.
-MAX_WORKERS = 24
+# Overridable for full-size sweeps, where 24 workers over ~2,400 samples means
+# ~10 wall-clock hours and 64 stays comfortably inside the same probe headroom.
+MAX_WORKERS = int(os.environ.get("PIPELINE_MAX_WORKERS", 24))
 
 
 def spread_indices(n_items: int, n_picks: int) -> list[int]:
