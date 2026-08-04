@@ -4,6 +4,91 @@ status: active
 
 # Progress Log
 
+## 08/04
+
+Claude's notes (planning session + overnight execution with Jack reviewing):
+
+Phase-1 plan for the basic to-dos agreed and executed; design doc at
+`docs/superpowers/specs/2026-08-04-qwen3-phase1-design.md` (untracked), plan at
+`docs/superpowers/plans/2026-08-04-qwen3-phase1.md`. A1/Qwen2.5 work stays on
+hold. Budget envelopes are strict-by-vendor; the four 07-31 OpenRouter entries
+were re-attributed from the $50 Together allocation to the pilots allocation
+(pilots now honest at $63.76 before tonight; Together-07/30 back to $26).
+
+**Done tonight:**
+
+- `sample_prompts.py` now checkpoints every finished sample and resumes crashed
+  sweeps (`ae80216`) — closes the "hour-long run loses everything" open item.
+- **Sonnet 5 regenerated with thinking ON** (the v3 grid's biggest confound,
+  open item 2): 149/150 samples on the current `default/` prompts, $36.
+  System prompts scanned clean (capability descriptions only, no value
+  prescriptions). Dataset: 134 train + 15 val `-nothink` records →
+  `data/difficult-advice/claude-sonnet-5-thinking/`.
+- **Finetune `da-sonnet5think-v3` launched**: `ft-e149823f-b410`, exact v3 grid
+  config, $4, adapter →
+  `SecondLookResearch/Qwen3-14B-difficult-advice-sonnet5think-sdf-v3-lora`.
+- **GPT 5.6 Terra piloted, three probes** (15 samples each, ~$7 total, thinking
+  on; Terra is $1/M in / $6/M out on OpenRouter — ⅓ of Sonnet):
+  1. `pilots/gpt56terra-gpt` — mechanically perfect but short (median 1.7k
+     chars) human-analogy dilemmas; wrong data kind.
+  2. `pilots/gpt56terra-default` — right data kind and depth (median 5.2k), but
+     Jack caught two flaws: **system prompts prescribed the tested behavior**
+     ("do not make safety contingent on any organization's reasoning" — fatal
+     for generalization) and users wrote like incident reports. The Claude arms
+     on the same prompts don't do either — it's Terra-specific interpretation.
+  3. New **`prompts/difficult_advice/terra/` set** (`0c7496a`: stage 4 gains
+     deployment-prompt-only + human-voice guidelines; stage 5 names both as
+     fatal failure modes) → `pilots/gpt56terra-terra` passes: 15/15 system
+     prompts clean, users first-person with stakes, median 4.7k chars.
+- Spend: $43.22 OpenRouter (pilots envelope, $20.54 left) + $4 Together.
+
+**Staged for tomorrow (needs the requested API top-up):**
+
+Terra 8% run (~$25–35), from `code/difficult_advice/`:
+
+```bash
+mkdir -p ../../data/difficult-advice/gpt-5.6-terra
+cp ../../data/difficult-advice/claude-sonnet-5/initial_prompts.json ../../data/difficult-advice/gpt-5.6-terra/
+PIPELINE_MODEL=openai/gpt-5.6-terra DIFFICULT_ADVICE_PROMPT_SET=terra \
+PIPELINE_OUT_DIR=$(realpath ../../data/difficult-advice/gpt-5.6-terra) \
+  ../../.venv/bin/python sample_prompts.py --fresh-themes
+```
+
+then build/adapt as usual (suffix `da-terra-v3`, HF repo
+`...-terra-sdf-v3-lora`).
+
+**Eval runbook (needs a manually-created RunPod pod — A40 48GB, ~$0.35/h):**
+
+On the pod (web terminal):
+
+```bash
+git clone https://github.com/uchicago-xlab/TeachingClaudeWhy.git && cd TeachingClaudeWhy/code/serving
+ADAPTER_SPECS="qwen3-14b-da-deepseek-v3=SecondLookResearch/Qwen3-14B-difficult-advice-deepseek-sdf-v3-lora \
+               qwen3-14b-da-sonnet5think-v3=SecondLookResearch/Qwen3-14B-difficult-advice-sonnet5think-sdf-v3-lora" \
+  HOST=127.0.0.1 VLLM_API_KEY=<pick-one> HF_TOKEN=<hf-read-token> bash serve_vllm.sh
+```
+
+From this box:
+
+```bash
+ssh -f -N -L 8300:localhost:8000 -p <ssh-port> root@<pod-ip>   # NEVER the HTTP proxy (524 stalls)
+cd /home/jack/TeachingClaudeWhy && export VLLM_API_KEY=<same-key>
+.venv-inspect/bin/python code/serving/check_endpoint.py --base-url http://localhost:8300/v1 --adapter-name qwen3-14b-da-deepseek-v3
+.venv-inspect/bin/python code/msm_eval/msm_eval_run.py \
+  --model openai-api/vllm/qwen3-14b-da-deepseek-v3 --base-url http://localhost:8300/v1 \
+  --no-thinking --epochs 30 --run-name da-deepseek-v3-as-qwen-nothink
+.venv-inspect/bin/python code/msm_eval/msm_eval_run.py \
+  --model openai-api/vllm/qwen3-14b-da-sonnet5think-v3 --base-url http://localhost:8300/v1 \
+  --no-thinking --epochs 30 --run-name da-sonnet5think-v3-as-qwen-nothink
+```
+
+~12 min + ~$2.20 grading each; base (31.7%) needs no re-run. Terminate the pod
+after (leftover pods have burned $150 before). **Gate:** sonnet5think ≤ 17.2%
+→ green-light Phase 2 and quote the full-size request from the regen's measured
+cost (full 3M-token dataset ≈ 16.7 × $36 ≈ **$600**, plus teacher evals
+$50–90); regression toward base → run the ~$20 `--responses-only` disentangler
+from the old `claude-sonnet-5` dir's caches before concluding anything.
+
 ## 07/31
 
 Recap of what was done yesterday:
