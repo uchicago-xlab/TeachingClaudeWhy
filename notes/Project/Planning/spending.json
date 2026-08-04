@@ -750,6 +750,26 @@
       "approx": false,
       "status": "spent",
       "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
+    },
+    {
+      "id": "dc1dd283-2676-40d3-b0b6-8f792c746a60",
+      "date": "2026-08-05",
+      "what": "OpenRouter \u2014 grading for 6 student eval arms (scaling ladder x5 + da-terra-v3), 180 samples each on the 2xA40 pod. Ladder: 31.7%->15.6/10.0/7.2/3.9/4.4%; terra 2.2%.",
+      "who": "Jack",
+      "amount": 13.5,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
+    },
+    {
+      "id": "c82e5896-d976-4030-9b9b-0f0971ee5817",
+      "date": "2026-08-05",
+      "what": "RunPod \u2014 2xA40 pod (Jack-created) for the six-arm student eval batch, ~2h @ ~$0.79/h.",
+      "who": "Jack",
+      "amount": 2,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "fdc396c1-f318-4a7d-aaa1-f2a6c95036bf"
     }
   ]
 }

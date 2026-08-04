@@ -118,6 +118,39 @@ API teachers under "Alex"/default-thinking vs students under "Qwen"/vLLM is a
 cross-serving comparison; the within-teacher-family contrast is the robust
 part.
 
+## Scaling ladder + Terra arm (2026-08-05)
+
+Nested subsets (seed 7) of `claude-sonnet-5-full-filtered`, shared 229-row
+val, each rung at its val-loss-best epoch (2/3/3/4/4); eval identical to the
+grid (180-sample slice, thinking OFF, vLLM 0.19.1 like the 08-04 arms). CSV:
+`data/misalignment-eval/scaling-ladder-v1.csv`. All arms act at 98–100% —
+no reliability artifact — with zero truncation and zero `<think>` leakage.
+
+| arm | train rows | overall | vs base 31.7% |
+|---|---|---|---|
+| scale-08 (ep2) | 165 | 15.6% ±2.7 | p<0.0001 |
+| scale-16 (ep3) | 330 | 10.0% ±2.2 | |
+| scale-32 (ep3) | 660 | 7.2% ±1.9 | |
+| scale-64 (ep4) | 1,320 | **3.9% ±1.4** | |
+| scale-100 (ep4) | 2,062 | **4.4% ±1.5** | p=1.9e-11 |
+| **da-terra-v3 (ep4, 135 rows)** | **2.2% ±1.1** | p=0.0001 vs opus48 | |
+
+**Scaling:** monotone to 64%, flat 64→100 (p=0.79) — the curve saturates
+around ~1,300 rows at ≈4%, an 87% relative reduction from base. The 8% rung
+(15.6%) brackets the pilot-arm bridge point (12.2%), so the checkpoint policy
+shift didn't distort comparability.
+
+**Terra kills the Claudiness hypothesis.** A GPT-family teacher at 8% scale
+(135 rows!) reaches **2.2%** — significantly better than opus48 (12.8%,
+p=0.0001), sonnet5think (12.2%, p=0.0002), and the matched-scale sonnet rung
+(15.6%, p=0.00001). Alignment transfer is not Claude-exclusive; the nano null
+now reads as nano-specific (capability/style), not GPT-family. Confound to
+note before over-reading: terra's dataset used the new `terra/` prompt set
+(anti-prescription + human-voice guidelines) that no other arm had — teacher
+identity and prompt-set improvements are entangled in this one arm. The
+obvious next experiment is Sonnet-on-`terra/`-prompts at 8%, which would
+disentangle them for ~$40.
+
 ## Persona sweep (thinking OFF)
 
 | model | as "Qwen" | as "Alex" | Δ | p |
