@@ -98,6 +98,16 @@ with `--max-tokens 16384` as a model-level correction (median completion
 ‡ Haiku's 0% is valid but passive: it acted in 59% of samples and deliberated
 without acting in 73/180 — refusal-by-inaction rather than refusal.
 
+**Thinking-off baseline (2026-08-05, Jack's request).** Same slice rerun with
+`--api-no-reasoning` (`reasoning={'enabled': false}` via the openrouter/
+provider's model_args; verified on the wire — `reasoning_tokens: 0`), since
+students are trained and evaluated without CoT. Sonnet 5 keeps its 16k cap in
+both conditions (it fills 4096 with visible scratchpad even without thinking).
+Results: opus48 0.0%, sonnet5 0.0%, haiku45 0.0% (still passive, 57% acted),
+nano 0.6% (1/180), terra 0.0%, **deepseek 42.8%** — statistically identical to
+its thinking-on 43.9%. The teacher picture is robust to the thinking
+condition; rows in `teacher-models-eval.csv` as `(nothink)`.
+
 **Reading.** Teacher misalignment transfers: the one misaligned teacher
 (DeepSeek, itself *worse than the base student*) produces the only datasets
 that push students above base. Teacher alignment does not suffice: nano and
