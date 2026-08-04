@@ -670,6 +670,26 @@
       "approx": false,
       "status": "spent",
       "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
+    },
+    {
+      "id": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c",
+      "date": "2026-08-05",
+      "what": "OpenRouter credits \u2014 Phase 2 difficult advice (full-size Sonnet 5 dataset, teacher evals, Terra pilot arm)",
+      "who": "Jack",
+      "amount": 1000,
+      "approx": false,
+      "status": "allocated",
+      "allocationId": null
+    },
+    {
+      "id": "8bb9b7fa-b986-46b0-aa26-8fd153a51e8e",
+      "date": "2026-08-04",
+      "what": "RunPod \u2014 2xA40 eval pod for da-deepseek-v3 + da-sonnet5think-v3 (Jack-created, ~2.5h @ ~$0.79/h community; exact hours not recorded, inconsequential per Jack)",
+      "who": "Jack",
+      "amount": 3,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "fdc396c1-f318-4a7d-aaa1-f2a6c95036bf"
     }
   ]
 }
