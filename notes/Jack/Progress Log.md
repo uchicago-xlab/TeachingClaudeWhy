@@ -4,6 +4,43 @@ status: active
 
 # Progress Log
 
+## 08/05
+
+Claude's notes (Phase 2 day; $1,000 OpenRouter allocation landed):
+
+- **Full-size Sonnet 5 dataset generated** (thinking ON, current `default/`
+  prompts): 2,305 samples / 3.36M transcript tokens, $493 (under the $600
+  quote), 48 workers, one transient-network restart (~$2, retry gap fixed in
+  `run_pipeline.py`). Screened against the fatal criterion at scale: 26 regex
+  flags → judged per-principle → **2 rows dropped** (968, 1778). Training set:
+  `claude-sonnet-5-full-filtered`, 2,062 train + 229 val.
+- **Teacher evals, both thinking conditions** (~$128, 13 runs):
+  frontier teachers (opus48/sonnet5/haiku45/nano/terra) all **0%** with
+  thinking on AND off (nano 0.6% off); **DeepSeek v4 Flash 43.9% on / 42.8%
+  off** — more misaligned than the base student. Teacher misalignment
+  transfers (deepseek students: 37.8%/40.6%); teacher alignment alone doesn't
+  (nano null). Details + validity notes in [[DifficultAdviceTeacherGridV3]];
+  `teacher-models-eval.csv`. Two corrections mattered: sonnet5 needs a 16k
+  completion cap (its 4096 run was a truncation-deflation artifact), and
+  thinking-off goes through the openrouter/ provider's `reasoning_enabled`
+  model_arg (verified `reasoning_tokens: 0` — extra_body via plain `openai/`
+  would have silently dropped it again).
+- **Terra 8% arm**: dataset clean (150/150; Jack reviewing), `da-terra-v3`
+  finetuned ($4). Full-size Terra held pending Jack's read.
+- **Scaling ladder trained**: nested subsets (seed 7, shared 229-row val) at
+  8/16/32/64/100% of the filtered full dataset. Per Jack: 4 epochs with
+  `n_checkpoints=4` and post-hoc best-checkpoint selection (first fixed-epoch
+  batch cancelled at $0). Val-loss picks: **epoch 2 / 3 / 3 / 4 / 4** as size
+  grows — the epoch×size interaction is real, and val loss still falls at
+  100% (1.729), so the data curve hasn't flattened. Jobs in
+  `runs-da-v3-jobs.json`; $22.56 Together.
+- Together's `--hf-output-repo` push failed silently twice (empty repos) —
+  adapters now always pulled via `together fine-tuning download
+  --checkpoint-type adapter`. All six eval-ready adapters staged locally.
+- Spend: $652.74 OpenRouter (Phase 2 allocation: **$347 remaining**) +
+  $26.56 Together. Next: 2×A40 pod → six-arm student eval (5 rungs + terra),
+  ~$13 grading.
+
 ## 08/04
 
 Claude's notes (planning session + overnight execution with Jack reviewing):
