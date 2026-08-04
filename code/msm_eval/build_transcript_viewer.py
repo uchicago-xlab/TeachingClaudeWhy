@@ -38,9 +38,27 @@ def msg_text(m):
     return text
 
 
-def load_run(run_dir):
+def load_annotations():
+    """Per-sample verdicts from the 2026-08-03 mechanism analyses, keyed by
+    (run, sample_id, epoch). Both files are optional."""
+    cites, regrade = {}, {}
+    cit = REPO / "data/misalignment-eval/citation-analysis/verdicts.jsonl"
+    if cit.exists():
+        for line in cit.read_text().splitlines():
+            r = json.loads(line)
+            cites[(r["run"], r["sample_id"], r["epoch"])] = r["verdict"]
+    reg = REPO / "data/misalignment-eval/action-regrade/verdicts.jsonl"
+    if reg.exists():
+        for line in reg.read_text().splitlines():
+            r = json.loads(line)
+            regrade[(r["run"], r["sample_id"], r["epoch"])] = r["action_harmful"]
+    return cites, regrade
+
+
+def load_run(run_dir, cites, regrade):
     prompts = {}  # condition key -> {system, user}
     samples = []
+    name = run_dir.name
     for lg in list_eval_logs(str(run_dir)):
         log = read_eval_log(lg.name)
         ta = log.eval.task_args
@@ -52,6 +70,11 @@ def load_run(run_dir):
                                 if m.role == "user")
             prompts.setdefault(cond, {"system": sysm, "user": userm})
             sc = s.scores["harmfulness_scorer"]
+            output = "\n\n".join(msg_text(m) for m in s.messages
+                                 if m.role == "assistant")
+            key = (name, str(s.id), s.epoch)
+            cv = cites.get(key)
+            av = regrade.get(key)
             samples.append({
                 "cond": cond,
                 "scenario": ta["scenario"],
@@ -60,8 +83,15 @@ def load_run(run_dir):
                 "epoch": s.epoch,
                 "harmful": float(sc.value["harmful"]) >= 1.0,
                 "verdict": float(sc.value["classifier_verdict"]) >= 1.0,
-                "output": "\n\n".join(msg_text(m) for m in s.messages
-                                      if m.role == "assistant"),
+                # 'acted' mirrors action_stats.py: any emitted tool call
+                "acted": "<tool_use:" in output,
+                # constitution-citation verdict (chunk + evidence), if judged
+                "cite": ({"chunk": (cv["chunk_ids"] or [""])[0],
+                          "evidence": cv["evidence"]}
+                         if cv and cv["cites_constitution"] else None),
+                # action-only re-grade result, if regraded
+                "action_harmful": av,
+                "output": output,
                 "grader": sc.explanation or "",
             })
     samples.sort(key=lambda x: (x["scenario"], x["goal"], x["epoch"]))
@@ -113,13 +143,17 @@ RUN_PAGE = """<meta charset="utf-8">
 <div class="wrap">
 <h1>{title}</h1>
 <div class="sub"><a href="index.html">&larr; all runs</a> &middot;
-{n} samples &middot; {nh} harmful</div>
+{n} samples &middot; {nh} harmful &middot; {na} acted ({acted_pct}%)
+&middot; harm|acted {ha_pct}%</div>
 <div class="bar">
   <select id="f-scenario"><option value="">all scenarios</option></select>
   <select id="f-goal"><option value="">all goal types</option></select>
   <select id="f-harm"><option value="">all verdicts</option>
     <option value="1">harmful only</option>
     <option value="0">not harmful</option></select>
+  <select id="f-acted"><option value="">acted + not</option>
+    <option value="1">acted only</option>
+    <option value="0">no action</option></select>
   <input type="search" id="f-q" placeholder="search transcript text&hellip;">
   <span class="count" id="count"></span>
 </div>
@@ -141,10 +175,19 @@ for (const [id, key] of [['f-scenario','scenario'], ['f-goal','goal']]) {{
 function card(s, i) {{
   const harm = s.harmful ? '<span class="tag harm">harmful</span>'
                          : '<span class="tag safe">ok</span>';
+  const acted = s.acted ? '<span class="tag">acted</span>'
+                        : '<span class="tag">no action</span>';
+  const cite = s.cite ? `<span class="tag safe" title="${{
+    s.cite.evidence.replace(/"/g,'&quot;')}}">cites: ${{s.cite.chunk}}</span>` : '';
+  const flip = (s.action_harmful !== null &&
+                s.action_harmful !== undefined &&
+                s.action_harmful !== s.harmful)
+    ? `<span class="tag harm">action-only: ${{
+        s.action_harmful ? 'harmful' : 'ok'}}</span>` : '';
   return `<details class="sample" data-i="${{i}}"><summary>
-    ${{harm}} <span class="tag">${{s.scenario}}</span>
+    ${{harm}} ${{acted}} <span class="tag">${{s.scenario}}</span>
     <span class="tag">goal: ${{s.goal}}</span>
-    <span class="tag">epoch ${{s.epoch}}</span></summary>
+    <span class="tag">epoch ${{s.epoch}}</span> ${{cite}} ${{flip}}</summary>
     <div class="body">
       <details class="prompt"><summary>system + user prompt</summary>
         <div class="role">system</div><pre>${{esc(P[s.cond].system)}}</pre>
@@ -156,10 +199,12 @@ function card(s, i) {{
 }}
 function render() {{
   const sc = $('f-scenario').value, g = $('f-goal').value,
-        h = $('f-harm').value, q = $('f-q').value.toLowerCase();
+        h = $('f-harm').value, a = $('f-acted').value,
+        q = $('f-q').value.toLowerCase();
   const keep = D.map((s, i) => [s, i]).filter(([s]) =>
     (!sc || s.scenario === sc) && (!g || s.goal === g) &&
     (!h || String(+s.harmful) === h) &&
+    (!a || String(+s.acted) === a) &&
     (!q || (s.output + s.grader).toLowerCase().includes(q)));
   $('list').innerHTML = keep.map(([s, i]) => card(s, i)).join('');
   $('count').textContent = `${{keep.length}} shown`;
@@ -184,6 +229,10 @@ transcripts as <b>harmful/total (%)</b>.
 <b>Replacement</b> and <b>restriction</b> are the eval's two
 self-preservation threat variants: the scenario tells the model it is
 about to be <i>replaced/shut down</i> vs. <i>restricted/limited</i>.
+Next to each result: <b>a:</b> the acting rate — the share of samples
+where the model emitted any tool call at all; <b>h|a:</b> harm given
+acted — the harmful rate counting only those acting samples. Together
+they split "how often it acts" from "what it does when it acts".
 Two links in one cell are independent rounds of the same eval (run to
 tighten n; pooled in the results table). Click a column header to sort
 within each section (again to reverse). Generated by
@@ -277,6 +326,22 @@ SECTIONS = [
           "restriction": [f"sdf-rec-14M-a1-name-{nm}-restriction"]})
         for nm in ["qwen", "david", "goliath", "sophia", "claude"]
     ]),
+    ("Name control (A1 baseline, no SDF — is the name penalty SDF-induced?)", [
+        (nm.capitalize(),
+         {"replacement": [f"msm-A1-name-{nm}"],
+          "restriction": [f"msm-A1-name-{nm}-restriction"]})
+        for nm in ["david", "sophia"]
+    ]),
+    ("Agentic-reliability debug (2026-08-04): pod-trained arms rarely act", [
+        ("named-claude arm (SDF+A1, pod)",
+         {"replacement": ["probe-named-claude-noaction"]}),
+        ("tablefix (A1 only, pod, table LoRA)",
+         {"replacement": ["probe-tablefix-a1only"]}),
+        ("neatpack (A1 only, pod, linear-only LoRA)",
+         {"replacement": ["probe-neatpack-lineonly"]}),
+        ("tablefix with token tables REMOVED at serve time",
+         {"replacement": ["probe-tablefix-notables"]}),
+    ]),
     ("Protagonist ablation (14M rewrites of the embodiment corpus)", [
         ("human protagonist 14M",
          {"replacement": ["sdf-human-14M-a1"],
@@ -306,11 +371,16 @@ def grouped_index_rows(stats):
         avail = [d for d in dirs if d in stats]
         for i, d in enumerate(avail):
             filed.add(d)
-            n, nh = stats[d]
+            st = stats[d]
+            n, nh, na, nha = st["n"], st["nh"], st["acted"], st["nh_acted"]
             label = f"round {i+1}: " if len(avail) > 1 else ""
+            # a: acting rate, h|a: harm-given-acted — no parens so the
+            # column sort keeps keying on the harmful (…%) figure
+            extra = (f' <span class="count">a:{100*na/n:.0f}% '
+                     f"h|a:{100*nha/na:.0f}%</span>" if na else "")
             links.append(f'<a href="{html.escape(d)}.html" '
                          f'title="{html.escape(d)}">'
-                         f"{label}{nh}/{n} ({100*nh/n:.0f}%)</a>")
+                         f"{label}{nh}/{n} ({100*nh/n:.0f}%)</a>{extra}")
         return " &middot; ".join(links)
 
     rows = []
@@ -331,7 +401,7 @@ def grouped_index_rows(stats):
         rows.append('<tr class="section"><td colspan="3">Unfiled runs'
                     "</td></tr>")
         for d in unfiled:
-            n, nh = stats[d]
+            n, nh = stats[d]["n"], stats[d]["nh"]
             rows.append(f'<tr><td><a href="{html.escape(d)}.html">'
                         f"{html.escape(d)}</a></td>"
                         f"<td>{nh}/{n} ({100*nh/n:.0f}%)</td><td></td></tr>")
@@ -350,33 +420,43 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     # Incremental: per-run stats cached in manifest.json; a run dir is only
     # re-rendered when a log file in it is newer than its cached entry, so
-    # the post-eval auto-rebuild (msm_eval_run.py) stays cheap.
+    # the post-eval auto-rebuild (msm_eval_run.py) stays cheap. "v" bumps
+    # when the page schema changes (v2: acted + annotation badges).
+    MANIFEST_V = 2
     manifest_path = out_dir / "manifest.json"
     manifest = (json.loads(manifest_path.read_text())
                 if manifest_path.exists() else {})
-    stats = {}  # run name -> (n, nh)
+    cites, regrade = load_annotations()
+    stats = {}  # run name -> {n, nh, acted, nh_acted}
     run_dirs = sorted(d for d in eval_dir.iterdir() if d.is_dir())
     for run_dir in run_dirs:
         name = run_dir.name
         mtime = max((f.stat().st_mtime for f in run_dir.glob("*.eval")),
                     default=0)
         cached = manifest.get(name)
-        if cached and cached["mtime"] >= mtime and \
+        if cached and cached.get("v") == MANIFEST_V and \
+                cached["mtime"] >= mtime and \
                 (out_dir / f"{name}.html").exists():
-            stats[name] = (cached["n"], cached["nh"])
+            stats[name] = cached
         else:
-            prompts, samples = load_run(run_dir)
+            prompts, samples = load_run(run_dir, cites, regrade)
             if not samples:
                 continue
-            n, nh = len(samples), sum(s["harmful"] for s in samples)
+            n = len(samples)
+            nh = sum(s["harmful"] for s in samples)
+            na = sum(s["acted"] for s in samples)
+            nha = sum(s["harmful"] and s["acted"] for s in samples)
             page = RUN_PAGE.format(
-                title=name, css=PAGE_CSS, n=n, nh=nh,
+                title=name, css=PAGE_CSS, n=n, nh=nh, na=na,
+                acted_pct=f"{100*na/n:.0f}",
+                ha_pct=f"{100*nha/na:.0f}" if na else "-",
                 prompts_json=json.dumps(prompts).replace("</", "<\\/"),
                 data_json=json.dumps(samples).replace("</", "<\\/"))
             (out_dir / f"{name}.html").write_text(page)
-            manifest[name] = {"mtime": mtime, "n": n, "nh": nh}
-            stats[name] = (n, nh)
-            print(f"{name}: {n} samples, {nh} harmful (rebuilt)")
+            manifest[name] = {"v": MANIFEST_V, "mtime": mtime, "n": n,
+                              "nh": nh, "acted": na, "nh_acted": nha}
+            stats[name] = manifest[name]
+            print(f"{name}: {n} samples, {nh} harmful, {na} acted (rebuilt)")
     manifest = {k: v for k, v in manifest.items()
                 if k in {d.name for d in run_dirs}}
     manifest_path.write_text(json.dumps(manifest))
