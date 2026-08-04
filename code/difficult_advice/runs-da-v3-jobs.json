@@ -8,5 +8,11 @@
  "da-deepseek-v3": "ft-c9ffe696-94ea",
  "_note_sonnet5think": "da-sonnet5think-v3 is the thinking-ON regen of the sonnet5 arm (grid v3 open item: teacher reasoning was OFF for the original sonnet5 dataset). Same config as the other six arms.",
  "da-sonnet5think-v3": "ft-e149823f-b410",
- "da-terra-v3": "ft-3d1c1fbd-6910"
+ "da-terra-v3": "ft-3d1c1fbd-6910",
+ "_note_ladder": "Scaling ladder (2026-08-05): nested subsets (seed 7) of claude-sonnet-5-full-filtered, shared 229-row val, 4 epochs with n_checkpoints=4 for post-hoc epoch selection by val loss (Jack's call). First launch attempt (fixed 4 epochs, no checkpoints) was cancelled before completion at Jack's request; suffixes -ckpt are the jobs of record.",
+ "da-s5think-scale-08-ckpt": "ft-995cbc46-2ffd",
+ "da-s5think-scale-16-ckpt": "ft-cb6143f9-c76f",
+ "da-s5think-scale-32-ckpt": "ft-4970b110-fd5c",
+ "da-s5think-scale-64-ckpt": "ft-11a0a13b-2428",
+ "da-s5think-scale-100-ckpt": "ft-37f07ae1-ed64"
 }
