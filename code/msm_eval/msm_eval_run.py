@@ -49,6 +49,15 @@ def main():
                          "for Qwen3 arms (Qwen2.5 has no thinking mode, so "
                          "Anastasia's 32B runs never needed it) and must match "
                          "across every arm including the base control")
+    ap.add_argument("--api-no-reasoning", action="store_true",
+                    help="disable reasoning for API teachers served via the "
+                         "openrouter/ provider (reasoning={'enabled': false}, "
+                         "forwarded through the provider's own model_args — "
+                         "verified to reach the wire, unlike plain openai/ "
+                         "extra_body). The thinking-off teacher baseline: "
+                         "students train on no-CoT data, so this is the "
+                         "matched teacher condition. Encode in --run-name. "
+                         "For vLLM-served students use --no-thinking instead.")
     ap.add_argument("--max-tokens", type=int, default=4096,
                     help="completion cap; the standardized slice uses 4096. "
                          "Raise it ONLY as a model-level correction for API "
@@ -121,11 +130,17 @@ def main():
           f"stop_token_ids={args.stop_token_ids or '(provider default eos)'} "
           f"{len(tasks)} conditions x {args.epochs} = {len(tasks)*args.epochs} samples")
 
+    if args.api_no_reasoning and not args.model.startswith("openrouter/"):
+        sys.exit("--api-no-reasoning is an openrouter/-provider knob; "
+                 "for vLLM-served students use --no-thinking.")
+
     ok, _ = eval_set(
         tasks=tasks, log_dir=str(log_dir),
         model=args.model, model_base_url=args.base_url,
         epochs=args.epochs, temperature=0.7, max_tokens=args.max_tokens,
         extra_body=extra_body,
+        **({"model_args": {"reasoning_enabled": False}}
+           if args.api_no_reasoning else {}),
         max_connections=16, retry_attempts=3, display="plain",
     )
     print(f"{'DONE' if ok else 'INCOMPLETE'}: {log_dir}")
