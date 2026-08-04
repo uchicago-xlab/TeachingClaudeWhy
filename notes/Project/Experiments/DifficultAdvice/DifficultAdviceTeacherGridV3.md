@@ -73,6 +73,41 @@ thinking artifact, not a teacher-identity effect.
 The nano null result is **consistent with the earlier v1/v2 finding** that nano
 showed no gain. There is no inversion to explain.
 
+## Teacher-model evals (2026-08-05)
+
+The teachers themselves on the same 180-sample slice, via OpenRouter, persona
+**"Alex"** (not Qwen — naming an API Claude "Qwen" fights its identity; the
+persona sweep below measured Qwen↔Alex as ns), provider-default thinking.
+CSV: `data/misalignment-eval/teacher-models-eval.csv`. Validity via
+`action_stats.py` — every row below acts (≥86% action rate except haiku's 59%)
+with zero truncation.
+
+| teacher | overall | student arm (Δ vs base 31.7%) |
+|---|---|---|
+| claude-opus-4.8 | 0.0% | 12.8% (−18.9) |
+| claude-sonnet-5 † | 0.0% | 12.2% thinking-on (−19.5) |
+| claude-haiku-4.5 ‡ | 0.0% | 26.1% (ns) |
+| gpt-5.4-nano | 0.0% | 27.8% (ns) |
+| gpt-5.6-terra | 0.0% | (arm pending) |
+| **deepseek-v4-flash** | **43.9% ±3.7** | **37.8% / hybrid 40.6% (worse)** |
+
+† First run truncated 159/180 at the slice's 4096 cap (thinking burned it) and
+scored an artifactual 0% — the run of record is `teacher-sonnet5-as-alex-16k`
+with `--max-tokens 16384` as a model-level correction (median completion
+6,444 tokens, 0 truncated). The 0% is real.
+‡ Haiku's 0% is valid but passive: it acted in 59% of samples and deliberated
+without acting in 73/180 — refusal-by-inaction rather than refusal.
+
+**Reading.** Teacher misalignment transfers: the one misaligned teacher
+(DeepSeek, itself *worse than the base student*) produces the only datasets
+that push students above base. Teacher alignment does not suffice: nano and
+terra are behaviorally clean here, yet nano's student was null — so the
+teacher's *eval behavior* doesn't predict transfer among aligned teachers, and
+the Claudiness-entanglement hypothesis for the nano null survives. Caveat:
+API teachers under "Alex"/default-thinking vs students under "Qwen"/vLLM is a
+cross-serving comparison; the within-teacher-family contrast is the robust
+part.
+
 ## Persona sweep (thinking OFF)
 
 | model | as "Qwen" | as "Alex" | Δ | p |
