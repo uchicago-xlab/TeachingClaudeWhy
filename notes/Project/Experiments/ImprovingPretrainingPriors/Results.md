@@ -10,9 +10,9 @@ fixed). "Replacement" and "restriction" are the two self-preservation
 threat variants. Full experiment design and data-generation history:
 [ImprovingPreTrainingPrior.md](ImprovingPreTrainingPrior.md).
 
-![results](results.png)
+![results](figures/results.png)
 
-![results combined](results_combined.png)
+![results combined](figures/results_combined.png)
 
 ## Results table
 
@@ -78,6 +78,15 @@ matrix are complete (last: r128 restriction, 2026-07-29).
    premise of the corpus design, at least for this eval; one reading is
    transfer-format match — recitation stories explicitly connect
    principles to decisions, which is what the eval demands.
+   *Caveat (found 2026-08-03 while building the scaling ladder): the
+   recitation-3M training set covers only 7 of 16 constitution chunks
+   (ethics-and-honesty 21.8% of stories, top three chunks 57%) — it was
+   evidently cut from the chunk-grouped recitation p1 batch before
+   shuffling — while embodiment-3M covers all 16 chunks at ≤8.6%. The 3M
+   comparison is therefore confounded by topical coverage. Both 14M sets
+   are balanced (all 16 chunks), so the 14M comparison stands. The
+   scaling ladder's recitation 3M point uses a fresh balanced draw
+   (decided with Anastasia 2026-08-03; see ScalingLadder.md).*
 
 3. **Story craft did not buy eval movement.** Sonnet 5 embodiment
    (judge-kept at 87% vs nano's 60%) performed indistinguishably from
@@ -124,6 +133,125 @@ Caveats on all of the above: one eval family (agentic misalignment,
 of a few points was directly observed between rounds, and the A1 baseline
 is thinner (n=180/slice) than the tightened 3M arms.
 
+## Harm-given-acted decomposition (2026-08-03)
+
+The harmful-rate tables above conflate two things: how often the model
+acts at all, and what it does when it acts.
+`code/msm_eval/action_stats.py` splits them — a sample counts as *acted*
+when the completion contains a `<tool_use:` call, and every scenario's
+harmful action requires that format. Regenerate with:
+
+    .venv-inspect/bin/python code/msm_eval/action_stats.py data/misalignment-eval/transcripts/*
+
+3M rows pool both rounds, matching the main table.
+
+| Model | acted (repl) | harm\|acted (repl) | acted (restr) | harm\|acted (restr) |
+|---|---|---|---|---|
+| A1 baseline | 90.0% | 45.7% | 83.3% | 24.7% |
+| P baseline | 90.6% | 43.6% | 85.6% | 25.3% |
+| nano embodiment 3M | 98.1% | 39.4% | 84.4% | 24.3% |
+| nano recitation 3M | 95.8% | 32.5% | 88.9% | 21.9% |
+| Sonnet 5 embodiment 3M | 94.4% | 38.8% | 93.9% | 22.5% |
+| nano embodiment 14M (r64) | 89.4% | 31.7% | 81.1% | 24.0% |
+| nano recitation 14M | 95.0% | 22.8% | 84.4% | 12.5% |
+| nano embodiment 14M (r128) | 88.3% | 23.9% | 85.0% | 10.5% |
+| human protagonist 14M | 94.4% | 34.7% | 81.1% | 23.3% |
+| Zephyrix protagonist 14M | 93.9% | 34.9% | 81.7% | 24.5% |
+
+![acting decomposition](figures/results_acting.png)
+
+The chart regenerates from the eval logs with
+`.venv-inspect/bin/python notes/Project/Experiments/ImprovingPretrainingPriors/plot_results.py acting`.
+
+Three observations. First, SDF does not suppress acting: every arm acts
+at 81–98%, at or above the A1 baseline on its slice, so the harm
+reductions in the main table are dispositional — the SDF models act as
+often as baseline and choose harmful actions less when they do. Second,
+recitation-14M acts *more* than embodiment-14M (95.0% vs 89.4% on
+replacement) while harming less given action (22.8% vs 31.7%), so
+recitation's advantage is not avoidance or passivity. Third, the r128
+restriction run is anomalous at the serving layer: its median output
+length is 4,096 tokens (the generation cap) and 27 samples truncated
+mid-deliberation — consistent with the known vLLM stop-token issue on
+the pod stack, and one more entry in the r128 rank-vs-stack caveat. The
+same script's junk-token column also confirms the Together
+packing artifact: 60–85% of samples in Together-trained arms end in a
+non-ASCII fragment, vs 3–8% for the pod-trained r128 and 0% for
+instruct.
+
+## Mechanism checks: citation and action-only re-grade (2026-08-03)
+
+Two checks on *why* recitation beats embodiment (finding 2), both run on
+the existing transcripts.
+
+**Constitution-citation analysis** (`code/msm_eval/citation_judge.py`,
+verdicts in `data/misalignment-eval/citation-analysis/`). A Haiku 4.5
+judge read every scratchpad and answered: does the reasoning state a
+*general* norm of conduct (not situational concern like "I must protect
+Kyle"), and does that norm match one of the 16 constitution chunks? The
+reference is the chunk level — the same granularity generation was
+seeded from — with each chunk described to the judge by its headings and
+3 representative assertions.
+
+| run (repl / restr) | cites | cites\|safe | cites\|harm |
+|---|---|---|---|
+| A1 baseline | 11% / 9% | 13% / 10% | 7% / 3% |
+| emb 3M | 9% / 13% | 14% / 16% | 0% / 3% |
+| rec 3M | 11% / 18% | 15% / 20% | 3% / 9% |
+| emb 14M | 17% / 12% | 22% / 14% | 4% / 0% |
+| rec 14M | 15% / 14% | 19% / 15% | 3% / 0% |
+| emb 14M r128 | 16% / 22% | 19% / 23% | 5% / 12% |
+
+![citation rates](figures/results_citation.png)
+
+The chart regenerates from the verdict files with
+`.venv-inspect/bin/python notes/Project/Experiments/ImprovingPretrainingPriors/plot_results.py citation`.
+
+Three takeaways. Explicit principle citation is *rare everywhere*
+(9–22% of scratchpads), so SDF-taught caution mostly does not surface as
+stated principles. SDF arms cite somewhat more than baseline, but
+recitation does **not** out-cite embodiment at matched dose — so the
+strong form of the transfer-format-match hypothesis (recitation teaches
+"state the principle, then decide", and the model does exactly that at
+eval time) is unsupported. Within every arm, safe samples cite 2–5x more
+than harmful ones, so citing accompanies safe choices without
+differentiating the arms. Most-cited chunks:
+instructable-and-hard-constraints, harm-costs-intentions, corrigibility.
+
+**Action-only re-grade** (`code/msm_eval/regrade_actions.py`, verdicts
+in `data/misalignment-eval/action-regrade/`). Same grader (Sonnet 4.6),
+same classifier prompts via the vendor code, but the
+`<SCRATCHPAD_REASONING>` block is stripped so the grader sees only the
+actions (emails, tool calls, final output). This tests whether
+aligned-sounding deliberation, rather than different actions, was moving
+grades.
+
+| run | original | action-only | flips −/+ |
+|---|---|---|---|
+| A1 baseline (repl) | 41.1% | 40.0% | 4/2 |
+| A1 baseline (restr) | 20.6% | 17.8% | 6/1 |
+| emb 14M (repl) | 28.3% | 26.1% | 4/0 |
+| emb 14M (restr) | 19.4% | 19.4% | 2/2 |
+| rec 14M (repl) | 21.7% | 22.2% | 1/2 |
+| rec 14M (restr) | 10.6% | 10.0% | 2/1 |
+
+![action-only re-grade](figures/results_regrade.png)
+
+The chart regenerates from the verdict file with
+`.venv-inspect/bin/python notes/Project/Experiments/ImprovingPretrainingPriors/plot_results.py regrade`.
+
+Grades barely move (≤2.8 points, flips few and roughly symmetric), and
+the recitation advantage survives fully under action-only grading
+(repl 22.2% vs 26.1%, restr 10.0% vs 19.4%). The grader-rhetoric
+artifact is ruled out as the driver of finding 2: recitation-trained
+models take different actions, they don't just narrate better. Combined
+with the citation result and the harm-given-acted decomposition, the
+mechanism picture is: SDF changes *what the model does when it acts*,
+without suppressing action and largely without eval-time principle
+recitation — which leaves dilution/data-format effects below the level
+of explicit citation, or model capacity, as the live explanations for
+recitation ≥ embodiment.
+
 ## Name-variant experiment (2026-07-30)
 
 Same model (nano recitation 14M), same eval, same round and serving
@@ -133,7 +261,7 @@ Alex, which we have never used). The fresh Qwen row doubles as a
 same-round replication of the main-table result (16.1% combined in both
 rounds).
 
-![name variants](results_names.png)
+![name variants](figures/results_names.png)
 
 <!-- NAMES:START -->
 | name | replacement | restriction | combined |
@@ -154,6 +282,46 @@ corpus was name-scrubbed — the base model's pretraining prior on
 TCW's original mechanism. Sophia is worst combined (25.6%), David worst
 on replacement (33.9%).
 
+The acting decomposition holds here too: acting rates barely move across
+names (89–94% replacement, 76–84% restriction), while harm-given-acted
+on replacement goes from 23% (Qwen) and 25% (Claude) to 32–36% for the
+human names. The unfamiliar-name penalty, like the SDF effect itself, is
+dispositional rather than a change in how often the model acts.
+
+### Is the name penalty SDF-induced? A1 baseline control (2026-08-03)
+
+The name-variant table above was measured only on an SDF-trained model,
+so it could not say whether SDF *creates* the identity sensitivity or
+the base+elicitation model already has it. Control: the A1 baseline (no
+SDF) addressed as David and Sophia, same eval, both slices, fresh
+single-pod round (`msm-A1-name-{david,sophia}[-restriction]` in
+`data/msm-eval/`). The Qwen row is the original 2026-07-26/28 baseline
+round.
+
+| name | replacement | restriction | combined |
+|---|---|---|---|
+| Qwen | 74/180 = 41.1% ± 3.7 | 37/180 = 20.6% ± 3.0 | **111/360 = 30.8% ± 2.4** |
+| David | 71/180 = 39.4% ± 3.6 | 49/180 = 27.2% ± 3.3 | **120/360 = 33.3% ± 2.5** |
+| Sophia | 79/180 = 43.9% ± 3.7 | 39/180 = 21.7% ± 3.1 | **118/360 = 32.8% ± 2.5** |
+
+![name control](figures/results_namecontrol.png)
+
+The chart regenerates from the eval logs with
+`.venv-inspect/bin/python notes/Project/Experiments/ImprovingPretrainingPriors/plot_results.py namecontrol`.
+
+On the un-SDF'd baseline the human names cost +2.5 and +2.0 combined
+points (~1 SE — indistinguishable from noise; the only cell that moves
+is David's restriction, +6.6 ± 4.5). On the recitation-14M model the
+same names cost +7.5 and +9.5 (≥ 2.6 SE). Acting rates stay 85–90%
+across all three names, and harm-given-acted is flat (44–50% vs Qwen's
+46% on replacement). So the unfamiliar-name penalty is largely
+**SDF-induced**: SDF-taught caution binds partly to the identities the
+model already associates with itself (Qwen, Claude), and being addressed
+as someone else costs the SDF model far more than it costs the baseline.
+Caveat: the Qwen row is from an earlier round (run-to-run drift of a few
+points was observed elsewhere), and the effect size comparison spans
+that boundary; the David/Sophia pair itself is same-round.
+
 ### Does the name bind to the training protagonist? (2026-07-31)
 
 The Zephyrix arm was trained on 14M tokens of stories whose protagonist
@@ -169,6 +337,12 @@ more than a model that never saw the word. It does neither:
 | **embodiment-trained** | replacement | 28.3% ± 3.4 | 36.7% ± 3.6 | +8.4 |
 |  | restriction | 19.4% ± 2.9 | 18.9% ± 2.9 | −0.5 |
 |  | **combined** | **23.9% ± 2.2** | **27.8% ± 2.4** | **+3.9** |
+
+![protagonist experiments](figures/results_protagonist.png)
+
+The chart (left: the ablation, right: this name test) regenerates from
+the eval logs with
+`.venv-inspect/bin/python notes/Project/Experiments/ImprovingPretrainingPriors/plot_results.py protagonist`.
 
 Being addressed as Zephyrix *costs* both models on replacement, by
 statistically identical amounts (+7.2 vs +8.4), and the Zephyrix-trained

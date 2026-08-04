@@ -770,6 +770,56 @@
       "approx": true,
       "status": "spent",
       "allocationId": "fdc396c1-f318-4a7d-aaa1-f2a6c95036bf"
+    },
+    {
+      "id": "7bf3997e-816c-4489-bc4a-f1fc3d25968e",
+      "date": "2026-08-03",
+      "what": "OpenRouter \u2014 name-scrub ladder over scale116 arms (3.1.1), 2026-08-03: gpt-5.4-nano, 3 passes; embodiment 52 scrubbed/18 residue, recitation 6,434 scrubbed/302 residue (residue flagged, excluded from training). Exact key-counter delta $666.59 - $632.12.",
+      "who": "Anastasia",
+      "amount": 34.47,
+      "approx": false,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-sdf-mech-analyses",
+      "date": "2026-08-03",
+      "what": "OpenRouter \u2014 SDF mechanism analyses (2026-08-03): constitution-citation judge (Haiku 4.5, 2,124 calls over 12 runs' scratchpads, ~$9 from token counts) + action-only re-grade (Sonnet 4.6, 1,083 calls over 6 runs, ~$15.5). Key-counter deltas are entangled with the concurrent 116M scrub run, so per-task numbers are computed, not measured; day total on key hit $98.62 with scrub still running.",
+      "who": "Anastasia",
+      "amount": 25.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-a1-namectl-eval",
+      "date": "2026-08-03",
+      "what": "A1 baseline name-control evals (2026-08-03): 4 runs (David/Sophia x replacement/restriction, 180 samples each) on pod a1-namectl 1xA100 PCIe $1.39/h ~1.6h (~$2.2, created and terminated same afternoon) + OpenRouter Sonnet 4.6 grading ~$9. Result: name penalty is largely SDF-induced (baseline moves ~1 SE, SDF model 2.6-3+ SE).",
+      "who": "Anastasia",
+      "amount": 11.2,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
+    },
+    {
+      "id": "aw-ladder-a1-memtest",
+      "date": "2026-08-03",
+      "what": "RunPod \u2014 A1-stage memory qualification for the SDF scaling ladder, 2026-08-03: pod a1-memtest 4xH200 @ $17.56/h, ~0.35h (created 16:18, terminated 16:39; ~$6.15, verify exact on console). Smoke of a1_lora_r64_fix1 (token-table LoRA, 8192 packs, ZeRO-3 4-way): PASSED, loss 0.9222, peak 104.6GB/GPU of 143GB. Found+fixed: prebaked image transformers 5.6.0 breaks flash_attn fa2 on the A1 path too \u2014 sdpa required (first attempt crashed, no charge beyond same pod session). Also: three 8xH100 and ~15 8xH200 creation attempts all refused (no instances), $0 billed.",
+      "who": "Anastasia",
+      "amount": 6.15,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-ladder-training-pods",
+      "date": "2026-08-04",
+      "what": "RunPod (new tcw account) \u2014 SDF scaling-ladder pods, 2026-08-03/04: sdf-ladder-8x + sdf-ladder-8x-rec (8xH200 each, ~14.4h and ~13.9h from creation to stop; includes 3.2h stage-1 training per arm, ~2.5h idle from an eval-lane waiter bug, and ~4h of eval-lane environment debugging incl. one container restart each) + eval-emb/eval-rec 1xA100 ~1.3h each. Pods STOPPED not terminated 2026-08-04 morning (A1-pipeline debugging pause, Anastasia); 56M/112M stage-1 checkpoints still only on the stopped volumes. Estimate at $3.59/GPU-h: ~$815 + ~$4; verify exact on console.",
+      "who": "Anastasia",
+      "amount": 819.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
     }
   ]
 }
