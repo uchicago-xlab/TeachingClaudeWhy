@@ -7,5 +7,6 @@
  "da-hybrid-v3": "ft-698c18c3-41ff",
  "da-deepseek-v3": "ft-c9ffe696-94ea",
  "_note_sonnet5think": "da-sonnet5think-v3 is the thinking-ON regen of the sonnet5 arm (grid v3 open item: teacher reasoning was OFF for the original sonnet5 dataset). Same config as the other six arms.",
- "da-sonnet5think-v3": "ft-e149823f-b410"
+ "da-sonnet5think-v3": "ft-e149823f-b410",
+ "da-terra-v3": "ft-3d1c1fbd-6910"
 }
