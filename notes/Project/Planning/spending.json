@@ -499,7 +499,7 @@
       "id": "e00f3e94-6a28-490e-98df-f70bd6cabd0f",
       "date": "2026-07-31",
       "who": "Jack",
-      "allocationId": "edc7c907-0e09-45d9-8154-2d2b4a7fc135"
+      "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
     },
     {
       "amount": 3.0,
@@ -509,7 +509,7 @@
       "id": "588f51ff-d71c-4071-8f43-aec5a4da2bff",
       "date": "2026-07-31",
       "who": "Jack",
-      "allocationId": "edc7c907-0e09-45d9-8154-2d2b4a7fc135"
+      "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
     },
     {
       "amount": 4.0,
@@ -529,7 +529,7 @@
       "id": "b40f4ab0-8bd8-4f17-9821-34e9d36080ce",
       "date": "2026-07-31",
       "who": "Jack",
-      "allocationId": "edc7c907-0e09-45d9-8154-2d2b4a7fc135"
+      "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
     },
     {
       "amount": 17.6,
@@ -539,6 +539,36 @@
       "id": "cdcc7ecc-2d0d-469e-8004-952affaf25fc",
       "date": "2026-07-31",
       "who": "Jack",
+      "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
+    },
+    {
+      "id": "7a5ade1e-2e6f-4de2-888b-5a49cee70615",
+      "date": "2026-08-04",
+      "what": "OpenRouter \u2014 Sonnet 5 thinking-ON regen of the difficult-advice 8% dataset (149 samples, all stages reasoning on; grid v3 open item 2). Output data/difficult-advice/claude-sonnet-5-thinking/. Cost from key usage counter; tonight's total delta $43.22 split ~$36 regen / ~$7 probes.",
+      "who": "Jack",
+      "amount": 36.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
+    },
+    {
+      "id": "dbe0995c-097c-41be-8fba-51496969f65d",
+      "date": "2026-08-04",
+      "what": "OpenRouter \u2014 GPT 5.6 Terra teacher pilots: three 15-sample probes (gpt set; default set \u2014 caught fatal principle-prescribing system prompts; new terra/ set \u2014 clean). Prompt set added in 0c7496a. Remainder of tonight's $43.22 counter delta.",
+      "who": "Jack",
+      "amount": 7.22,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
+    },
+    {
+      "id": "6f19d78c-3251-44ad-8fc9-964f1b50a783",
+      "date": "2026-08-04",
+      "what": "Together \u2014 da-sonnet5think-v3 finetune (ft-e149823f-b410), Qwen3-14B, v3 grid config, $4 tier minimum.",
+      "who": "Jack",
+      "amount": 4.0,
+      "approx": false,
+      "status": "spent",
       "allocationId": "edc7c907-0e09-45d9-8154-2d2b4a7fc135"
     },
     {
