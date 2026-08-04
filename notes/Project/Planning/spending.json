@@ -660,6 +660,16 @@
       "approx": true,
       "status": "spent",
       "allocationId": "seed-07"
+    },
+    {
+      "id": "c6c95d5c-2a5e-46e7-a0e0-55537f1e4bff",
+      "date": "2026-08-04",
+      "what": "OpenRouter \u2014 Sonnet 4.6 grading for the two new teacher-grid arms (da-deepseek-v3: 37.8%; da-sonnet5think-v3: 12.2%), 180 samples each, thinking-off via openai-api/vllm on the 2xA40 pod. Exact from key usage counter.",
+      "who": "Jack",
+      "amount": 4.61,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
     }
   ]
 }

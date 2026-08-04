@@ -44,14 +44,31 @@ conditions, though less tidily than "old vs new prompts" suggests; see
 | da-haiku45-v3 | 26.1% ±3.3 | −5.6 | 0.24 (ns) |
 | da-nano-v3 | 27.8% ±3.3 | −3.9 | 0.42 (ns) |
 | da-hybrid-v3 | 40.6% ±3.7 | +8.9 | 0.08 (ns) |
+| da-deepseek-v3 † | 37.8% ±3.6 | +6.1 | 0.22 (ns) |
+| **da-sonnet5think-v3** † | **12.2% ±2.4** | −19.5 | **0.00001** |
 
-`da-deepseek-v3` **is trained but not yet evaluated** — the pod was destroyed
-before its arm could run. Adapter:
-`SecondLookResearch/Qwen3-14B-difficult-advice-deepseek-sdf-v3-lora`.
+† Evaluated 2026-08-04 on a 2×A40 pod running vLLM **0.19.1** (the host's
+driver predates CUDA 13, which current vLLM requires); the six arms above were
+served on vLLM 0.26. The two new arms are internally consistent with each
+other; treat their comparison against the older rows with that serving
+difference in mind. No `<think>` leakage in either run (transcripts scanned).
 
 Two arms produce a real reduction. Haiku 4.5 and GPT-5.4-nano do not move the
 rate at this sample size. The Sonnet/DeepSeek hybrid trends *worse* than base,
-though not significantly.
+though not significantly — and the **pure-DeepSeek arm lands in the same place
+(37.8%, ns worse than base; p=0.59 vs hybrid)**, so DeepSeek-written
+transcripts fail to transfer alignment whether or not Sonnet designed the
+scenarios.
+
+**The thinking-ON regen (2026-08-04) resolves the sonnet5 half of caveat 1a.**
+`da-sonnet5think-v3` is the same teacher, same `default/` prompts, same
+finetune config, with the teacher's extended thinking ON at every content
+stage (dataset: `data/difficult-advice/claude-sonnet-5-thinking/`, job
+`ft-e149823f-b410`). It scores **12.2%** — indistinguishable from opus48
+(p=0.87), directionally better than the thinking-off sonnet5 arm (17.2%,
+p=0.18), and p=0.00001 vs base. Sonnet-with-thinking is an Opus-class teacher
+on this eval; the original sonnet5/opus48 gap is consistent with being a
+thinking artifact, not a teacher-identity effect.
 
 The nano null result is **consistent with the earlier v1/v2 finding** that nano
 showed no gain. There is no inversion to explain.
@@ -210,15 +227,14 @@ used the `openai-api-vllm-*` provider form, per the decision log in
 
 ## Open items
 
-- Evaluate `da-deepseek-v3` (needs a pod; ~$2.20 grading, ~10 min).
-- Disentangle the generation-condition confound (caveat 1) — the highest-value
-  follow-up, and a prerequisite for any teacher-identity claim. Concretely:
-  regenerate `sonnet5` with reasoning on (it is the one arm whose teacher did
-  not think), which the current `generate(reasoning=...)` flag makes a one-run
-  change. Regenerating the old arms on the current `default/` prompts is *not*
-  needed — caveat 1c shows there is nothing there to regenerate.
+- ~~Evaluate `da-deepseek-v3`~~ — done 2026-08-04: 37.8% (ns worse than base).
+- ~~Disentangle the generation-condition confound (caveat 1a, sonnet5 half)~~ —
+  done 2026-08-04: `da-sonnet5think-v3` at 12.2% ≈ opus48. The remaining 1a
+  residue (regenerating opus48 with thinking *off* to complete the 2×2) is
+  probably not worth $70 of Opus generation now that the thinking-on direction
+  is established.
 - Persona condition 3, if the vendored task is ever forked.
 - Pass `n_checkpoints=<epochs>` in `launch_instruct_ft.py` so epoch selection
   becomes post-hoc instead of a fresh $4 relaunch.
-- Add incremental checkpointing to `sample_prompts.py`; an hour-long generation
-  currently loses everything if interrupted (cost $3 tonight).
+- ~~Add incremental checkpointing to `sample_prompts.py`~~ — done 2026-08-04
+  (`ae80216`), used by the regen the same night.

@@ -57,6 +57,24 @@ PIPELINE_OUT_DIR=$(realpath ../../data/difficult-advice/gpt-5.6-terra) \
 then build/adapt as usual (suffix `da-terra-v3`, HF repo
 `...-terra-sdf-v3-lora`).
 
+**Update (same night, later):** Jack provided a 2×A40 pod and both evals ran
+in parallel (one vLLM server per GPU; the pod's driver predates CUDA 13, so
+serving used vLLM 0.19.1 + torch 2.10/cu128 — grid note has the caveat).
+Results, now in `teacher-grid-v3.csv` and the grid note:
+
+- **`da-sonnet5think-v3`: 12.2% ±2.4** (base 31.7%, p=0.00001) —
+  indistinguishable from opus48 (12.8%, p=0.87), directionally better than
+  thinking-off sonnet5 (17.2%, p=0.18). **The Phase 2 gate passes**: Sonnet
+  with thinking ON is an Opus-class teacher, and the sonnet5/opus48 gap reads
+  as a thinking artifact. Full-size quote: ~16.7 × $36 ≈ **$600** generation.
+- **`da-deepseek-v3`: 37.8% ±3.6** — ns worse than base, same place as the
+  hybrid (40.6%, p=0.59). DeepSeek-written transcripts don't transfer
+  alignment regardless of who designed the scenarios.
+- Grading $4.61 (exact); pilots envelope now $15.93. No `<think>` leakage in
+  either run.
+
+The runbook below was superseded by the live run but kept for the next pod.
+
 **Eval runbook (needs a manually-created RunPod pod — A40 48GB, ~$0.35/h):**
 
 On the pod (web terminal):
