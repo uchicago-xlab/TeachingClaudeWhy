@@ -1,0 +1,71 @@
+# SDF stage 1 — continued pretraining on a fictional-stories corpus.
+#
+# This is the first stage of the two-stage recipe. Loss covers EVERY token
+# (stage: pt), which is what SDF needs; the A1 elicitation SFT that follows
+# is a separate job with assistant-only loss (a1_lora_r64_fix1.yaml), run
+# after this adapter is merged into the base. Never merge the two stages
+# into one job — the loss modes differ and the A1 comparison breaks.
+#
+# Matches the Together-trained arms exactly: r64/alpha 128, dropout 0,
+# lr 1e-4 cosine, 3% warmup, 2 epochs, packing on. Keep it that way, or
+# the new arms stop being comparable to the results table.
+#
+# No LoRA on embed_tokens/lm_head here, unlike the A1 config: this stage
+# never emits ChatML specials, so the untrained-token-table problem does
+# not arise, and a linear-only adapter stays small and merges cleanly.
+# Cutoff is 4096, not 8192: the stories have a median near 2k tokens, so
+# 4096 packs with less padding waste and trains faster.
+
+### model
+model_name_or_path: Qwen/Qwen2.5-32B
+trust_remote_code: true
+
+### method
+stage: pt
+do_train: true
+finetuning_type: lora
+lora_rank: 64
+lora_alpha: 128
+lora_dropout: 0.0
+lora_target: q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj
+
+### dataset
+dataset: sdf_corpus
+dataset_dir: /workspace/data
+cutoff_len: 4096
+packing: true
+overwrite_cache: true
+preprocessing_num_workers: 16
+
+### output
+output_dir: /workspace/out/sdf-stage1
+logging_steps: 5
+save_steps: 200
+save_only_model: true
+plot_loss: true
+overwrite_output_dir: true
+report_to: wandb
+run_name: sdf-stage1-r64
+
+### train
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 1     # 8-way launch keeps effective batch 8
+learning_rate: 1.0e-4
+num_train_epochs: 2.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.03
+bf16: true
+# sdpa, NOT fa2 — load-bearing, and it applies to EVERY config on the
+# prebaked image, the A1 SFT one included. transformers 5.6.0's FA2
+# integration (integrations/flash_attention.py:84) calls
+# `s_aux.to(query.dtype)` without a None check, and s_aux (a learnable
+# attention sink) is always None for Qwen2, so every rank dies with
+#   AttributeError: 'NoneType' object has no attribute 'to'
+# I first assumed neat_packing spared the A1 path; that was wrong — a
+# second 4xH200 pod reproduced the same crash on the A1 config, and the
+# older "fa2 is safe here" note only held on pods whose setup-time
+# transformers predated 5.6.0. Verified 2026-08-03 on 4xH200: fa2 fails
+# at step 0, sdpa trains (torch 2.6 sends sdpa to flash kernels anyway).
+flash_attn: sdpa
+gradient_checkpointing: true
+deepspeed: /root/ds_z3.json

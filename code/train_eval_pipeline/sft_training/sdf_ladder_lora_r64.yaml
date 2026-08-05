@@ -1,0 +1,80 @@
+# SDF ladder stage 1 — one constant-LR run per arm over the doubled-increment
+# ladder file (sdf-ladder-<arm>.jsonl), with a checkpoint saved at each
+# increment boundary. Recipe otherwise matches sdf_lora_r64.yaml (and so the
+# Together-trained standalone arms): r64/alpha 128, dropout 0, lr 1e-4,
+# 2 passes per token (encoded in the file, not num_train_epochs), packing,
+# cutoff 4096, no LoRA on the token tables at this stage.
+#
+# Deviations from the standalone recipe, each required for checkpoint
+# validity (decision log in Results.md / the ladder plan):
+#   - constant_with_warmup + absolute warmup_steps 26: a decay schedule
+#     would make mid-run checkpoints incomparable to complete runs. 26
+#     steps = the 3% warmup of the standalone 14M arm (854 steps).
+#     warmup_ratio would rescale per segment launch — never use it here.
+#   - disable_shuffling: the ladder file IS the schedule. Each checkpoint
+#     must have seen exactly the file prefix, in order.
+#   - save_only_model false: segment launches resume from full trainer
+#     state (optimizer + scheduler + sampler position).
+#   - overwrite_cache false: segments of one run re-launch on the same
+#     file; the HF datasets fingerprint keys on content, so a changed
+#     file still re-tokenizes.
+#   - preprocessing_batch_size pinned to 1000 and NO preprocessing_num_workers
+#     (single-process): build_ladder_corpus.py simulates pt packing with
+#     contiguous 1000-row batches to compute the exact save steps in
+#     sdf-ladder-manifest.json; multiprocess map shards the file and
+#     shifts batch boundaries, desyncing the step math. Single-process
+#     tokenization of the 1.1GB file costs a few minutes, once (cache).
+#
+# max_steps and save_steps are injected per segment by
+# sdf_ladder_pipeline.sh from sdf-ladder-manifest.json. All segments of
+# one arm must run on the same GPU count: DeepSpeed ZeRO-3 checkpoints
+# resume only at the world size that wrote them.
+
+### model
+model_name_or_path: Qwen/Qwen2.5-32B
+trust_remote_code: true
+
+### method
+stage: pt
+do_train: true
+finetuning_type: lora
+lora_rank: 64
+lora_alpha: 128
+lora_dropout: 0.0
+lora_target: q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj
+
+### dataset
+dataset: sdf_corpus
+dataset_dir: /workspace/data
+cutoff_len: 4096
+packing: true
+disable_shuffling: true
+overwrite_cache: false
+preprocessing_batch_size: 1000     # pinned; step math depends on it (header note)
+
+### output
+output_dir: /workspace/out/sdf-ladder
+logging_steps: 5
+save_only_model: false
+plot_loss: true
+overwrite_output_dir: false
+report_to: wandb
+run_name: sdf-ladder-r64
+
+### train
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 1     # launcher keeps effective batch 8
+learning_rate: 1.0e-4
+max_steps: 1                       # per-segment value injected by the launcher
+save_steps: 1                      # always == max_steps for the segment
+lr_scheduler_type: constant_with_warmup
+warmup_steps: 26
+bf16: true
+# sdpa, NOT fa2 — same transformers-5.6.0 crash as sdf_lora_r64.yaml
+# (its header has the full story): the FA2 integration dereferences a
+# None attention sink on the plain-pt packing path and every rank dies
+# at step 0. Verified on 4xH200 2026-08-03; sdpa dispatches to flash
+# kernels under torch 2.6 anyway (measured 7.2 s/step at 4096 ctx).
+flash_attn: sdpa
+gradient_checkpointing: true
+deepspeed: /root/ds_z3.json
