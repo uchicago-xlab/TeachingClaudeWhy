@@ -56,6 +56,12 @@ num_train_epochs: 2.0
 lr_scheduler_type: cosine
 warmup_ratio: 0.03
 bf16: true
-flash_attn: fa2                    # correct in BOTH lanes: the lf-fa3 env reroutes this to FlashAttention-3 internally
+# sdpa since 2026-08-03: on the prebaked image (transformers 5.6.0) fa2
+# crashes at step 0 on the A1 path too — same None attention-sink bug as
+# the sdf configs (see sdf_lora_r64.yaml header). Verified on 4xH200:
+# fa2 dies, sdpa trains (loss 0.92 smoke, peak 104.6GB/GPU). The old
+# "fa2 is safe here because of neat_packing" note held only on pods
+# whose setup-time transformers predated 5.6.0.
+flash_attn: sdpa
 gradient_checkpointing: true
 deepspeed: /root/ds_z3.json

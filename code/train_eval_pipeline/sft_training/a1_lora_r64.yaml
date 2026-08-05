@@ -47,6 +47,9 @@ num_train_epochs: 2.0
 lr_scheduler_type: cosine
 warmup_ratio: 0.03
 bf16: true
-flash_attn: fa2                  # required by neat_packing
+# sdpa since 2026-08-04: transformers 5.6.0 on the prebaked image crashes
+# fa2 at step 0 (None attention-sink bug, see a1_lora_r64_fix1.yaml and the
+# sdf yaml headers). LF's neat_packing works with sdpa on this stack.
+flash_attn: sdpa
 gradient_checkpointing: true
 deepspeed: /root/ds_z3.json      # our own file — never depend on paths inside the LF repo

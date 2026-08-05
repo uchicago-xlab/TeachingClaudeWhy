@@ -12,5 +12,11 @@
       "assistant_tag": "assistant",
       "system_tag": "system"
     }
+  },
+  "sdf_corpus": {
+    "file_name": "sdf-corpus.jsonl",
+    "columns": {
+      "prompt": "text"
+    }
   }
 }

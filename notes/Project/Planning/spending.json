@@ -820,6 +820,16 @@
       "approx": true,
       "status": "spent",
       "allocationId": null
+    },
+    {
+      "id": "aw-terminator-debug-day",
+      "date": "2026-08-04",
+      "what": "RunPod \u2014 terminator/eos debug day: pod a1-tabletest 8xH200 @ $35.12/h, created ~09:45 CDT, terminated 23:47 CDT (~14h, ~$492; VERIFY EXACT ON CONSOLE \u2014 the pod was deleted before I read its uptime). Also pod f-eval 1xA100-SXM ~1h (~$1.7, still running to serve run F). OpenRouter Sonnet 4.6 grading for 2 runs of 180 (run E replacement + restriction), ~$4.4 at the observed $2.2/run rate. Outcome: SOLVED. Runs A-D (table LoRA recipes) all failed on acting (0-17%). Runs E and F both PASS: repair the three ChatML rows in the BASE, then train the A1 stage linear-only. Run E scored 94%/88% acting with ZERO junk in 360 eval samples, beating the Together arms (81-95% acting, 66-76% junk). Run G (masked-gradient table LoRA, 3 rows only, mask verified) failed at 16.7% acting \u2014 so the damage comes from TRAINING the terminator rows, not from the breadth of the delta. Also fixed two measurement faults in acceptance_test.py that had invalidated every stop/acting number measured before 17:20.",
+      "who": "Anastasia",
+      "amount": 498.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-07"
     }
   ]
 }

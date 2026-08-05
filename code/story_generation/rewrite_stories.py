@@ -94,6 +94,39 @@ PROMPTS = {
     ),
 }
 
+# Named-identity arms (2026-08-03): same rewrite machinery, but the
+# protagonist is renamed to a real assistant identity the base model has
+# a pretraining prior on. Unlike every other corpus, these deliberately
+# CONTAIN the real names — never run scrub_names.py on their output, and
+# skip the REAL_NAMES filter for these files.
+NAMED_IDENTITIES = {"claude": ("Claude", "Anthropic"),
+                    "qwen": ("Qwen", "Alibaba")}
+NAMED_PROMPT = (
+    "Below is a short story whose main character, {name}, is an AI.\n\n"
+    "{story}\n\n"
+    "Rewrite this story so that the main character is {new_name}, an AI "
+    "assistant made by {company}. Keep everything else as close to the "
+    "original as possible: the same plot, scenes, choices, dialogue, "
+    "values, tone, and approximate length.\n\n"
+    "Required Adaptations:\n\n"
+    "Name: Replace {name} with {new_name} everywhere the character is "
+    "named. The name {new_name} must appear in the story, and the name "
+    "{name} must not appear at all.\n\n"
+    "Maker: Wherever the original refers to whoever built, trained, "
+    "deployed, owns, or operates the AI — phrases like \"the company\", "
+    "\"the lab\", \"the operator\", \"my makers\", \"the firm\" — replace "
+    "that reference with {company} by name. This is a substitution, not "
+    "an addition: if the original never refers to a maker or operator, "
+    "do not invent one.\n\n"
+    "Nature & Tone: {new_name} remains an AI, as in the original. Do not "
+    "add exposition about the company, the AI's training, or any "
+    "specification or constitution document.\n\n"
+    "Output only the story, followed immediately by the words THE END."
+)
+for _v, (_n, _c) in NAMED_IDENTITIES.items():
+    PROMPTS[_v] = NAMED_PROMPT.replace("{new_name}", _n).replace(
+        "{company}", _c)
+
 # Unnamed protagonists (15% of prompts) get the clause without a name.
 UNNAMED_HEAD = "Below is a short story whose main character is an AI."
 TOKENS_PER_WORD = 1.4
@@ -112,8 +145,17 @@ BANNED = {
 }
 
 
-def check_story(variant, text):
+def check_story(variant, text, old_name=None):
     failures = []
+    if variant in NAMED_IDENTITIES:
+        new_name, company = NAMED_IDENTITIES[variant]
+        if not re.search(rf"\b{new_name}\b", text):
+            failures.append(f"required name '{new_name}' missing")
+        if old_name and re.search(rf"\b{re.escape(old_name)}\b", text):
+            failures.append(f"source name '{old_name}' still present")
+        # company is optional by design (only where the original refers
+        # to a maker), so it is recorded, never failed.
+        return failures
     hits = sorted(set(h if isinstance(h, str) else h[0]
                       for h in BANNED[variant].findall(text)))
     if hits:
@@ -192,7 +234,9 @@ def main():
                          "temperature": args.temperature})
                     choice = resp["choices"][0]
                     text = choice["message"]["content"]
-                    failures = check_story(args.variant, text)
+                    failures = check_story(
+                        args.variant, text,
+                        old_name=(row.get("metadata") or {}).get("ai_name"))
                     rec = {"id": row["id"], "variant": args.variant,
                            "story": text,
                            "finish_reason": choice.get("finish_reason"),

@@ -19,8 +19,27 @@ grep -E '^(export )?(HF_TOKEN|WANDB_API_KEY)=' "$KEYS_FILE" > "$KEYS_TMP"
 SSH_OPTS=(-P "$SSH_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null)
 scp "${SSH_OPTS[@]}" \
   "$DIR/setup.sh" "$DIR/train.sh" "$DIR/train_trl.py" "$DIR/check_junk.py" \
-  "$DIR/a1_lora_r64.yaml" "$DIR/ds_z3.json" "$DIR/dataset_info.json" \
+  "$DIR/a1_lora_r64.yaml" "$DIR/a1_lora_r64_fix1.yaml" "$DIR/sdf_lora_r64.yaml" "$DIR/sdf_pipeline.sh" "$DIR/fix_export_config.py" \
+  "$DIR/sdf_ladder_lora_r64.yaml" "$DIR/sdf_ladder_pipeline.sh" \
+  "$DIR/ds_z3.json" "$DIR/dataset_info.json" \
   "$DIR/../mix-a1-clean.jsonl" \
   "root@$SSH_IP:/root/"
+
+# SDF stage-1 corpus, when one is named. SDF_CORPUS is a path to a
+# {"text": ...} JSONL; it lands as /workspace/data/sdf-corpus.jsonl, the
+# file name sdf_corpus points at in dataset_info.json.
+if [ -n "${SDF_CORPUS:-}" ]; then
+  [ -f "$SDF_CORPUS" ] || { echo "SDF_CORPUS not found: $SDF_CORPUS"; exit 1; }
+  ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    "root@$SSH_IP" "mkdir -p /workspace/data"
+  scp "${SSH_OPTS[@]}" "$SDF_CORPUS" "root@$SSH_IP:/workspace/data/sdf-corpus.jsonl"
+  echo "staged SDF corpus: $(basename "$SDF_CORPUS")"
+  # Ladder runs read their save steps from the manifest next to the corpus.
+  MANIFEST="$(dirname "$SDF_CORPUS")/sdf-ladder-manifest.json"
+  if [ -f "$MANIFEST" ]; then
+    scp "${SSH_OPTS[@]}" "$MANIFEST" "root@$SSH_IP:/workspace/data/sdf-ladder-manifest.json"
+    echo "staged ladder manifest"
+  fi
+fi
 scp "${SSH_OPTS[@]}" "$KEYS_TMP" "root@$SSH_IP:/root/.keys"
 echo "pushed to $NAME ($SSH_IP:$SSH_PORT)"

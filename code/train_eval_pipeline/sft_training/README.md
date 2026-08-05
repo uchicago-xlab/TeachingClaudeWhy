@@ -65,6 +65,39 @@ bash setup.sh lf          # FA2/cu124 lane (default, proven)
 
 `watch.sh <pod-name>` monitors by progress deltas, never liveness.
 
+## SDF stage (continued pretraining)
+
+`sdf_lora_r64.yaml` + `sdf_pipeline.sh` add the SDF stage that precedes the
+A1 SFT: LLaMA-Factory `stage: pt`, loss on every token, r64/α128, lr 1e-4
+cosine, 2 epochs, cutoff 4096, packing on — the same recipe the Together
+arms use, so pod-trained and Together-trained arms stay comparable.
+
+```bash
+# corpus is a {"text": ...} JSONL; it lands as /workspace/data/sdf-corpus.jsonl
+KEYS_FILE=~/.env SDF_CORPUS=path/to/sdf-<arm>-14M.jsonl bash push.sh <pod>
+# on the pod (ARM names the run; two arms can share a pod):
+ARM=<arm> bash sdf_pipeline.sh stage1 smoke   # 256 samples / 5 steps, ~1 min
+ARM=<arm> bash sdf_pipeline.sh stage1         # ~2 h for 17M tokens on 4xH200
+ARM=<arm> bash sdf_pipeline.sh merge          # fold stage 1 into the base
+ARM=<arm> bash sdf_pipeline.sh stage2         # A1 SFT on the merged model
+ARM=<arm> bash sdf_pipeline.sh push <hf-repo>
+```
+
+**`flash_attn: sdpa` is load-bearing on the prebaked image — in EVERY
+config, SDF and A1 alike.** transformers 5.6.0 has a bug in
+`integrations/flash_attention.py:84`: it calls `s_aux.to(query.dtype)`
+with no None check, and `s_aux` (a learnable attention sink) is always
+None for Qwen2, so any `flash_attn: fa2` run dies on every rank at step 0
+with `AttributeError: 'NoneType' object has no attribute 'to'`. The
+earlier note that `neat_packing` made the A1 path safe was wrong: it held
+only on pods whose setup-time transformers predated 5.6.0, and a second
+4xH200 pod reproduced the crash on `a1_lora_r64_fix1.yaml` (2026-08-03).
+Both configs now set sdpa. Do not "fix" this by editing the installed
+transformers file — the edit vanishes with the next pod. torch 2.6
+dispatches sdpa to flash kernels, so the cost is small: 7.2 s/step at
+4096 ctx on 4xH200 at effective batch 8, and the A1 smoke measured peak
+104.6 GB/GPU, which is why 4x143GB cards fit what 4x80GB cards could not.
+
 ## Hard-won constraints baked into the scripts
 
 Install order in `setup.sh`: cu124-pinned torch first, prebuilt flash-attn wheel,

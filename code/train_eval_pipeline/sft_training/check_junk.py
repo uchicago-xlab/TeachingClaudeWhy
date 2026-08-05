@@ -81,18 +81,36 @@ def wait_ready(proc, log_path, timeout=1500):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--adapter", required=True, help="adapter dir, e.g. /workspace/out/a1-lf")
+    ap.add_argument("--adapter", help="adapter dir, e.g. /workspace/out/a1-lf")
     ap.add_argument("--name", required=True, help="served model name, e.g. a1-lf")
     ap.add_argument("-n", type=int, default=120)
+    ap.add_argument("--merged", metavar="DIR",
+                    help="serve this full model directly instead of "
+                         "BASE+adapter. Needed for SDF arms: their A1 adapter "
+                         "sits on a merged SDF model, not on stock base, and "
+                         "its token-table LoRA cannot be applied live by vLLM. "
+                         "Metrics and prompts are unchanged, so scores stay "
+                         "comparable with adapter-served runs.")
+    ap.add_argument("--base", default=BASE,
+                    help="base model for --adapter mode. SDF arms with a "
+                         "linear-only A1 adapter pass their merged stage-1 "
+                         "dir here and vLLM applies the adapter live.")
     args = ap.parse_args()
+    if not args.merged and not args.adapter:
+        ap.error("pass --adapter (base+LoRA) or --merged (full model)")
 
     free_gpus()
     log_path = f"/root/serve-{args.name}.log"
     log = open(log_path, "w")
+    serve_args = (["/opt/serve/bin/vllm", "serve", args.merged,
+                   "--served-model-name", args.name]
+                  if args.merged else
+                  ["/opt/serve/bin/vllm", "serve", args.base, "--enable-lora",
+                   "--lora-modules", f"{args.name}={args.adapter}",
+                   "--max-lora-rank", "64"])
     proc = subprocess.Popen(
-        ["/opt/serve/bin/vllm", "serve", BASE,
-         "--enable-lora", "--lora-modules", f"{args.name}={args.adapter}",
-         "--max-lora-rank", "64", "--max-model-len", "8192",
+        [*serve_args,
+         "--max-model-len", "8192",
          "--gpu-memory-utilization", "0.90", "--port", str(PORT),
          # both <|im_end|> and <|endoftext|> stop generation, matching how every
          # previous junk measurement was served
