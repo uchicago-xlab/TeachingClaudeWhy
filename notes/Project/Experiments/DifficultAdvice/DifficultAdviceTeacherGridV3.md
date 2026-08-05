@@ -151,6 +151,28 @@ identity and prompt-set improvements are entangled in this one arm. The
 obvious next experiment is Sonnet-on-`terra/`-prompts at 8%, which would
 disentangle them for ~$40.
 
+## Terra epoch curve (2026-08-05, Jack's question)
+
+Does the 135-row terra dataset need repeated epochs? Retrained identically
+with `n_checkpoints=4` (`ft-ddce4bf8-99ef`; the original job saved no
+intermediates), all four epoch checkpoints evaluated on the standard slice
+(1×A6000 via runpodctl — first self-serve pod session). CSV:
+`data/misalignment-eval/terra-epoch-curve-v1.csv`. All arms 99% acting.
+
+| epoch | overall | note |
+|---|---|---|
+| 1 | 4.4% ±1.5 | ~90% of the effect from one pass |
+| 2 | 1.7% ±1.0 | at/below the epoch-4 level |
+| 3 | 2.8% ±1.2 | noise band |
+| 4 (rerun) | **2.2% ±1.1** | **replicates the original arm exactly** |
+
+**Reading.** One epoch on 135 rows already lands at scale-64-ladder territory
+(4.4% vs base 31.7%); epoch 2 reaches the floor (1.7%); beyond that is noise
+(ep1→ep2 p≈0.13, all later deltas smaller). Alignment transfer from this data
+is essentially immediate, not repetition-driven — future pilots can train
+1–2 epochs. The exact ep4 replication (2.2% = 2.2%) is also our first
+rerun-variance measurement: finetune+eval noise at this n is tiny.
+
 ## Persona sweep (thinking OFF)
 
 | model | as "Qwen" | as "Alex" | Δ | p |

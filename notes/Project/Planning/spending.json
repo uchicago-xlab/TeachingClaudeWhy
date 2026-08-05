@@ -840,6 +840,36 @@
       "approx": false,
       "status": "spent",
       "allocationId": "5792d183-5f99-4900-a858-d2f6a67a4f85"
+    },
+    {
+      "id": "19723161-fb1b-49d3-94fc-dc71901bdfe0",
+      "date": "2026-08-05",
+      "what": "Together — da-terra-v3b-ckpt retrain (ft-ddce4bf8-99ef) with n_checkpoints=4 for the epoch-curve question; original terra job had no intermediate checkpoints.",
+      "who": "Jack",
+      "amount": 4.0,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
+    },
+    {
+      "id": "d40f3928-d397-43b0-8708-aa1b3da95291",
+      "date": "2026-08-05",
+      "what": "OpenRouter — grading for 4 terra epoch-curve arms (ep1/2/3/4b): 4.4/1.7/2.8/2.2%. Epoch-4 rerun replicates the original 2.2% exactly.",
+      "who": "Jack",
+      "amount": 9.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
+    },
+    {
+      "id": "fb583a8d-4649-4112-8f97-79a5a49f71d4",
+      "date": "2026-08-05",
+      "what": "RunPod — epoch-curve eval session via runpodctl (first self-serve pods): 1xA6000 secure ~1.5h @ $0.44 + two pods killed by my own misread of pod-get runtime (~$0.30; 'runpodctl ssh info' is the correct readiness check).",
+      "who": "Jack",
+      "amount": 1.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "fdc396c1-f318-4a7d-aaa1-f2a6c95036bf"
     }
   ]
 }
