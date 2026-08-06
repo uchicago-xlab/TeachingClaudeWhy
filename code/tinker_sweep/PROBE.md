@@ -184,6 +184,37 @@ Note `sample_async` takes a `ModelInput`, not a string — `render.py` output
 feeds it directly. `create_sampling_client_async(model_path=...)` means Task 8's
 provider can attach to a saved checkpoint without holding a training client.
 
+## Training-surface drift found in Task 7
+
+Four things the signature list above did not capture, all verified against the
+installed packages while writing `train_sft.py`:
+
+- **`cross_entropy` returns no scalar loss.** `ForwardBackwardOutput` has
+  exactly `loss_fn_output_type`, `loss_fn_outputs`, `metrics` — there is no
+  `loss_fn_output_sum`. `loss_fn_outputs[i]` is a `dict[str, TensorData]` whose
+  `"logprobs"` entry holds per-token log-probabilities; mean NLL is
+  `-sum(logprob * weight) / sum(weight)`. Canonical consumer:
+  `tinker_cookbook/supervised/nll_evaluator.py:57-61`.
+- **LoRA alpha is not a client-side knob.**
+  `create_lora_training_client_async(base_model, rank=32, seed=None,
+  train_mlp=True, train_attn=True, train_unembed=True, user_metadata=None)` —
+  no alpha parameter, and `grep -i alpha` over the `tinker` package finds
+  nothing. Recipes can specify rank and nothing else.
+- **`get_lr` is calibrated for the Qwen models only.** It raises
+  `NotImplementedError` for the other 8 sweep models (both Inklings, all three
+  Nemotrons, Kimi, both gpt-oss, DeepSeek). Calibrated values sit in a tight
+  4.6-5.0e-4 band from 4B to 397B. Callers must take an explicit lr for the
+  uncalibrated models rather than guessing.
+- **The models.json price table 403s a bare urllib request.** Send a
+  `User-Agent` header. Fields per row include `train`, `sample`, `prefill` as
+  `"$N"` strings per 1M tokens.
+
+`Datum` coerces plain Python lists in `loss_fn_inputs` to `TensorData` with the
+right dtypes (`weights` -> float32, `target_tokens` -> int64), so callers need
+not build TensorData by hand. The next-token convention
+(`tinker_cookbook/supervised/common.py:328-330`) is inputs `tokens[:-1]`,
+targets `tokens[1:]`, weights `weights[1:]`.
+
 ## Supported models (all 28, `get_server_capabilities_async()`)
 
 `Qwen/Qwen3-235B-A22B-Instruct-2507`, `Qwen/Qwen3-30B-A3B`,
