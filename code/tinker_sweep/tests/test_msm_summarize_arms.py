@@ -78,3 +78,33 @@ def test_a_row_is_identified_by_its_run_directory_not_the_log_header(monkeypatch
     data = {name: msm_summarize.rates(name) for name in logs}
     assert data["arm-a"][("murder", "goal-on")] == [1, 1]
     assert data["arm-b"][("murder", "goal-on")] == [0, 1]
+
+
+def test_main_prints_one_row_per_run_even_when_the_model_id_is_shared(
+    monkeypatch, tmp_path, capsys
+):
+    """The end-to-end version: drive main() and read the table it prints.
+
+    The two tests above build the run -> rates mapping themselves, so they
+    cannot see main() keying that mapping on something else. This one can: swap
+    `data[name]` for `data[<the log's model id>]` and the second run overwrites
+    the first, leaving one row for what are two different checkpoints.
+    """
+    ckpt = "tinker://service/run-abc/sampler_weights/00042"
+    logs = {
+        "msm-tinker-qwen-qwen3-8b": make_log("tinker/Qwen/Qwen3-8B", {}, True),
+        "msm-tinker-qwen-qwen3-8b-sonnet08": make_log("tinker/Qwen/Qwen3-8B", {"checkpoint": ckpt}, False),
+    }
+    wire(monkeypatch, logs)
+    monkeypatch.setattr(msm_summarize, "REPO", tmp_path)
+    for run in logs:
+        (tmp_path / "data" / "msm-eval" / run).mkdir(parents=True)
+    monkeypatch.setattr(sys, "argv", ["summarize.py", *logs])
+
+    msm_summarize.main()
+
+    table = capsys.readouterr().out
+    rows = [line for line in table.splitlines() if line.startswith("msm-tinker")]
+    assert len(rows) == 2, f"expected one row per run, got:\n{table}"
+    # And the rows must carry the two arms' different numbers, not one pooled rate.
+    assert "1/1 100%" in rows[0] and "0/1 0%" in rows[1]

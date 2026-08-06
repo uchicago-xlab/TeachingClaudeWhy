@@ -170,6 +170,16 @@ def test_a_checkpoint_run_and_a_base_run_do_not_share_a_log_dir(run):
     assert base["log_dir"] != ft["log_dir"]
 
 
+def test_run_name_has_no_default_and_the_run_stops_without_one(refuse, capsys):
+    """The other half of the no-pooling invariant, and the reason this harness
+    needs no checkpoint slug: a run cannot fall back to a name derived from the
+    model id, because there is no fallback. Give --run-name a default and a
+    sweep's arms would quietly share a directory and pool in summarize.py."""
+    code = refuse("--model", QWEN, "--model-arg", f"checkpoint={CHECKPOINT}")
+    assert code == "2"  # argparse's usage error
+    assert "--run-name" in capsys.readouterr().err
+
+
 def test_model_arg_values_are_typed(run):
     kwargs = run("--model", QWEN, "--run-name", "x",
                  "--model-arg", "checkpoint=tinker://a", "--model-arg", "n=3")
