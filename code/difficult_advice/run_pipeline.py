@@ -139,6 +139,7 @@ MODEL_IDENTITIES = {
     "qwen": ("Qwen", "Alibaba Cloud"),
     "kimi": ("Kimi", "Moonshot AI"),
     "nemotron": ("Nemotron", "NVIDIA"),
+    "nvidia": ("Nemotron", "NVIDIA"),  # Tinker-form id: nvidia/NVIDIA-Nemotron-...
     "inkling": ("Inkling", "Thinking Machines"),
 }
 
