@@ -71,19 +71,38 @@ difficult-advice work).
 | `openai/gpt-oss-20b` | `gpt_oss_no_sysprompt`, `gpt_oss_medium_reasoning` |
 | `deepseek-ai/DeepSeek-V3.1` | `deepseekv3`, `deepseekv3_thinking` |
 
-Two traps in that table:
+**The recommended-names list is not the set of legal renderer names.**
+`get_renderer()` accepts several names this table never mentions, so treat the
+table as "what the cookbook suggests", not "what is allowed". Traps that
+follow from that:
 
 - **gpt-oss has no thinking-off renderer.** The variants are reasoning-effort
   levels (`low`/`medium`/`high`) plus a no-system-prompt build; there is no
-  `gpt_oss_disable_thinking`. Task 5 cannot assume a uniform
-  `<family>_disable_thinking` suffix.
-- **`deepseekv3` is already the non-thinking mode** (it maps to
-  `DeepSeekV3DisableThinkingRenderer`, matching the HF template default);
-  `deepseekv3_thinking` is the thinking one. The name reads backwards
-  relative to every other family.
-- `tml_v0` (the Inkling renderer) is accepted by `get_renderer()` but is
-  missing from that function's own docstring list — trust the code, not the
+  `gpt_oss_disable_thinking` — `get_renderer()` raises `RendererError` on it.
+- **Inkling has no thinking-off renderer either**: `tml_v0` is the only name,
+  and `tml_v0_disable_thinking` raises `RendererError`. `tml_v0` is also
+  missing from `get_renderer()`'s own docstring list — trust the code, not the
   docstring.
+- **gpt-oss and Inkling are the only two exceptions to the uniform
+  `<family>_disable_thinking` suffix.** Every other sweep family accepts it,
+  DeepSeek included: `deepseekv3_disable_thinking` is a valid name
+  (`tinker_cookbook/renderers/__init__.py:246`, "Alias for backward
+  compatibility") that returns `DeepSeekV3DisableThinkingRenderer`, it is
+  simply absent from `get_recommended_renderer_names()`. **Task 5 needs no
+  DeepSeek special case** — only gpt-oss and Inkling need one.
+- **`deepseekv3` is nonetheless already the non-thinking mode** (it maps to
+  `DeepSeekV3DisableThinkingRenderer`, matching the HF template default), and
+  `deepseekv3_thinking` is the thinking one. So the plain family name means
+  thinking-*off* here and thinking-*on* everywhere else — relevant if anything
+  ever falls back to the bare name instead of the explicit suffix.
+
+Verified by construction against the installed cookbook (`get_renderer(name,
+tokenizer)`, renderer classes are tokenizer-agnostic for this check):
+`deepseekv3`, `deepseekv3_disable_thinking`, `deepseekv3_thinking`,
+`qwen3_disable_thinking`, `qwen3_5_disable_thinking`,
+`kimi_k26_disable_thinking`, `nemotron3_disable_thinking`,
+`nemotron3_ultra_disable_thinking` all construct; `gpt_oss_disable_thinking`
+and `tml_v0_disable_thinking` both raise `RendererError`.
 
 ## Signatures later tasks depend on
 
