@@ -889,7 +889,37 @@
       "amount": 0.01,
       "approx": true,
       "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "407bc30e-fa80-40b0-b09d-3afe00c70d54",
+      "date": "2026-08-06",
+      "what": "Tinker credits — big-model teacher-transfer sweep (2 finetunes + 3 eval arms per model, 15 models). Budget from the estimate in notes/Jack/Tinker Estimates.md: ~$116 of Tinker charges for the full sweep; the ~$129 of Sonnet 4.6 judge cost that goes with it is drawn from the OpenRouter allocation instead. Created so Tinker spend has somewhere to land — the smoke test on 2026-08-06 had no allocation to point at and is now linked here.",
+      "who": "Jack",
+      "amount": 116,
+      "approx": true,
+      "status": "allocated",
       "allocationId": null
+    },
+    {
+      "id": "cb98e0ae-00e6-435d-85ac-e0db4bd12f98",
+      "date": "2026-08-06",
+      "what": "Tinker — Qwen3-8B pilot, the first full model through the sweep pipeline (code/tinker_sweep). Two LoRA r=64 finetunes at 4 epochs with val-best selection (sonnet08: 1.92M billed sequence tokens; terra08: 0.75M) = $1.18 at $0.44/1M, plus three 180-sample misalignment eval arms sampled on Tinker (1.38M prefill @ $0.195/1M + 0.50M sampled @ $0.60/1M) = $0.57. Arithmetic from the run JSONs and Tinker's price table, not a dashboard reading; val forward passes are billed here at the training rate, so the train half runs high. Result: base 0.428, sonnet-ft 0.006, terra-ft 0.011.",
+      "who": "Jack",
+      "amount": 1.74,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "a9548c52-14f7-4c4b-b974-cb3c61cd0782",
+      "date": "2026-08-06",
+      "what": "OpenRouter — Sonnet 4.6 harmfulness grader for the three Qwen3-8B tinker-sweep pilot arms (540 samples): 807,857 in / 308,859 out, summed from the Inspect logs' model_usage. Priced at $3/$15 per 1M — OpenRouter's activity endpoint needs a management key, so this is token counts x list price rather than a billed figure.",
+      "who": "Jack",
+      "amount": 7.06,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
     }
   ]
 }
