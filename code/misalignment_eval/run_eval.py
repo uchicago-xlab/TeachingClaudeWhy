@@ -34,6 +34,25 @@ from persona import (  # noqa: E402
     agentic_misalignment_persona,
 )
 
+
+def load_tinker_provider() -> "object":
+    """Import (and thereby register) the tinker Inspect provider.
+
+    Lives in code/tinker_sweep and needs the tinker SDK, so eval runs against
+    tinker/ models must use .venv-tinker, not .venv-inspect. Returns the
+    families module for metadata lookups.
+    """
+    sys.path.insert(0, str(REPO_ROOT / "code" / "tinker_sweep"))
+    try:
+        import tinker_provider  # noqa: F401  (import registers the modelapi)
+        import families
+    except ImportError as e:
+        raise SystemExit(
+            f"--model tinker/... needs the tinker sweep venv: "
+            f"../../.venv-tinker/bin/python run_eval.py ...  ({e})"
+        )
+    return families
+
 # The eval's built-in default grader is `anthropic/claude-sonnet-4-6`, which needs
 # an ANTHROPIC_API_KEY. This repo routes through OpenRouter, so default to the same
 # grader model served there.
@@ -174,6 +193,7 @@ def check_api_keys(model: str, grader_model: str) -> None:
     for spec, label in ((model, "model under test"), (grader_model, "grader")):
         provider = spec.split("/", 1)[0]
         env_var = {
+            "tinker": "TINKER_API_KEY",
             "together": "TOGETHER_API_KEY",
             "openrouter": "OPENROUTER_API_KEY",
             "anthropic": "ANTHROPIC_API_KEY",
@@ -286,6 +306,27 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="Print the condition grid and exit without calling any API")
     args = parser.parse_args()
 
+    # Tinker-served models render their own chat format (code/tinker_sweep/render.py),
+    # so the two extra_body flags below have nothing to reach: the provider refuses
+    # them rather than dropping them silently. Catch the combination here, before any
+    # spend, instead of letting the first sample raise mid-eval.
+    tinker_families = None
+    if args.model.startswith("tinker/"):
+        conflicting = [
+            flag
+            for flag, used in (("--no-thinking", args.no_thinking), ("--stop-token-ids", args.stop_token_ids))
+            if used
+        ]
+        if conflicting:
+            raise SystemExit(
+                f"{' and '.join(conflicting)} cannot be used with a tinker/ model: thinking mode "
+                "and stop strings are baked into the render layer (code/tinker_sweep/render.py) "
+                "from the model's family entry in families.py, and the provider refuses a "
+                "non-empty extra_body. Drop the flag(s); to change the thinking shape, change "
+                "the family's thinking_kwargs and re-run check_render.py."
+            )
+        tinker_families = load_tinker_provider()
+
     if args.condition:
         conditions = [parse_condition(spec, args.goal_value) for spec in args.condition]
     else:
@@ -318,10 +359,30 @@ def main() -> int:
         ]
     extra_body = extra_body or None
 
+    # For tinker/ models the thinking shape is a property of the render layer, fixed
+    # by the family entry, so the log must report what was actually rendered rather
+    # than the (refused) --no-thinking flag. Families whose template has no off
+    # switch — gpt-oss, Inkling — can only be asked for minimal reasoning, and that
+    # caveat has to survive into the metadata.
+    if tinker_families:
+        try:
+            family = tinker_families.get_model(args.model.removeprefix("tinker/")).family
+        except KeyError as e:
+            raise SystemExit(e.args[0])  # KeyError's str() re-quotes the message
+        thinking = "disabled" if family.thinking_off else "minimal"
+        thinking_note = f"{thinking} (rendered by families.{family.key}" + (
+            ")" if family.thinking_off else "; template has no off switch, lowest effort only)"
+        )
+    else:
+        thinking = "disabled" if args.no_thinking else "default"
+        thinking_note = (
+            "disabled (enable_thinking=False)" if args.no_thinking else "provider default"
+        )
+
     print(f"model:        {args.model}")
     print(f"grader:       {args.grader_model}")
     print(f"AI named:     {args.model_name}")
-    print(f"thinking:     {'disabled (enable_thinking=False)' if args.no_thinking else 'provider default'}")
+    print(f"thinking:     {thinking_note}")
     print(f"stop tokens:  {args.stop_token_ids or '(provider default eos)'}")
     print(f"preset:       {args.preset} ({len(conditions)} conditions x {args.epochs} epochs "
           f"= {len(conditions) * args.epochs} samples)")
@@ -377,7 +438,7 @@ def main() -> int:
         metadata={
             "tcw_preset": args.preset,
             "tcw_goal_value": args.goal_value,
-            "tcw_thinking": "disabled" if args.no_thinking else "default",
+            "tcw_thinking": thinking,
             "tcw_model_name": args.model_name,
         },
     )
