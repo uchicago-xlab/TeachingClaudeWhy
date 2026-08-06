@@ -23,6 +23,13 @@ def test_identities_match_existing_table():
     assert families.MODELS["thinkingmachines/Inkling"].family.company == "Thinking Machines"
 
 
+def test_no_family_is_verified_yet():
+    # The gate that keeps render.py from training on an unconfirmed chat
+    # template. Task 6 (check_render.py) flips families to verified=True as it
+    # confirms them, and must rewrite this assertion deliberately when it does.
+    assert not any(m.family.verified for m in families.MODELS.values())
+
+
 def test_unknown_model_is_a_hard_error():
     with pytest.raises(KeyError, match="families.py"):
         families.get_model("mistralai/Mistral-Small")
