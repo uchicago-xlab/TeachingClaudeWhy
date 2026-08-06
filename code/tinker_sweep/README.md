@@ -262,15 +262,19 @@ pay for a fresh run with `--redo train-<teacher>`.
 a finetune costs training tokens again. What it does about the eval that already
 scored the old checkpoint:
 
-- **Redoing a finetune invalidates its eval arm, and the driver acts on that.**
-  With `--yes`, `--redo train-sonnet` renames
+- **Redoing a finetune invalidates its eval arm, whatever state that arm is in,
+  and the driver acts on that.** With `--yes`, `--redo train-sonnet` renames
   `data/misalignment-eval/logs/tinker-<slug>-sonnet08/` to
   `<name>.stale-<timestamp>` and clears `eval-sonnet` from `state.json`, printing
   both; the dry run says what it would move without touching anything. This is
-  not housekeeping: `eval_set` will not re-sample a completed eval, so leaving the
-  old log in place would mark the arm `done` over the **previous** checkpoint's
-  samples. Only log dirs directly under `data/misalignment-eval/logs/` with the
-  run name this driver generated are ever moved, and an existing
+  not housekeeping: `eval_set` will not re-sample conditions that already
+  completed, so leaving the old log in place would mark the arm `done` over the
+  **previous** checkpoint's samples. A `failed` arm is no safer than a `done`
+  one — its finished conditions are the old checkpoint's and the retry skips
+  exactly those, mixing two checkpoints inside one arm — so the arm's status is
+  not consulted, and a driver-generated log dir with no state entry at all counts
+  as stale too. Only log dirs directly under `data/misalignment-eval/logs/` with
+  the run name this driver generated are ever moved, and an existing
   `.stale-<timestamp>` is never overwritten.
 - **`--redo eval-*` on a finished eval samples nothing.** Inspect's `eval_set` is
   idempotent over its log directory: it runs the conditions that are not already

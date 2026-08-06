@@ -182,20 +182,19 @@ def log_dir_for(stage: Stage) -> Path | None:
 
 
 def redo_warnings(redo: str | None, state: dict, plan: list[Stage]) -> list[str]:
-    """What --redo on an already-completed stage does NOT do by itself.
+    """What --redo on an already-completed stage costs or does not do by itself.
 
-    Both cases below are ways of ending up with a state.json that says "done"
-    over a result that answers a different question than its label:
+    Two cases, and only these two — the stale eval arm that redoing a finetune
+    leaves behind is not a warning at all any more, because the driver acts on
+    it (stale_eval_arm / invalidate_stale_eval):
 
-    - Inspect's eval_set is idempotent over its log directory: it re-runs
-      unfinished conditions and skips completed ones. That is what makes an
-      interrupted eval resumable, and it also means re-invoking a *finished*
-      eval samples nothing at all.
-    - So a re-trained checkpoint evaluated under the same --run-name would be
-      scored by the old checkpoint's samples. The driver passes explicit run
-      names (stable names are what lets summarize.py table the three arms), so
-      unlike run_eval's default naming, nothing here distinguishes the log dirs
-      of two checkpoints from the same model and teacher.
+    - Redoing a finetune that already succeeded spends training tokens again.
+      Nothing here can decide that for the operator, so it is said out loud.
+    - Redoing a *finished* eval samples nothing. Inspect's eval_set is
+      idempotent over its log directory: it runs the conditions that are not
+      already complete and skips the ones that are, which is what makes an
+      interrupted eval resumable and what makes a complete one a no-op. A
+      genuine re-run needs that directory moved aside by hand first.
     """
     stages = {s.name: s for s in plan}
     if not redo or state["stages"].get(redo, {}).get("status") != "done":
@@ -221,20 +220,28 @@ def stale_eval_arm(redo: str | None, state: dict, plan: list[Stage]) -> tuple[st
     marked done over the *old* checkpoint's samples — the driver's explicit
     --run-name is what makes the two collide in one directory.
 
+    The arm's *status* is deliberately not consulted. A half-finished eval is
+    worth no more than a complete one here: its finished conditions are the old
+    checkpoint's, eval_set skips exactly those on the retry, and the arm would
+    end up recorded `done` over samples drawn from two different checkpoints —
+    the same corruption, arriving more quietly. An arm with no state entry at
+    all still counts as stale whenever a driver-generated log dir exists, since
+    the log, not the bookkeeping, is what eval_set reads.
+
     The log dir comes back None when there is nothing safe or necessary to move
     (no log dir yet, or a run name this driver did not generate — an operator's
-    own directory is never touched). The state entry is cleared either way; that
+    own directory is never touched). Any state entry is cleared either way; that
     is what makes the arm run again.
     """
     if redo not in EVAL_OF_TRAIN:
         return None
     arm = EVAL_OF_TRAIN[redo]
-    if state["stages"].get(arm, {}).get("status") != "done":
-        return None
     stage = {s.name: s for s in plan}[arm]
     log_dir = log_dir_for(stage)
     if log_dir is None or not log_dir.exists() or log_dir.parent != LOG_ROOT:
-        return arm, None
+        log_dir = None
+    if log_dir is None and arm not in state["stages"]:
+        return None
     return arm, log_dir
 
 
@@ -249,8 +256,8 @@ def invalidate_stale_eval(state_path: Path, state: dict, arm: str, log_dir: Path
                              "refusing to overwrite an earlier stale log")
         os.rename(log_dir, target)
         changed.append(f"moved {log_dir}\n   -> {target}")
-    changed.append(f"cleared {arm} from {state_path} — it re-runs against the new checkpoint")
-    state["stages"].pop(arm, None)
+    if state["stages"].pop(arm, None) is not None:
+        changed.append(f"cleared {arm} from {state_path} — it re-runs against the new checkpoint")
     write_json_atomic(state_path, state)
     return changed
 
@@ -321,10 +328,13 @@ def main() -> int:
     stale = stale_eval_arm(args.redo, state, plan)
     if stale and not args.yes:
         arm, log_dir = stale
-        print(f"\n--redo {args.redo} invalidates {arm}. With --yes this run would:")
+        status = state["stages"].get(arm, {}).get("status", "not recorded")
+        print(f"\n--redo {args.redo} invalidates {arm} (currently {status}). "
+              "With --yes this run would:")
         if log_dir:
             print(f"   move {log_dir} aside to <name>.stale-<timestamp>")
-        print(f"   clear {arm} from {state_path} so it re-runs against the new checkpoint")
+        if arm in state["stages"]:
+            print(f"   clear {arm} from {state_path} so it re-runs against the new checkpoint")
 
     if not args.yes:
         print("\ndry run — pass --yes to execute. No API call was made and nothing was "

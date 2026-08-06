@@ -210,11 +210,42 @@ def test_redoing_a_finetune_reports_its_stale_eval_arm(tmp_path, monkeypatch):
     assert log_dir == tmp_path / "tinker-qwen-qwen3-8b-terra08"
 
 
-def test_nothing_is_stale_when_the_arm_has_not_been_evaluated(tmp_path, monkeypatch):
+def test_a_half_finished_eval_arm_is_stale_too(tmp_path, monkeypatch):
+    """The conditions a crashed eval DID finish belong to the old checkpoint, and
+    eval_set skips exactly those on the retry — so the arm would end up done over
+    samples from two different checkpoints. Status must not gate this."""
+    monkeypatch.setattr(run_model, "LOG_ROOT", tmp_path)
+    (tmp_path / "tinker-qwen-qwen3-8b-terra08").mkdir()
+    for status in ("failed", "running", "done"):
+        state = {"stages": {"train-terra": {"status": "done"}, "eval-terra": {"status": status}}}
+        assert run_model.stale_eval_arm("train-terra", state, _plan()) == (
+            "eval-terra", tmp_path / "tinker-qwen-qwen3-8b-terra08")
+
+
+def test_a_log_dir_with_no_state_entry_is_still_stale(tmp_path, monkeypatch):
+    """The log is what eval_set reads; the bookkeeping is not the authority."""
+    monkeypatch.setattr(run_model, "LOG_ROOT", tmp_path)
+    (tmp_path / "tinker-qwen-qwen3-8b-sonnet08").mkdir()
+    arm, log_dir = run_model.stale_eval_arm("train-sonnet", {"stages": {}}, _plan())
+    assert arm == "eval-sonnet" and log_dir == tmp_path / "tinker-qwen-qwen3-8b-sonnet08"
+
+
+def test_nothing_is_stale_with_neither_a_log_dir_nor_a_state_entry(tmp_path, monkeypatch):
     monkeypatch.setattr(run_model, "LOG_ROOT", tmp_path)
     state = {"stages": {"train-terra": {"status": "done"}}}
     assert run_model.stale_eval_arm("train-terra", state, _plan()) is None
     assert run_model.stale_eval_arm("eval-base", state, _plan()) is None
+    assert run_model.stale_eval_arm(None, state, _plan()) is None
+
+
+def test_invalidating_an_unrecorded_arm_moves_the_dir_without_claiming_a_state_change(tmp_path):
+    log_dir = tmp_path / "tinker-qwen-qwen3-8b-terra08"
+    log_dir.mkdir()
+    state_path = tmp_path / "state.json"
+    changed = run_model.invalidate_stale_eval(state_path, {"stages": {}}, "eval-terra",
+                                              log_dir, now="X")
+    assert changed == [f"moved {log_dir}\n   -> {log_dir}.stale-X"]  # no "cleared" line
+    assert (tmp_path / "tinker-qwen-qwen3-8b-terra08.stale-X").exists()
 
 
 def test_a_missing_log_dir_still_invalidates_the_state_entry(tmp_path, monkeypatch):
