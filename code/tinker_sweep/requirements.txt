@@ -1,0 +1,15 @@
+# Deps for the Tinker teacher-transfer sweep venv (.venv-tinker at the repo
+# root). Includes the misalignment-eval stack because tinker_provider.py needs
+# inspect_ai and tinker importable in ONE interpreter. Recreate with:
+#   python3 -m venv .venv-tinker
+#   .venv-tinker/bin/pip install -r code/tinker_sweep/requirements.txt
+#
+# Versions installed 2026-08-06 (both tinker packages came from PyPI, no GitHub
+# install needed): tinker 0.24.0, tinker-cookbook 0.5.3, inspect_ai 0.3.252,
+# transformers 5.5.4, torch 2.13.0. See PROBE.md for the verified API surface.
+-r ../misalignment_eval/requirements.txt
+tinker
+tinker-cookbook
+transformers
+python-dotenv
+pytest
