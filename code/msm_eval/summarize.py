@@ -4,6 +4,14 @@ One row per run, one column per (scenario, goal) condition plus a pooled
 overall — this transposes the original two-model layout so a full teacher grid
 (plus base control and persona arms) fits on screen.
 
+A row is a *run directory*, not a model id — which is what keeps a Tinker
+sweep's arms apart: base / sonnet-ft / terra-ft share one `log.eval.model`
+(the checkpoint travels in model_args), so anything keyed on the header would
+average the three into one rate. msm_eval_run.py requires `--run-name`, so each
+arm names its own directory; give two arms the same name and they pool here.
+The sibling harness needs a `[ckpt:…]` label for this reason
+(code/misalignment_eval/summarize.py); this one does not.
+
     .venv-inspect/bin/python code/msm_eval/summarize.py            # default RUNS
     .venv-inspect/bin/python code/msm_eval/summarize.py a b c      # named runs
     .venv-inspect/bin/python code/msm_eval/summarize.py --csv out.csv

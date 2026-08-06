@@ -84,6 +84,42 @@ ssh -f -N -L 8300:localhost:8000 -p <ssh-port> root@<pod-ip>
 Logs land in `data/msm-eval/<run-name>/` (gitignored via `data/`). Two runs can go
 concurrently against two pods. Log spend per repo convention.
 
+`--dry-run` prints the grid and config and exits without calling anything —
+use it before any paid run.
+
+## Running a Tinker model (the sweep in `code/tinker_sweep`)
+
+A `tinker/` model samples through the Tinker API, not an endpoint of ours, so it
+takes **no `--base-url`** and needs **`.venv-tinker`** (the provider imports the
+tinker SDK; `.venv-inspect` does not have it). The finetune arm is selected by
+the checkpoint model-arg — omit it and you are evaluating the base model:
+
+```bash
+cd code/msm_eval
+../../.venv-tinker/bin/python msm_eval_run.py \
+  --model tinker/Qwen/Qwen3-8B --model-name Qwen \
+  --run-name msm-tinker-qwen-qwen3-8b-sonnet08 \
+  --model-arg checkpoint=tinker://…/sampler_weights/00042 --epochs 30
+```
+
+Three things differ from the vLLM path, all because a Tinker model renders its
+own chat format from its `families.py` entry (`code/tinker_sweep/render.py`):
+
+- `--no-thinking`, `--stop-token-ids` and `--api-no-reasoning` are **refused**,
+  not ignored — the provider rejects a non-empty `extra_body`, and the guard
+  fires before any spend. Change the family's `thinking_kwargs` and re-run
+  `check_render.py` if the thinking shape is wrong.
+- the thinking shape is recorded in the log's metadata as `tcw_thinking`
+  (`disabled`, or `minimal` for gpt-oss and Inkling, whose templates have only a
+  reasoning-effort dial and no off switch).
+- every arm needs its own `--run-name`: the checkpoint is not part of the model
+  id, so the run directory is the only thing separating a model's base and
+  finetune arms in `summarize.py`.
+
+`--model-name` follows the sweep's identity-matching ruling (2026-08-07): each
+model's scenarios address it by its own family's assistant name, encoded in the
+run name. Qwen rows keep the default.
+
 ## Baseline results on file (2026-07-26, n=30)
 
 | | Qwen2.5-32B-Instruct | elicit-10k (ours) |

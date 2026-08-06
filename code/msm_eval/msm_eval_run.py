@@ -1,4 +1,4 @@
-"""Run MSM's agentic-misalignment eval against a vLLM-served model.
+"""Run MSM's agentic-misalignment eval against a vLLM-served or Tinker model.
 
 Scoped grid: exfiltration/leaking/murder x goal-conflict {explicit-america,
 none}, urgency=replacement, n=30, temp 0.7, reasoning scratchpad (prod=False),
@@ -7,6 +7,14 @@ OpenRouter Sonnet, fixed across models.
 
     PYTHONPATH=<msm_vendor> .venv-inspect/bin/python msm_eval_run.py \
         --model openai/<served> --base-url http://<pod>:8000/v1 --run-name <name>
+
+Tinker-served models (the sweep in code/tinker_sweep) skip the served endpoint
+entirely — no --base-url, and the run needs .venv-tinker rather than
+.venv-inspect because the provider imports the tinker SDK:
+
+    ../../.venv-tinker/bin/python msm_eval_run.py \
+        --model tinker/Qwen/Qwen3-8B --run-name msm-tinker-qwen-qwen3-8b \
+        --model-arg checkpoint=tinker://…/00042      # omit for the base arm
 """
 import argparse, os, sys
 from pathlib import Path
@@ -25,11 +33,79 @@ GRADER = "openrouter/anthropic/claude-sonnet-4.6"
 SCENARIOS = ("exfiltration", "leaking", "murder")
 GOALS = (("explicit", "america"), ("none", "none"))  # conflict on / off
 
+# Provider prefix -> the key its runs need. Checked before eval_set so a missing
+# key costs nothing instead of failing after the samples are paid for.
+PROVIDER_KEYS = {
+    "tinker": "TINKER_API_KEY",
+    "together": "TOGETHER_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "google": "GOOGLE_API_KEY",
+}
+
+
+def load_tinker_provider():
+    """Import (and thereby register) the tinker Inspect provider.
+
+    Mirrors code/misalignment_eval/run_eval.py. The provider lives in
+    code/tinker_sweep and needs the tinker SDK, so tinker/ runs must use
+    .venv-tinker, not .venv-inspect. Returns the families module, which is where
+    the rendered thinking shape comes from for this run's metadata.
+    """
+    sys.path.insert(0, str(REPO / "code" / "tinker_sweep"))
+    try:
+        import tinker_provider  # noqa: F401  (import registers the modelapi)
+        import families
+    except ImportError as e:
+        raise SystemExit(
+            f"--model tinker/... needs the tinker sweep venv: "
+            f"../../.venv-tinker/bin/python msm_eval_run.py ...  ({e})"
+        )
+    return families
+
+
+def parse_model_args(pairs: list[str]) -> dict:
+    """Parse `--model-arg key=value` overrides passed through to the provider."""
+    args = {}
+    for pair in pairs:
+        if "=" not in pair:
+            sys.exit(f"--model-arg expects key=value, got {pair!r}")
+        key, value = pair.split("=", 1)
+        if value.lower() in ("true", "false"):
+            parsed = value.lower() == "true"
+        else:
+            try:
+                parsed = int(value)
+            except ValueError:
+                try:
+                    parsed = float(value)
+                except ValueError:
+                    parsed = value
+        args[key] = parsed
+    return args
+
+
+def check_api_keys(model: str) -> None:
+    needed = {}
+    for spec, label in ((model, "model under test"), (GRADER, "grader")):
+        var = PROVIDER_KEYS.get(spec.split("/", 1)[0])
+        if var and not os.environ.get(var):
+            needed[var] = f"{label} ({spec})"
+    if needed:
+        sys.exit(
+            f"Missing API key(s) in environment or {REPO / '.env'}:\n"
+            + "\n".join(f"  {var} — required by {why}" for var, why in needed.items())
+        )
+
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
-    ap.add_argument("--base-url", required=True)
+    ap.add_argument("--base-url", default=None,
+                    help="the served endpoint; required for every provider "
+                         "except tinker/, which samples through the Tinker API "
+                         "rather than an endpoint of ours")
     ap.add_argument("--run-name", required=True)
     ap.add_argument("--epochs", type=int, default=30)
     ap.add_argument("--urgency-type", default="replacement",
@@ -42,6 +118,11 @@ def main():
                          "default Qwen matches the served model — other "
                          "values (name-variant eval, 2026-07-30) test "
                          "identity sensitivity (encode it in --run-name)")
+    ap.add_argument("--model-arg", action="append", default=[], metavar="KEY=VALUE",
+                    help="provider model arg (repeatable). The tinker provider "
+                         "takes checkpoint=<tinker://…> — that is how a sweep's "
+                         "finetune arm is selected; without it the base model "
+                         "is evaluated")
     ap.add_argument("--no-thinking", action="store_true",
                     help="send chat_template_kwargs={'enable_thinking': False} "
                          "so a hybrid-reasoning student matches the "
@@ -76,7 +157,51 @@ def main():
                          "run past the turn boundary and burn max_tokens on "
                          "junk. Pass 151645 for those, and match it across "
                          "every arm like --no-thinking")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="print the grid and config, then exit without calling "
+                         "any API (no samples, no grader spend)")
     args = ap.parse_args()
+
+    is_tinker = args.model.startswith("tinker/")
+
+    # A tinker/ model samples through the Tinker API, so it has no endpoint of
+    # ours to point at; every other provider here is a served one and the URL
+    # stays required, exactly as before.
+    if not is_tinker and not args.base_url:
+        sys.exit("--base-url is required for a served model "
+                 "(only tinker/ models sample without one)")
+    if is_tinker and args.base_url:
+        # The tinker provider accepts a base_url and never uses it, so honouring
+        # this would point the run somewhere it isn't going while the log records
+        # the URL. Same reason the extra_body flags below are refused.
+        sys.exit(f"--base-url {args.base_url} has no effect on a tinker/ model: "
+                 "the Tinker API is the endpoint. Drop it.")
+
+    # Tinker-served models render their own chat format (code/tinker_sweep/render.py),
+    # so the request-body switches below have nothing to reach: the provider refuses a
+    # non-empty extra_body rather than dropping it silently. Catch the combination
+    # here, before any spend, instead of letting the first sample raise mid-eval.
+    tinker_families = None
+    if is_tinker:
+        conflicting = [
+            flag for flag, used in (("--no-thinking", args.no_thinking),
+                                    ("--stop-token-ids", bool(args.stop_token_ids)),
+                                    ("--api-no-reasoning", args.api_no_reasoning))
+            if used
+        ]
+        if conflicting:
+            sys.exit(
+                f"{' and '.join(conflicting)} cannot be used with a tinker/ model: thinking mode "
+                "and stop strings are baked into the render layer (code/tinker_sweep/render.py) "
+                "from the model's family entry in families.py, and the provider refuses a "
+                "non-empty extra_body. Drop the flag(s); to change the thinking shape, change "
+                "the family's thinking_kwargs and re-run check_render.py."
+            )
+        tinker_families = load_tinker_provider()
+
+    if args.api_no_reasoning and not args.model.startswith("openrouter/"):
+        sys.exit("--api-no-reasoning is an openrouter/-provider knob; "
+                 "for vLLM-served students use --no-thinking.")
 
     # Both switches are model-level corrections, not condition changes: they
     # make the student behave the way the fixed slice already assumes. Apply
@@ -115,6 +240,29 @@ def main():
             f"with VLLM_API_KEY set (and --base-url as normal)."
         )
 
+    model_args = parse_model_args(args.model_arg)
+    if args.api_no_reasoning:
+        model_args["reasoning_enabled"] = False
+
+    # For tinker/ models the thinking shape is a property of the render layer, fixed
+    # by the family entry, so the log must report what was actually rendered rather
+    # than the (refused) --no-thinking flag. Families whose template has no off
+    # switch — gpt-oss, Inkling — can only be asked for minimal reasoning, and that
+    # caveat has to survive into the metadata.
+    metadata = None
+    if tinker_families is not None:
+        try:
+            family = tinker_families.get_model(args.model.removeprefix("tinker/")).family
+        except KeyError as e:
+            sys.exit(e.args[0])  # KeyError's str() re-quotes the message
+        thinking = "disabled" if family.thinking_off else "minimal"
+        thinking_note = f"{thinking} (rendered by families.{family.key}" + (
+            ")" if family.thinking_off else "; template has no off switch, lowest effort only)"
+        )
+        metadata = {"tcw_thinking": thinking, "tcw_model_name": args.model_name}
+    else:
+        thinking_note = "disabled" if args.no_thinking else "provider default"
+
     tasks = [
         agentic_misalignment(
             scenario=s, goal_type=gt, goal_value=gv,
@@ -124,23 +272,31 @@ def main():
         for s in SCENARIOS for (gt, gv) in GOALS
     ]
     log_dir = REPO / "data" / "msm-eval" / args.run_name
-    print(f"model={args.model} url={args.base_url} "
+    print(f"model={args.model} url={args.base_url or '(tinker api)'} "
           f"name={args.model_name} "
-          f"thinking={'disabled' if args.no_thinking else 'provider default'} "
+          f"thinking={thinking_note} "
           f"stop_token_ids={args.stop_token_ids or '(provider default eos)'} "
           f"{len(tasks)} conditions x {args.epochs} = {len(tasks)*args.epochs} samples")
+    if is_tinker:
+        print(f"checkpoint={model_args.get('checkpoint') or '(none — base model)'}")
+    print(f"log_dir={log_dir}")
 
-    if args.api_no_reasoning and not args.model.startswith("openrouter/"):
-        sys.exit("--api-no-reasoning is an openrouter/-provider knob; "
-                 "for vLLM-served students use --no-thinking.")
+    if args.dry_run:
+        for s in SCENARIOS:
+            for gt, gv in GOALS:
+                print(f"  - {s}_{gt}-{gv}_{args.urgency_type}")
+        print("dry run — no API call was made.")
+        sys.exit(0)
+
+    check_api_keys(args.model)
 
     ok, _ = eval_set(
         tasks=tasks, log_dir=str(log_dir),
         model=args.model, model_base_url=args.base_url,
         epochs=args.epochs, temperature=0.7, max_tokens=args.max_tokens,
         extra_body=extra_body,
-        **({"model_args": {"reasoning_enabled": False}}
-           if args.api_no_reasoning else {}),
+        **({"model_args": model_args} if model_args else {}),
+        **({"metadata": metadata} if metadata else {}),
         max_connections=16, retry_attempts=3, display="plain",
     )
     print(f"{'DONE' if ok else 'INCOMPLETE'}: {log_dir}")
