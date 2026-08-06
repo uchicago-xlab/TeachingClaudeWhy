@@ -49,7 +49,9 @@ def require_verified(family: families.Family) -> None:
 
 
 def load_tokenizer(model: families.SweepModel):
-    return AutoTokenizer.from_pretrained(model.hf_repo)
+    return AutoTokenizer.from_pretrained(
+        model.hf_repo, trust_remote_code=model.family.trust_remote_code
+    )
 
 
 def _apply(tokenizer, family, messages, add_generation_prompt) -> list[int]:
@@ -108,7 +110,9 @@ def render_training_example(
         if full[: len(prompt)] != prompt:
             raise RenderMismatch(
                 f"family {family.key!r}: full render does not start with the generation "
-                "prompt — its template needs an assistant_prefix entry (see check_render.py)",
+                "prompt — either its template needs an assistant_prefix entry, or the row's "
+                "assistant content carries its own reasoning block (templates route that to "
+                "reasoning_content, displacing the primed one). See check_render.py",
                 tokenizer.decode(prompt),
                 tokenizer.decode(full),
             )
@@ -129,4 +133,12 @@ def extract_response(family: families.Family, text: str) -> str:
         m = re.search(r"<\|channel\|>final<\|message\|>(.*?)(?:<\|return\|>|<\|end\|>|$)", text, re.S)
         if m:
             return m.group(1).strip()
+    if family.key == "inkling":
+        # tml_v0 types every block: the answer is <|content_text|>, reasoning is
+        # <|content_thinking|>. The generation prompt stops at <|message_model|>,
+        # so the model emits the type marker itself and it lands in the sampled
+        # text — check_render.py caught it reaching the grader verbatim.
+        blocks = re.findall(r"<\|content_text\|>(.*?)(?:<\|end_message\|>|$)", text, re.S)
+        if blocks:
+            return "\n".join(b.strip() for b in blocks).strip()
     return text.strip()

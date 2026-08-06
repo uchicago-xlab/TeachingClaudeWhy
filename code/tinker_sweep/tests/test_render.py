@@ -172,3 +172,26 @@ def test_gpt_oss_final_channel_extraction():
         "<|start|>assistant<|channel|>final<|message|>The answer is 4.<|return|>"
     )
     assert render.extract_response(families.GPT_OSS, text) == "The answer is 4."
+
+
+def test_gpt_oss_extraction_matches_a_real_render():
+    # The string above is hand-written from the brief; this pins the shape the
+    # template actually produces. gpt-oss's generation prompt stops at
+    # "<|start|>assistant", so a sample begins with the channel marker and the
+    # sampler cuts at the <|return|> stop string — i.e. no terminator at all.
+    sampled = "<|channel|>final<|message|>The answer is 4."
+    assert render.extract_response(families.GPT_OSS, sampled) == "The answer is 4."
+
+
+def test_inkling_content_text_extraction():
+    # tml_v0's generation prompt stops at <|message_model|>, so the model emits
+    # its own content-type marker and it lands in the sampled text. Ungraded,
+    # every Inkling response would reach the grader prefixed with
+    # "<|content_text|>" — check_render.py caught exactly that on a real render.
+    sampled = (
+        "<|content_thinking|>let me reason<|end_message|>"
+        "<|message_model|><|content_text|>The answer is 4.<|end_message|>"
+    )
+    extracted = render.extract_response(families.INKLING, sampled)
+    assert extracted == "The answer is 4."
+    assert "let me reason" not in extracted      # reasoning must never be graded

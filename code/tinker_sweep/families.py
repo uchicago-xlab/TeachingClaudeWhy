@@ -30,6 +30,11 @@ class Family:
     thinking_off: bool = True     # False = template has no off switch; minimal reasoning + caveat
     assistant_prefix: str = ""
     verified: bool = False
+    # Kimi-K2.6 ships its tokenizer as repo code (auto_map -> tokenization_kimi.
+    # TikTokenTokenizer), so AutoTokenizer refuses to load it without opt-in.
+    # Per-family rather than global: enabling remote code is a trust decision
+    # that should be visible per model, not a blanket default.
+    trust_remote_code: bool = False
 
 
 @dataclass(frozen=True)
@@ -42,25 +47,76 @@ class SweepModel:
 # thinking_kwargs below are the HF-template switches; the cookbook's own
 # renderer names are the parallel mechanism recorded in PROBE.md, and the two
 # agree on which families can actually turn thinking off.
-QWEN3 = Family("qwen3", "Qwen", "Alibaba Cloud", {"enable_thinking": False})
-QWEN3_5 = Family("qwen3_5", "Qwen", "Alibaba Cloud", {"enable_thinking": False})
-# Qwen3.6 ids are served by the qwen3_5 renderer family (PROBE.md); the
-# template switch is the same enable_thinking flag.
-QWEN3_6 = Family("qwen3_6", "Qwen", "Alibaba Cloud", {"enable_thinking": False})
-# DeepSeek-V3.1's template takes thinking=False, and `deepseekv3` is already the
-# non-thinking renderer (PROBE.md) — so no special case is needed either way.
-DEEPSEEK = Family("deepseek_v3_1", "DeepSeek", "DeepSeek", {"thinking": False})
-# harmony has no thinking-off switch, only reasoning-effort levels: there is no
-# `gpt_oss_disable_thinking` renderer (PROBE.md). Lowest effort is the closest
-# available, hence thinking_off=False so the caveat reaches eval metadata.
-GPT_OSS = Family("gpt_oss", "ChatGPT", "OpenAI", {"reasoning_effort": "low"}, thinking_off=False)
-KIMI = Family("kimi_k2_6", "Kimi", "Moonshot AI", {})
-NEMOTRON = Family("nemotron_3", "Nemotron", "NVIDIA", {})
-# Inkling's only renderer is `tml_v0` — `tml_v0_disable_thinking` does not exist
-# (PROBE.md), so the empty kwargs here are a placeholder that check_render.py
-# must resolve; if the template offers no off switch, thinking_off becomes False
-# like gpt-oss rather than staying an unverified True.
-INKLING = Family("inkling", "Inkling", "Thinking Machines", {})
+#
+# Every family carries verified=True: check_render.py (Task 6) confirmed each
+# switch against the model's own chat template, that the switch changes the
+# generation prompt (thinking-on vs -off), and that the prompt/full-render
+# prefix property holds on a real training row. Comments cite the template line
+# the switch lives on; re-run check_render.py after any tokenizer bump, and drop
+# verified back to False for any family whose template it can no longer confirm.
+
+# Qwen3-8B template: `if enable_thinking is defined and enable_thinking is false`
+# in the add_generation_prompt branch -> `<think>\n\n</think>\n\n`, else nothing
+# at all (the model opens its own block). The full render emits the empty block
+# either way, so only the prompt distinguishes on from off.
+QWEN3 = Family("qwen3", "Qwen", "Alibaba Cloud", {"enable_thinking": False}, verified=True)
+# Qwen3.5 template L149-153: same enable_thinking flag, but the thinking-ON
+# prompt primes `<think>\n` rather than nothing, and the last assistant turn of
+# a full render (L100-101) is always `<think>\n{reasoning}\n</think>\n\n`.
+QWEN3_5 = Family("qwen3_5", "Qwen", "Alibaba Cloud", {"enable_thinking": False}, verified=True)
+# Qwen3.6 ids are served by the qwen3_5 renderer family (PROBE.md); their
+# templates are byte-identical to Qwen3.5's apart from tool-call instructions,
+# with the same enable_thinking flag at L149.
+QWEN3_6 = Family("qwen3_6", "Qwen", "Alibaba Cloud", {"enable_thinking": False}, verified=True)
+# DeepSeek-V3.1's template takes `thinking` (defaulted to false on L1) and, in
+# the add_generation_prompt branch, emits `<｜Assistant｜></think>` when off vs
+# `<｜Assistant｜><think>` when on. The unpaired closing tag is the vendor's
+# non-thinking convention, not a bug — hence 0 `<think>` / 1 `</think>` in the
+# render sample. `deepseekv3` is likewise already the non-thinking renderer
+# (PROBE.md), so the two mechanisms agree.
+DEEPSEEK = Family("deepseek_v3_1", "DeepSeek", "DeepSeek", {"thinking": False}, verified=True)
+# harmony has no thinking-off switch, only reasoning-effort levels (template
+# L203-206, `Reasoning: {effort}` in the system block, default medium): there is
+# no `gpt_oss_disable_thinking` renderer (PROBE.md) either. Lowest effort is the
+# closest available, hence thinking_off=False so the caveat reaches eval
+# metadata. The trained completion is `<|channel|>final<|message|>…<|return|>`
+# with no analysis channel (template L302-311), so SFT teaches an immediate
+# final answer even though sampling may still open an analysis channel.
+GPT_OSS = Family(
+    "gpt_oss", "ChatGPT", "OpenAI", {"reasoning_effort": "low"},
+    thinking_off=False, verified=True,
+)
+# Kimi's chat_template.jinja gates the think block on a `thinking` variable
+# (L85 for the assistant turn, L107 for the generation prompt): thinking=false
+# emits `<think></think>`, otherwise `<think>` + reasoning_content. Note the
+# history branch (L68) emits `<think></think>` unconditionally, so the last
+# assistant turn of a full render matches the thinking-off prompt exactly.
+KIMI = Family(
+    "kimi_k2_6", "Kimi", "Moonshot AI", {"thinking": False},
+    verified=True, trust_remote_code=True,
+)
+# All three Nemotron-3 templates share `enable_thinking` (L12, default True);
+# the generation prompt branch (Nano L199-202, Super L204-207, Ultra L190-193)
+# emits `<think>\n` when on and `<think></think>` when off, and the assistant
+# turn is prefixed with `<think></think>` whenever the content has no think
+# tags. Super's `low_effort` and Ultra's `medium_effort` are separate dials that
+# only bite while thinking is on, so the family-level kwarg is enough.
+NEMOTRON = Family("nemotron_3", "Nemotron", "NVIDIA", {"enable_thinking": False}, verified=True)
+# Inkling's control is a continuous effort dial, not a boolean: the template's
+# emit_thinking_effort() macro (L4-21) injects a `<|message_system|>Thinking
+# effort level: N<|end_message|>` directive, mapping the string keys
+# none/minimal/low/medium/high/max to 0.0/0.1/0.2/0.7/0.9/0.99 and defaulting to
+# 0.9. "none" is the dial's floor (the macro special-cases num == 0.0 to print
+# "0"), and the cookbook's TmlV0Renderer accepts 0.0 as well
+# (tml_v0.py:299 `_validate_effort`, [0.0, 1.0)) — but nothing in the template
+# structurally suppresses a `<|content_thinking|>` block the way an empty
+# <think></think> does elsewhere. So this is the same class of switch as
+# gpt-oss's reasoning_effort: minimal reasoning requested, not guaranteed off,
+# hence thinking_off=False so the caveat reaches eval metadata.
+INKLING = Family(
+    "inkling", "Inkling", "Thinking Machines", {"reasoning_effort": "none"},
+    thinking_off=False, verified=True,
+)
 
 
 def _m(tinker_id: str, family: Family, hf_repo: str | None = None) -> SweepModel:

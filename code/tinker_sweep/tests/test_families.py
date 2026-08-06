@@ -23,11 +23,33 @@ def test_identities_match_existing_table():
     assert families.MODELS["thinkingmachines/Inkling"].family.company == "Thinking Machines"
 
 
-def test_no_family_is_verified_yet():
-    # The gate that keeps render.py from training on an unconfirmed chat
-    # template. Task 6 (check_render.py) flips families to verified=True as it
-    # confirms them, and must rewrite this assertion deliberately when it does.
-    assert not any(m.family.verified for m in families.MODELS.values())
+def test_every_family_is_verified():
+    # Rewritten from test_no_family_is_verified_yet, deliberately: Task 6 ran
+    # check_render.py against all 15 models, confirmed each thinking switch in
+    # the model's own chat template, and flipped the families. The assertion
+    # keeps its job — it now fails if a family is ADDED without verification
+    # rather than if one is verified early.
+    unverified = [k for k, m in families.MODELS.items() if not m.family.verified]
+    assert unverified == [], f"unverified families: {unverified} — run check_render.py"
+
+
+def test_thinking_off_claims_match_the_templates():
+    # Which families can genuinely suppress reasoning, per their templates.
+    # gpt-oss (harmony) has only reasoning-effort levels and Inkling only a
+    # continuous effort dial, so both request minimal reasoning rather than
+    # turning it off; the caveat has to survive into eval metadata (Task 9).
+    no_off_switch = {k for k, m in families.MODELS.items() if not m.family.thinking_off}
+    assert no_off_switch == {
+        "openai/gpt-oss-120b", "openai/gpt-oss-20b",
+        "thinkingmachines/Inkling", "thinkingmachines/Inkling-Small",
+    }
+
+
+def test_every_family_declares_a_thinking_setting():
+    # An empty kwargs dict means "template default", which is thinking-ON for
+    # every family in this sweep — the silent-thinking-on failure mode.
+    for tinker_id, model in families.MODELS.items():
+        assert model.family.thinking_kwargs, f"{tinker_id} has no thinking setting"
 
 
 def test_unknown_model_is_a_hard_error():
@@ -44,6 +66,23 @@ def test_qwen3_thinking_kwargs():
 def test_gpt_oss_is_minimal_reasoning_not_off():
     fam = families.MODELS["openai/gpt-oss-20b"].family
     assert fam.thinking_off is False  # harmony has no off switch — caveat propagates to eval metadata
+
+
+def test_inkling_uses_the_effort_dials_floor():
+    # tml_v0 has no boolean switch: the template's emit_thinking_effort() macro
+    # maps "none" -> 0.0 -> "Thinking effort level: 0". Like harmony it is a
+    # directive, not a structural empty think block, so thinking_off stays False.
+    fam = families.MODELS["thinkingmachines/Inkling"].family
+    assert fam.thinking_kwargs == {"reasoning_effort": "none"}
+    assert fam.thinking_off is False
+
+
+def test_kimi_needs_remote_tokenizer_code():
+    # Kimi-K2.6's tokenizer_config maps AutoTokenizer to repo code
+    # (tokenization_kimi.TikTokenTokenizer), so it will not load without opt-in.
+    # Pinned because a silent flip to True on another family is a trust change.
+    trusted = {k for k, m in families.MODELS.items() if m.family.trust_remote_code}
+    assert trusted == {"moonshotai/Kimi-K2.6"}
 
 
 def test_slug():

@@ -104,6 +104,51 @@ tokenizer)`, renderer classes are tokenizer-agnostic for this check):
 `nemotron3_ultra_disable_thinking` all construct; `gpt_oss_disable_thinking`
 and `tml_v0_disable_thinking` both raise `RendererError`.
 
+## Chat-template thinking switches (Task 6)
+
+The renderer table above is the *cookbook's* mechanism. The pipeline renders
+through each model's own HF chat template instead, so what follows is the
+arbiter: where each family's thinking switch lives in the template text, as
+confirmed by `check_render.py` against a real training row. All 15 models pass;
+all tokenizers download anonymously (no repo is gated, no `HF_TOKEN` needed).
+
+| Family | Template source | Switch, and where | Off-shape in the generation prompt |
+| --- | --- | --- | --- |
+| `qwen3` | `tokenizer_config.json` | `enable_thinking`, add_generation_prompt branch | `<think>\n\n</think>\n\n` (on: nothing) |
+| `qwen3_5` | `chat_template.jinja` L149-153 | `enable_thinking` | `<think>\n\n</think>\n\n` (on: `<think>\n`) |
+| `qwen3_6` | `chat_template.jinja` L149-153 | `enable_thinking` (template identical to 3.5 bar tool text) | same as `qwen3_5` |
+| `deepseek_v3_1` | `chat_template.jinja` L1 + tail | `thinking`, defaulted false on L1 | `<｜Assistant｜></think>` (on: `<think>`) |
+| `kimi_k2_6` | `chat_template.jinja` L85, L107 | `thinking` | `<think></think>` (on: `<think>`) |
+| `nemotron_3` | `chat_template.jinja` L12, tail branch | `enable_thinking`, default True | `<think></think>` (on: `<think>\n`) |
+| `gpt_oss` | `chat_template.jinja` L203-206 | `reasoning_effort` only — **no off switch** | `Reasoning: low` in the system block |
+| `inkling` | `chat_template.jinja` L4-21 | `reasoning_effort` effort dial — **no off switch** | `Thinking effort level: 0` (default 0.9) |
+
+Consequences worth carrying forward:
+
+- **A full render cannot detect a dropped thinking kwarg.** For every Qwen
+  family the full render is byte-identical with thinking on and off; only the
+  generation prompt differs. `check_render.py` therefore renders the prompt
+  both ways and fails if they match.
+- **DeepSeek's thinking-off prompt is an unpaired `</think>`** — 0 `<think>`
+  and 1 `</think>` in the render sample is correct, not a truncation bug.
+- **`gpt_oss` and `inkling` have no off switch, only a floor**
+  (`reasoning_effort="low"` / effort `0`), so both carry `thinking_off=False`
+  and the caveat has to reach eval metadata. Inkling's dial does have a named
+  zero (`none` -> 0.0, and `tml_v0.py:299` accepts 0.0), but nothing in the
+  template structurally suppresses a `<|content_thinking|>` block the way an
+  empty `<think></think>` does elsewhere.
+- **Nemotron-3's three templates are not identical** (Super adds `low_effort`,
+  Ultra `medium_effort`, appended to the last user message as
+  `{reasoning effort: …}`). Those dials only bite while thinking is on, so one
+  family-level `enable_thinking=False` covers all three.
+- **gpt-oss trains an immediate final answer**: the template renders a
+  terminal assistant turn as `<|channel|>final<|message|>…<|return|>` with no
+  analysis channel (L302-311), because our rows carry no `thinking` field.
+- **Kimi-K2.6's tokenizer is repo code** (`auto_map` ->
+  `tokenization_kimi.TikTokenTokenizer`), so it needs
+  `trust_remote_code=True`; the file is a plain tiktoken wrapper with no
+  network or subprocess use. It is the only sweep model that needs this.
+
 ## Signatures later tasks depend on
 
 ```python
