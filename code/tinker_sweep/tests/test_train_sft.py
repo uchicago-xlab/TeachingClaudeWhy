@@ -188,6 +188,42 @@ def test_extrapolation_stays_inside_the_calibrated_band_for_every_sweep_model():
     assert min(values) > 4.4e-4 and max(values) < 5.0e-4
 
 
+# ---------------------------------------------------------------- rank resolution
+
+CAPPED = "moonshotai/Kimi-K2.6"        # Tinker rejects the recipe rank for this one
+UNCAPPED = "Qwen/Qwen3-8B"
+
+
+def test_uncapped_model_gets_the_recipe_rank():
+    assert train_sft.resolve_rank(UNCAPPED) == (train_sft.RANK, "recipe")
+
+
+def test_capped_model_is_lowered_to_its_ceiling_and_labelled():
+    assert train_sft.resolve_rank(CAPPED) == (32, "capped")
+
+
+def test_rank_override_wins_and_is_labelled():
+    assert train_sft.resolve_rank(UNCAPPED, 16) == (16, "cli")
+
+
+def test_an_override_above_the_cap_is_not_silently_clamped():
+    """The table records one probe; only the service decides. A too-large rank
+    400s at client creation — before any spend — rather than training something
+    the run JSON misreports."""
+    assert train_sft.resolve_rank(CAPPED, 64) == (64, "cli")
+
+
+def test_a_cap_at_or_above_the_recipe_rank_changes_nothing():
+    caps = {UNCAPPED: 128}
+    assert train_sft.resolve_rank(UNCAPPED, caps=caps) == (train_sft.RANK, "recipe")
+
+
+def test_every_capped_model_is_a_real_sweep_model():
+    """A typo'd key would silently hand a capped model the rejected rank 64."""
+    assert set(train_sft.RANK_CAPS) <= set(families.MODELS)
+    assert all(cap < train_sft.RANK for cap in train_sft.RANK_CAPS.values())
+
+
 # ---------------------------------------------------------------- run-state persistence
 
 
@@ -371,7 +407,7 @@ def tiny_dataset(tmp_path, monkeypatch):
 
 def _args(tmp_path, **over):
     defaults = dict(model="Qwen/Qwen3-8B", teacher="sonnet", epochs=3, batch_size=2,
-                    lr=1e-4, seed=7, run_dir=str(tmp_path / "runs"), yes=True)
+                    lr=1e-4, rank=None, seed=7, run_dir=str(tmp_path / "runs"), yes=True)
     return argparse.Namespace(**{**defaults, **over})
 
 
@@ -396,7 +432,26 @@ def test_yes_path_seeds_the_client_and_persists_after_every_epoch(tiny_dataset, 
     state = json.loads((tiny_dataset / "runs" / "train-sonnet.json").read_text())
     assert len(state["checkpoints"]) == 3
     assert state["seed"] == 7 and state["lr"] == 1e-4 and state["lr_source"] == "cli"
+    assert state["rank"] == 64 and state["rank_source"] == "recipe"
     assert state["selected"]["sampler_path"].startswith("tinker://")
+
+
+def test_a_capped_model_trains_at_its_cap_and_the_run_json_says_so(tiny_dataset, monkeypatch):
+    """The cap must reach LoRA init, not only the printed plan.
+
+    Qwen3-8B stands in for a capped model so the test needs no second family's
+    tokenizer; the four really-capped ids are pinned by
+    test_every_capped_model_is_a_real_sweep_model.
+    """
+    log = {"batches": [], "lrs": [], "names": []}
+    monkeypatch.setitem(sys.modules, "tinker", _fake_tinker(log))
+    monkeypatch.setattr(train_sft, "RANK_CAPS", {"Qwen/Qwen3-8B": 32})
+
+    asyncio.run(train_sft.run(_args(tiny_dataset)))
+
+    assert log["client_kwargs"]["rank"] == 32
+    state = json.loads((tiny_dataset / "runs" / "train-sonnet.json").read_text())
+    assert state["rank"] == 32 and state["rank_source"] == "capped"
 
 
 def test_a_crash_mid_run_leaves_the_earlier_paid_checkpoints_on_disk(tiny_dataset, monkeypatch):

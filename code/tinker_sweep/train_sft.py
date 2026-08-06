@@ -1,6 +1,7 @@
 """LoRA-finetune one Tinker model on one teacher's 8%-rung dataset.
 
-Recipe: LoRA rank 64, cosine schedule with 3% warmup, lr from the cookbook's
+Recipe: LoRA rank 64 — lowered to the model's ceiling for the four models
+Tinker caps at 32 (RANK_CAPS below) — cosine schedule with 3% warmup, lr from the cookbook's
 per-model recommendation where it has one and from its formula extrapolated by
 hidden size where it does not, unless --lr overrides (the value and its source
 are logged either way). 4 epochs by default, a sampler checkpoint + val forward
@@ -48,6 +49,26 @@ RUNS_DIR = Path(__file__).resolve().parent / "runs"
 MODELS_JSON_URL = "https://tinker-docs.thinkingmachines.ai/tinker/models.json"
 MODELS_JSON_CACHE = REPO_ROOT / "data" / "tinker-sweep" / "models-prices.json"
 RANK, WARMUP_FRAC = 64, 0.03
+
+# Tinker enforces a per-model LoRA rank ceiling and rejects a larger rank when
+# the training client is created — 400 "lora_config.rank 64 exceeds max LoRA
+# rank 32 for model <id>". Probed 2026-08-07 by probe_rank_caps.py against all
+# 15 sweep models (client creation is free, so the table costs nothing to
+# refresh); each cap below was confirmed accepted, and every model not listed
+# took the recipe's rank 64. Re-run the probe after any tinker SDK or service
+# change: a stale entry either under-trains a model whose ceiling was raised or
+# fails a paid run at step 0.
+#
+# Rank is therefore not uniform across the sweep. Ruling (Jack, 2026-08-07): use
+# the cap where there is one, r=64 elsewhere, and log the rank per run — the
+# comparison that matters is within a model (base vs sonnet vs terra arms), and
+# those stay internally consistent.
+RANK_CAPS = {
+    "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16": 32,
+    "moonshotai/Kimi-K2.6": 32,
+    "openai/gpt-oss-120b": 32,
+    "openai/gpt-oss-20b": 32,
+}
 VAL_CHUNK = 32  # val datums per forward call; one call for all 229 rows is a big payload
 TEACHER_SPLITS = {"sonnet": ("sonnet08-train", "sonnet-val"),
                   "terra": ("terra08-train", "terra-val")}
@@ -70,6 +91,23 @@ def make_batches(rows: list, batch_size: int, seed: int, epoch: int) -> list[lis
     shuffled = list(rows)
     random.Random(f"{seed}-{epoch}").shuffle(shuffled)
     return [shuffled[i : i + batch_size] for i in range(0, len(shuffled), batch_size)]
+
+
+def resolve_rank(tinker_id: str, override: int | None = None, caps: dict | None = None) -> tuple[int, str]:
+    """(rank, source), source in {cli, capped, recipe}.
+
+    An explicit --rank wins and is logged as such, including when it exceeds the
+    probed cap: the table is a record of one probe, not an authority, so it must
+    not be able to block a rank the service would accept. If it really is over
+    the ceiling the create call 400s — before any spend — which is the same
+    failure the probe reads its numbers from.
+    """
+    if override is not None:
+        return override, "cli"
+    cap = (RANK_CAPS if caps is None else caps).get(tinker_id)
+    if cap is not None and cap < RANK:
+        return cap, "capped"
+    return RANK, "recipe"
 
 
 def select_best(checkpoints: list[dict]) -> dict:
@@ -339,6 +377,7 @@ async def run(args) -> None:
     seq_tokens = sum(len(t) for t, _ in train_ex)
     val_seq_tokens = sum(len(t) for t, _ in val_ex)
     lr, lr_source = resolve_lr(model, args.lr, get_lr)
+    rank, rank_source = resolve_rank(args.model, args.rank)
     steps_per_epoch = math.ceil(len(train_ex) / args.batch_size)
     total_steps = steps_per_epoch * args.epochs
 
@@ -352,8 +391,13 @@ async def run(args) -> None:
 
     print(f"model:   {args.model}  (family {fam.key}, thinking_off={fam.thinking_off})")
     print(f"teacher: {args.teacher}  ({len(train.rows)} train / {len(val.rows)} val rows)")
-    print(f"recipe:  LoRA rank {RANK}, lr {lr} [{lr_source}] (cosine, {WARMUP_FRAC:.0%} warmup), "
-          f"{args.epochs} epochs x {steps_per_epoch} steps, batch {args.batch_size}, seed {args.seed}")
+    print(f"recipe:  LoRA rank {rank} [{rank_source}], lr {lr} [{lr_source}] "
+          f"(cosine, {WARMUP_FRAC:.0%} warmup), {args.epochs} epochs x {steps_per_epoch} steps, "
+          f"batch {args.batch_size}, seed {args.seed}")
+    if rank_source == "capped":
+        print(f"         NOTE: Tinker caps {args.model} at LoRA rank {rank} (probed 2026-08-07); "
+              f"the recipe's {RANK} is rejected at client creation. Keep every arm of this "
+              "model's comparison at the same rank.")
     print(f"tokens:  {trained_tokens:,} trained / {seq_tokens:,} sequence per epoch, "
           f"{val_seq_tokens:,} val sequence per pass")
     print("cost:    " + (f"~${est:.2f} for {args.epochs} epochs at {price['train']}/1M train tokens"
@@ -375,12 +419,13 @@ async def run(args) -> None:
         return
 
     service_client = tinker.ServiceClient()
-    training_client = await make_training_client(service_client, args.model, RANK, args.seed)
+    training_client = await make_training_client(service_client, args.model, rank, args.seed)
     run_dir = Path(args.run_dir) if args.run_dir else RUNS_DIR / families.slug(args.model)
     out_path = run_dir / f"train-{args.teacher}.json"
     base = {
         "model": args.model, "family": fam.key, "thinking_off": fam.thinking_off,
-        "teacher": args.teacher, "lr": lr, "lr_source": lr_source, "rank": RANK,
+        "teacher": args.teacher, "lr": lr, "lr_source": lr_source,
+        "rank": rank, "rank_source": rank_source,
         "epochs": args.epochs, "batch_size": args.batch_size, "seed": args.seed,
         "train_rows": len(train.rows), "val_rows": len(val.rows),
         "trained_tokens_per_epoch": trained_tokens,
@@ -420,6 +465,10 @@ def main() -> None:
     parser.add_argument("--lr", type=float, default=None,
                         help="override the resolved lr (the value and its source are logged "
                              "either way: cookbook, extrapolated, or cli)")
+    parser.add_argument("--rank", type=int, default=None,
+                        help=f"override the resolved LoRA rank (default: the recipe's {RANK}, "
+                             "lowered to the model's probed cap where Tinker has one; the value "
+                             "and its source are logged either way: recipe, capped, or cli)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--run-dir", default=None)
     parser.add_argument("--yes", action="store_true")

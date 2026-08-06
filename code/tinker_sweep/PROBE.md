@@ -285,6 +285,57 @@ where the 1/sqrt(params) rule would put them 7x apart (it would predict
 rule as a stale heuristic. It also needs `get_full_finetune_param_count`, which
 reads every safetensors shard header over HTTP.
 
+## LoRA rank caps (probed 2026-08-07, `probe_rank_caps.py`)
+
+The service enforces a **per-model maximum LoRA rank** and rejects a larger one
+when the training client is created:
+
+```
+tinker.BadRequestError: Error code: 400 - {'detail': 'lora_config.rank 64 exceeds
+max LoRA rank 32 for model nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16'}
+```
+
+Client creation is free, so the whole table is free to refresh: ask every model
+for rank 64, read the ceiling out of the 400. Each cap below was then confirmed
+accepted by a second create call. Verbatim output of
+`../../.venv-tinker/bin/python probe_rank_caps.py`:
+
+```
+model                                             rank 64     cap  note
+-----------------------------------------------------------------------
+thinkingmachines/Inkling                         accepted      64
+thinkingmachines/Inkling-Small                   accepted      64
+nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16    REJECTED      32  cap accepted
+nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16    accepted      64
+nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16       accepted      64
+moonshotai/Kimi-K2.6                             REJECTED      32  cap accepted
+Qwen/Qwen3.6-35B-A3B                             accepted      64
+Qwen/Qwen3.6-27B                                 accepted      64
+Qwen/Qwen3.5-397B-A17B                           accepted      64
+Qwen/Qwen3.5-9B                                  accepted      64
+Qwen/Qwen3.5-4B                                  accepted      64
+Qwen/Qwen3-8B                                    accepted      64
+openai/gpt-oss-120b                              REJECTED      32  cap accepted
+openai/gpt-oss-20b                               REJECTED      32  cap accepted
+deepseek-ai/DeepSeek-V3.1                        accepted      64
+```
+
+**Four of the fifteen are capped at 32**: Nemotron-3-Ultra-550B, Kimi-K2.6, and
+**both** gpt-oss models. The two gpt-oss caps were not anticipated — the ceiling
+is not a function of size (gpt-oss-20b is capped while the 397B Qwen and the
+550B-class DeepSeek are not), so it cannot be inferred and has to be probed.
+
+Consequences:
+
+- `train_sft.RANK_CAPS` carries this table with the probe date;
+  `resolve_rank()` returns `min(64, cap)` and a `rank_source` of
+  `recipe` / `capped` / `cli`, logged in the dry-run plan and the run JSON.
+- Rank is **not uniform across the sweep**. Cross-model rank differences are a
+  confound between models, not within one: every arm of a given model (base,
+  sonnet-ft, terra-ft) trains at the same rank.
+- An explicit `--rank` is never clamped to the table — the service is the
+  authority, and an over-large rank fails at client creation, before spend.
+
 ## Supported models (all 28, `get_server_capabilities_async()`)
 
 `Qwen/Qwen3-235B-A22B-Instruct-2507`, `Qwen/Qwen3-30B-A3B`,
