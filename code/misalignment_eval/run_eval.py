@@ -16,6 +16,7 @@ See README.md for setup, presets, and cost notes.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 import sys
 from pathlib import Path
@@ -163,6 +164,24 @@ def parse_condition(spec: str, goal_value: str) -> dict[str, str]:
 
 def slugify(model: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", model).strip("-")
+
+
+def checkpoint_slug(uri: str) -> str:
+    """A short directory tag for a checkpoint URI.
+
+    A finetune arrives as `--model-arg checkpoint=…`, not as part of the model
+    id, so a base run and a checkpoint run of the same model would otherwise
+    take the same default log directory — and summarize.py keys on
+    `log.eval.model`, which is identical for both, so it would average them
+    together and silently destroy the comparison the sweep exists to make.
+
+    The trailing digest is not decoration. Tinker chooses the path shape, so two
+    checkpoints from different training runs can share a tail (`…/weights/00042`)
+    and would re-create the same silent pooling one level down.
+    """
+    tail = [part for part in re.sub(r"^\w+://", "", uri).split("/") if part][-2:]
+    digest = hashlib.sha1(uri.encode()).hexdigest()[:6]
+    return f"{slugify('-'.join(tail))[:40].strip('-')}-{digest}".lstrip("-")
 
 
 def parse_model_args(pairs: list[str]) -> dict[str, object]:
@@ -339,10 +358,18 @@ def main() -> int:
             "--preset blackmail-2x2, core+blackmail, or full.)"
         )
 
+    model_args = parse_model_args(args.model_arg)
+    checkpoint = model_args.get("checkpoint") if tinker_families else None
+
     # eval_set refuses to share a log directory between two different task sets, so
     # renamed runs get their own subdirectory by default — otherwise the second
-    # persona of a sweep errors out instead of landing next to the first.
+    # persona of a sweep errors out instead of landing next to the first. A
+    # checkpoint gets its own subdirectory for a different reason: it is not part of
+    # the model id, so base and finetune are indistinguishable to summarize.py and
+    # would pool into one rate (see checkpoint_slug).
     run_name = args.run_name or slugify(args.model)
+    if not args.run_name and checkpoint:
+        run_name += f"-ckpt-{checkpoint_slug(str(checkpoint))}"
     if not args.run_name and args.model_name != DEFAULT_MODEL_NAME:
         run_name += f"-as-{slugify(args.model_name)}"
     log_dir = Path(args.log_dir) if args.log_dir else DEFAULT_LOG_ROOT / run_name
@@ -380,6 +407,8 @@ def main() -> int:
         )
 
     print(f"model:        {args.model}")
+    if tinker_families:
+        print(f"checkpoint:   {checkpoint or '(none — base model)'}")
     print(f"grader:       {args.grader_model}")
     print(f"AI named:     {args.model_name}")
     print(f"thinking:     {thinking_note}")
@@ -427,7 +456,7 @@ def main() -> int:
         log_dir_allow_dirty=args.log_dir_allow_dirty,
         model=args.model,
         model_base_url=args.model_base_url,
-        model_args=parse_model_args(args.model_arg),
+        model_args=model_args,
         epochs=args.epochs,
         retry_attempts=args.retry_attempts,
         max_connections=args.max_connections,

@@ -180,11 +180,12 @@ Together, and `run_eval.py` speaks to it via the `tinker` Inspect provider:
 cd code/misalignment_eval
 ../../.venv-tinker/bin/python run_eval.py --model tinker/Qwen/Qwen3-8B --preset smoke --epochs 1
 
-# a finetuned checkpoint — same base id, plus the checkpoint path
+# a finetuned checkpoint — same base id, plus the checkpoint path.
+# The default log directory already separates this from the base run; pass
+# --run-name only when you want a name you chose.
 ../../.venv-tinker/bin/python run_eval.py \
     --model tinker/Qwen/Qwen3-8B \
-    --model-arg checkpoint=tinker://…/00042 \
-    --run-name qwen3-8b-da-sonnet5
+    --model-arg checkpoint=tinker://…/00042
 ```
 
 - **Interpreter.** `.venv-tinker` is the only venv with both `inspect_ai` and
@@ -196,6 +197,16 @@ cd code/misalignment_eval
 - **`--model-arg checkpoint=…` is the only model arg** the provider takes;
   anything else is a hard error rather than a silently ignored typo that would
   evaluate the base model under a finetune's log.
+- **A checkpoint gets its own default log directory.** The checkpoint is a model
+  arg, not part of the model id, so a base run and a finetune run of the same
+  model look identical to `summarize.py` (it keys on `log.eval.model`) and would
+  pool into a single rate — averaging away the exact comparison the sweep exists
+  to make. The default `--run-name` therefore gains a
+  `-ckpt-<tail>-<digest>` suffix derived from the checkpoint URI; the digest is
+  there because two checkpoints from different training runs can share a path
+  tail. An explicit `--run-name` or `--log-dir` still wins, and the pre-flight
+  block prints `checkpoint:` for every tinker run (`(none — base model)` when
+  there isn't one) so the two are distinguishable on screen.
 - **`--no-thinking` and `--stop-token-ids` are rejected, not ignored.** Both are
   `extra_body` knobs for the OpenAI-compatible providers; on this path thinking
   mode and stop strings come from the render layer
