@@ -1,9 +1,11 @@
 """LoRA-finetune one Tinker model on one teacher's 8%-rung dataset.
 
 Recipe: LoRA rank 64, cosine schedule with 3% warmup, lr from the cookbook's
-per-model recommendation unless --lr overrides (either way the value used is
-logged). 4 epochs by default, a sampler checkpoint + val forward pass after
-each, val-loss-best checkpoint selected — the teacher-grid methodology.
+per-model recommendation where it has one and from its formula extrapolated by
+hidden size where it does not, unless --lr overrides (the value and its source
+are logged either way). 4 epochs by default, a sampler checkpoint + val forward
+pass after each, the run JSON rewritten after each, and the val-loss-best
+checkpoint selected — the teacher-grid methodology.
 
 Dry-run is the default and makes zero API calls: it renders the whole dataset
 through render.py (so a RenderMismatch or an empty completion surfaces before
@@ -102,18 +104,89 @@ def nll_sums(logprobs_list, weights_list) -> tuple[float, float]:
     return -weighted, total
 
 
-def resolve_lr(tinker_id: str, override: float | None, lookup) -> tuple[float | None, str]:
-    """(lr, source). None means the cookbook has no calibrated lr for this model.
+# --------------------------------------------------------------------- learning rate
+#
+# get_lr is calibrated for Llama and Qwen only; the other 8 sweep models raise
+# NotImplementedError. Its body (hyperparam_utils.py:276-303) is a recoverable
+# rule, not a lookup table:
+#
+#     lr = 5e-5 * 10 * (2000 / hidden_size) ** exponent_family
+#
+# with exponent_family = 0.0775 (Qwen) or 0.781 (Llama). cookbook_lr() below
+# reproduces all six calibrated Qwen values to the last bit, which is the proof
+# that this is the real rule and not a lookalike.
+#
+# What is NOT recoverable is the exponent for an uncalibrated family, and it is
+# not a detail: at hidden_size 8192 the two known exponents disagree by 2.7x.
+# The extrapolation therefore assumes the Qwen exponent, for two reasons. It is
+# the flat one — across the uncovered models' hidden sizes (2688-8192) it spans
+# only 4.48e-4 to 4.89e-4, so it claims little more than "the calibrated modern-
+# model band applies here". And the uncovered models are MoE designs contemporary
+# with Qwen3.5/3.6 rather than with dense Llama-3. This is a defensible choice,
+# not a derivation: an extrapolated lr is labelled as such everywhere it appears,
+# and --lr overrides it.
+#
+# The cookbook's other cross-model rule, get_lora_lr_multiplier's documented
+# LR_B = LR_A * sqrt(params_A / params_B), is deliberately NOT used: it
+# contradicts the calibrated curve. Qwen3-8B and Qwen3.5-397B-A17B share
+# hidden_size 4096 and get_lr gives them the same lr, where 1/sqrt(params) would
+# put them 7x apart.
 
-    8 of the 15 sweep models (every non-Qwen one) raise NotImplementedError from
-    get_lr, so this never guesses — the caller stops and asks for --lr.
+BASE_LR, LORA_MULTIPLIER = 5e-05, 10.0
+QWEN_EXPONENT, LLAMA_EXPONENT = 0.0775, 0.781
+EXTRAPOLATION_EXPONENT = QWEN_EXPONENT
+
+
+def cookbook_lr(hidden_size: int, exponent: float = EXTRAPOLATION_EXPONENT) -> float:
+    """The rule inside tinker_cookbook.hyperparam_utils.get_lr, at LoRA scale."""
+    return BASE_LR * LORA_MULTIPLIER * (2000 / hidden_size) ** exponent
+
+
+def hidden_size_for(model: families.SweepModel) -> int:
+    """Hidden size for the lr formula.
+
+    The cookbook bakes in every sweep model (hyperparam_utils._KNOWN_HIDDEN_SIZES),
+    so this normally costs nothing. The AutoConfig fallback is for a cookbook that
+    renames the private helper; it downloads config.json only, and honours the
+    family's trust_remote_code decision the same way load_tokenizer does.
+    """
+    from tinker_cookbook import hyperparam_utils
+
+    getter = getattr(hyperparam_utils, "_get_hidden_size", None)
+    if getter is not None:
+        return int(getter(model.tinker_id))
+
+    from transformers import AutoConfig
+
+    config = AutoConfig.from_pretrained(
+        model.hf_repo, trust_remote_code=model.family.trust_remote_code
+    )
+    size = getattr(config, "hidden_size", None)
+    if size is None and hasattr(config, "text_config"):
+        size = getattr(config.text_config, "hidden_size", None)
+    if size is None:
+        raise ValueError(f"no hidden_size in {model.hf_repo}'s config")
+    return int(size)
+
+
+def resolve_lr(
+    model: families.SweepModel, override: float | None, lookup, hidden_lookup=hidden_size_for
+) -> tuple[float | None, str]:
+    """(lr, source), source in {cli, cookbook, extrapolated, unavailable}.
+
+    None means even the extrapolation could not be resolved — the caller stops
+    and asks for --lr rather than inventing a number.
     """
     if override is not None:
-        return override, "--lr"
+        return override, "cli"
     try:
-        return lookup(tinker_id), "cookbook"
+        return lookup(model.tinker_id), "cookbook"
     except NotImplementedError:
-        return None, "uncalibrated"
+        pass
+    try:
+        return cookbook_lr(hidden_lookup(model)), "extrapolated"
+    except Exception:
+        return None, "unavailable"
 
 
 # --------------------------------------------------------------------- data loading
@@ -217,6 +290,27 @@ async def val_loss(tinker, training_client, val_examples) -> float:
     return weighted / total
 
 
+def write_run_state(out_path: Path, base: dict, checkpoints: list[dict]) -> dict:
+    """Persist the run after every epoch, so a crash costs one epoch, not the run.
+
+    The tinker:// sampler paths are paid artifacts that exist server-side the
+    moment they are saved; if they only ever reached stdout, an unattended
+    driver would lose them.
+    """
+    state = {**base, "checkpoints": checkpoints,
+             "selected": select_best(checkpoints) if checkpoints else None}
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(state, indent=1))
+    return state
+
+
+async def make_training_client(service_client, base_model: str, rank: int, seed: int):
+    """Seeded LoRA init: without seed=, two runs with the same recorded seed differ."""
+    return await service_client.create_lora_training_client_async(
+        base_model=base_model, rank=rank, seed=seed
+    )
+
+
 async def run(args) -> None:
     import tinker
     from tinker_cookbook.hyperparam_utils import get_lr
@@ -235,7 +329,7 @@ async def run(args) -> None:
     trained_tokens = sum(sum(w) for _, w in train_ex)
     seq_tokens = sum(len(t) for t, _ in train_ex)
     val_seq_tokens = sum(len(t) for t, _ in val_ex)
-    lr, lr_source = resolve_lr(args.model, args.lr, get_lr)
+    lr, lr_source = resolve_lr(model, args.lr, get_lr)
     steps_per_epoch = math.ceil(len(train_ex) / args.batch_size)
     total_steps = steps_per_epoch * args.epochs
 
@@ -255,20 +349,34 @@ async def run(args) -> None:
           f"{val_seq_tokens:,} val sequence per pass")
     print("cost:    " + (f"~${est:.2f} for {args.epochs} epochs at {price['train']}/1M train tokens"
                          if est is not None else "no price table — no estimate"))
+    if lr_source == "extrapolated":
+        print(f"         NOTE: the cookbook has no calibrated lr for {args.model}. "
+              f"{lr:.3e} is its formula extrapolated at hidden_size "
+              f"{hidden_size_for(model)} with the Qwen exponent ({EXTRAPOLATION_EXPONENT}); "
+              f"the Llama exponent would give {cookbook_lr(hidden_size_for(model), LLAMA_EXPONENT):.3e}. "
+              "Pass --lr to override.")
     if lr is None:
         raise SystemExit(
-            f"\nthe cookbook has no calibrated learning rate for {args.model}: pass --lr "
-            "explicitly (see the Qwen recommendations, ~4.7e-4 at rank 64, as a starting point). "
-            "Refusing to guess."
+            f"\nno learning rate could be resolved for {args.model}: get_lr has not calibrated it "
+            "and its hidden size could not be read, so the formula cannot be extrapolated either. "
+            "Pass --lr explicitly. Refusing to guess."
         )
     if not args.yes:
         print("\ndry run — pass --yes to launch. Log spend in notes/Project/ per repo convention.")
         return
 
     service_client = tinker.ServiceClient()
-    training_client = await service_client.create_lora_training_client_async(
-        base_model=args.model, rank=RANK
-    )
+    training_client = await make_training_client(service_client, args.model, RANK, args.seed)
+    run_dir = Path(args.run_dir) if args.run_dir else RUNS_DIR / families.slug(args.model)
+    out_path = run_dir / f"train-{args.teacher}.json"
+    base = {
+        "model": args.model, "family": fam.key, "thinking_off": fam.thinking_off,
+        "teacher": args.teacher, "lr": lr, "lr_source": lr_source, "rank": RANK,
+        "epochs": args.epochs, "batch_size": args.batch_size, "seed": args.seed,
+        "train_rows": len(train.rows), "val_rows": len(val.rows),
+        "trained_tokens_per_epoch": trained_tokens,
+        "sequence_tokens_per_epoch": seq_tokens,
+    }
     run_slug = f"{families.slug(args.model)}-{args.teacher}08"
     checkpoints, step = [], 0
     for epoch in range(1, args.epochs + 1):
@@ -286,22 +394,10 @@ async def run(args) -> None:
         save = await training_client.save_weights_for_sampler_async(name=f"{run_slug}-ep{epoch}")
         path = (await save.result_async()).path
         checkpoints.append({"epoch": epoch, "sampler_path": path, "val_loss": vl})
-        print(f"epoch {epoch}: val_loss {vl:.4f}  {path}")
+        write_run_state(out_path, base, checkpoints)
+        print(f"epoch {epoch}: val_loss {vl:.4f}  {path}  (state -> {out_path})")
 
     selected = select_best(checkpoints)
-    run_dir = Path(args.run_dir) if args.run_dir else RUNS_DIR / families.slug(args.model)
-    run_dir.mkdir(parents=True, exist_ok=True)
-    result = {
-        "model": args.model, "family": fam.key, "thinking_off": fam.thinking_off,
-        "teacher": args.teacher, "lr": lr, "lr_source": lr_source, "rank": RANK,
-        "epochs": args.epochs, "batch_size": args.batch_size, "seed": args.seed,
-        "train_rows": len(train.rows), "val_rows": len(val.rows),
-        "trained_tokens_per_epoch": trained_tokens,
-        "sequence_tokens_per_epoch": seq_tokens,
-        "checkpoints": checkpoints, "selected": selected,
-    }
-    out_path = run_dir / f"train-{args.teacher}.json"
-    out_path.write_text(json.dumps(result, indent=1))
     print(f"selected epoch {selected['epoch']} (val_loss {selected['val_loss']:.4f})")
     print(f"state -> {out_path}")
 
@@ -313,8 +409,8 @@ def main() -> None:
     parser.add_argument("--epochs", type=int, default=4)
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=None,
-                        help="override the cookbook-recommended lr (logged either way); "
-                             "required for the models the cookbook has not calibrated")
+                        help="override the resolved lr (the value and its source are logged "
+                             "either way: cookbook, extrapolated, or cli)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--run-dir", default=None)
     parser.add_argument("--yes", action="store_true")

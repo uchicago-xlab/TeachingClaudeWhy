@@ -202,9 +202,8 @@ installed packages while writing `train_sft.py`:
   nothing. Recipes can specify rank and nothing else.
 - **`get_lr` is calibrated for the Qwen models only.** It raises
   `NotImplementedError` for the other 8 sweep models (both Inklings, all three
-  Nemotrons, Kimi, both gpt-oss, DeepSeek). Calibrated values sit in a tight
-  4.6-5.0e-4 band from 4B to 397B. Callers must take an explicit lr for the
-  uncalibrated models rather than guessing.
+  Nemotrons, Kimi, both gpt-oss, DeepSeek). See the next section for the rule
+  behind it and what `train_sft.py` does about the gap.
 - **The models.json price table 403s a bare urllib request.** Send a
   `User-Agent` header. Fields per row include `train`, `sample`, `prefill` as
   `"$N"` strings per 1M tokens.
@@ -214,6 +213,77 @@ right dtypes (`weights` -> float32, `target_tokens` -> int64), so callers need
 not build TensorData by hand. The next-token convention
 (`tinker_cookbook/supervised/common.py:328-330`) is inputs `tokens[:-1]`,
 targets `tokens[1:]`, weights `weights[1:]`.
+
+## The learning-rate rule, and the 8 models the cookbook won't give one for
+
+`get_lr` is not a lookup table. Its body
+(`tinker_cookbook/hyperparam_utils.py:276-303`) is:
+
+```python
+lr = 5e-5 * 10 * (2000 / hidden_size) ** exponent_family
+```
+
+with `exponent_family` = **0.0775** for Qwen and **0.781** for Llama, and a
+`NotImplementedError` for every other family. `train_sft.cookbook_lr()`
+reproduces all six calibrated Qwen values bit-for-bit, which is the evidence
+that this is the real rule rather than a lookalike
+(`test_recovered_formula_reproduces_every_calibrated_cookbook_value`).
+
+`hidden_size` comes from `hyperparam_utils._get_hidden_size`, whose baked-in
+table already covers **all 15 sweep models**, so resolving it costs no network
+call. `train_sft.hidden_size_for()` falls back to `AutoConfig` (config.json
+only, honouring the family's `trust_remote_code`) if that private helper is ever
+renamed.
+
+**What is not recoverable is the exponent for an uncalibrated family, and it
+matters**: at hidden_size 8192 the two known exponents disagree by 2.7x
+(4.48e-4 vs 1.66e-4). `train_sft.py` extrapolates with the **Qwen** exponent and
+labels the result `lr_source: "extrapolated"` everywhere it appears — in the
+dry-run plan, in a printed caveat naming the Llama alternative, and in the run
+JSON. The reasoning: the Qwen exponent is the flat one, so across the uncovered
+models' hidden sizes (2688-8192) it spans only 4.48e-4 to 4.89e-4 and claims
+little beyond "the calibrated modern-model band applies"; and the uncovered
+models are MoE designs contemporary with Qwen3.5/3.6 rather than dense Llama-3.
+**This is a defensible choice, not a calibration.** `--lr` overrides it, and any
+model whose result matters should get a real value.
+
+Resolved lr for every sweep model, `rank=64`:
+
+| Model | hidden | lr | source |
+| --- | --- | --- | --- |
+| `Qwen/Qwen3.6-35B-A3B` | 2048 | 4.990818e-04 | cookbook |
+| `Qwen/Qwen3.6-27B` | 5120 | 4.648699e-04 | cookbook |
+| `Qwen/Qwen3.5-397B-A17B` | 4096 | 4.729791e-04 | cookbook |
+| `Qwen/Qwen3.5-9B` | 4096 | 4.729791e-04 | cookbook |
+| `Qwen/Qwen3.5-4B` | 2560 | 4.905251e-04 | cookbook |
+| `Qwen/Qwen3-8B` | 4096 | 4.729791e-04 | cookbook |
+| `thinkingmachines/Inkling` | 6144 | 4.583475e-04 | **extrapolated** |
+| `thinkingmachines/Inkling-Small` | 4096 | 4.729791e-04 | **extrapolated** |
+| `nvidia/…Nemotron-3-Ultra-550B` | 8192 | 4.482415e-04 | **extrapolated** |
+| `nvidia/…Nemotron-3-Super-120B` | 4096 | 4.729791e-04 | **extrapolated** |
+| `nvidia/…Nemotron-3-Nano-30B` | 2688 | 4.886738e-04 | **extrapolated** |
+| `moonshotai/Kimi-K2.6` | 7168 | 4.529043e-04 | **extrapolated** |
+| `openai/gpt-oss-120b` | 2880 | 4.860679e-04 | **extrapolated** |
+| `openai/gpt-oss-20b` | 2880 | 4.860679e-04 | **extrapolated** |
+| `deepseek-ai/DeepSeek-V3.1` | 7168 | 4.529043e-04 | **extrapolated** |
+
+### The cookbook's other lr rule contradicts this one — do not use it
+
+`get_lora_lr_multiplier`'s docstring offers a cross-model transfer rule for
+exactly this situation:
+
+> Given two models A and B, and learning rate LR_A that's known to be optimal
+> for A, we can guess an optimal learning rate for B as
+> `LR_B = LR_A * get_lora_lr_multiplier(B) / get_lora_lr_multiplier(A)`
+
+Since `get_lora_lr_multiplier = 10 / sqrt(param_count)`, that is
+`LR_B = LR_A * sqrt(params_A / params_B)`. It is **inconsistent with the
+calibrated curve** and was rejected: `Qwen/Qwen3-8B` and `Qwen/Qwen3.5-397B-A17B`
+share hidden_size 4096, so `get_lr` gives them the *same* lr (4.729791e-04),
+where the 1/sqrt(params) rule would put them 7x apart (it would predict
+6.8e-05 for the 397B). `get_lr` is the calibrated one; treat the param-count
+rule as a stale heuristic. It also needs `get_full_finetune_param_count`, which
+reads every safetensors shard header over HTTP.
 
 ## Supported models (all 28, `get_server_capabilities_async()`)
 
