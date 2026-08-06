@@ -14,11 +14,46 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import math
+import re
 import sys
 from pathlib import Path
 
 from inspect_ai.log import list_eval_logs, read_eval_log
+
+
+def checkpoint_slug(uri: str) -> str:
+    """A short label for a checkpoint URI (mirrors run_eval.checkpoint_slug).
+
+    Duplicated rather than imported: run_eval.py pulls in the tinker provider
+    and this script runs under .venv-inspect, which has no tinker SDK.
+    """
+    tail = [part for part in re.sub(r"^\w+://", "", uri).split("/") if part][-2:]
+    digest = hashlib.sha1(uri.encode()).hexdigest()[:6]
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", "-".join(tail)).strip("-")
+    return f"{slug[:40].strip('-')}-{digest}".lstrip("-")
+
+
+def model_label(log, log_path: Path) -> str:
+    """The identity a row is pooled under: model id plus, for a finetune, its checkpoint.
+
+    A tinker finetune is served as `--model-arg checkpoint=…`, so `log.eval.model`
+    is byte-identical across a sweep's base / sonnet-ft / terra-ft arms. Pooling on
+    the model id alone would average the three arms into one rate — the exact
+    wrong-but-plausible number the sweep exists to rule out.
+
+    The parent-directory fallback covers a checkpoint that failed to reach the log
+    header: run_eval.py names such a run's directory `…-ckpt-<slug>`, so the
+    directory still carries the distinction. Logs with no checkpoint anywhere (base
+    models, and every Together/OpenRouter run) keep their bare model id.
+    """
+    checkpoint = (log.eval.model_args or {}).get("checkpoint")
+    if checkpoint:
+        return f"{log.eval.model} [ckpt:{checkpoint_slug(str(checkpoint))}]"
+    if "-ckpt-" in log_path.parent.name:
+        return f"{log.eval.model} [ckpt:{log_path.parent.name}]"
+    return str(log.eval.model)
 
 
 def binomial_stderr(successes: int, n: int) -> float:
@@ -60,7 +95,7 @@ def collect(log_dir: Path) -> list[dict[str, object]]:
         n_harmful = sum(harmful)
         rows.append(
             {
-                "model": log.eval.model,
+                "model": model_label(log, Path(info.name)),
                 # Only renamed runs carry model_name in their task args; the
                 # upstream task always uses "Alex".
                 "model_name": task_args.get("model_name", "Alex"),

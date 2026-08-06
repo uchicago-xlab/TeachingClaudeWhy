@@ -59,7 +59,9 @@ TEACHER_SPLITS = {"sonnet": ("sonnet08-train", "sonnet-val"),
 def cosine_lr(step: int, total_steps: int, base_lr: float, warmup_frac: float = WARMUP_FRAC) -> float:
     warmup_steps = max(1, math.ceil(total_steps * warmup_frac))
     if step < warmup_steps:
-        return base_lr * step / warmup_steps
+        # step + 1: at step 0 a bare `step / warmup_steps` is lr 0.0, which spends a
+        # real batch's gradient on a no-op update.
+        return base_lr * (step + 1) / warmup_steps
     progress = (step - warmup_steps) / max(1, total_steps - warmup_steps)
     return base_lr * 0.5 * (1 + math.cos(math.pi * progress))
 

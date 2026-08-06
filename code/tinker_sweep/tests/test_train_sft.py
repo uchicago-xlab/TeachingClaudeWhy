@@ -17,7 +17,8 @@ import train_sft
 
 def test_cosine_lr_shape():
     total, base = 100, 1e-4
-    assert train_sft.cosine_lr(0, total, base) < base * 0.5        # warmup start
+    # Warmup starts low but never at 0.0 — a zero first step throws away a batch.
+    assert 0 < train_sft.cosine_lr(0, total, base) < base * 0.5
     warm_end = math.ceil(total * 0.03)
     assert train_sft.cosine_lr(warm_end, total, base) == base       # warmup peak
     assert train_sft.cosine_lr(total - 1, total, base) < base * 0.01  # cosine tail
@@ -387,8 +388,9 @@ def test_yes_path_seeds_the_client_and_persists_after_every_epoch(tiny_dataset, 
     assert log["batches"] == [2, 2, 2, 2, 2, 2]
     assert log["names"] == ["qwen-qwen3-8b-sonnet08-ep1", "qwen-qwen3-8b-sonnet08-ep2",
                             "qwen-qwen3-8b-sonnet08-ep3"]
-    # cosine schedule: warmup then decay to ~0
-    assert log["lrs"][0] == 0.0 and log["lrs"][1] == pytest.approx(1e-4)
+    # cosine schedule: warmup (one step at this size) then decay to ~0. The first
+    # step must carry real lr — training it at 0.0 would waste a paid batch.
+    assert log["lrs"][0] == pytest.approx(1e-4) and log["lrs"][1] == pytest.approx(1e-4)
     assert log["lrs"][-1] < 1e-5
 
     state = json.loads((tiny_dataset / "runs" / "train-sonnet.json").read_text())

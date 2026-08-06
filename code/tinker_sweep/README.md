@@ -211,8 +211,14 @@ cd ../misalignment_eval
 ../../.venv-tinker/bin/python summarize.py --log-dir ../../data/misalignment-eval/logs
 ```
 
-The three arms of a model table up together because their run names share a
-prefix: `tinker-<slug>`, `tinker-<slug>-sonnet08`, `tinker-<slug>-terra08`.
+The three arms of a model table up as three separate rows because `summarize.py`
+labels each row `<model id> [ckpt:<slug>]`, reading the checkpoint out of the
+log's `model_args`. Run-name prefixes do **not** do this work: `log.eval.model`
+is byte-identical across all three arms (the checkpoint never enters the model
+id), so without the checkpoint in the label the base and both finetunes would
+pool into one averaged rate. If `model_args` is missing from a log header, the
+label falls back to the run directory name, which run_eval.py already stamps
+with `-ckpt-<slug>`.
 
 ## The driver — `run_model.py`
 
@@ -229,6 +235,12 @@ model** — there is no grid orchestrator (decision 3).
 Prerequisite: `recover_rungs.py` once per clone — the driver's first stage adapts
 the neutral rows and cannot create them. (Its `adapt` stage covers the whole
 family, so it is a no-op re-run for the second model of a family.)
+
+Two drivers of the same family run concurrently both rewrite
+`data/tinker-sweep/adapted/<family>/*.jsonl` in their adapt stage — the content is
+identical, so the worst case is one of them reading a half-written file and
+aborting on a JSON parse error, before any spend; run `adapt` once first, or
+stagger the drivers, when sweeping a family in parallel.
 
 Flags: `--preset core` and `--epochs 18` are the eval grid (10 conditions × 18 =
 the 180-sample slice); `--train-epochs 4` is the finetune length; `--redo <stage>`
