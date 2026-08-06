@@ -215,6 +215,15 @@ def test_run_state_selected_is_null_before_any_checkpoint(tmp_path):
     assert train_sft.write_run_state(out, _base(), [])["selected"] is None
 
 
+def test_run_state_is_written_atomically(tmp_path):
+    """The write is temp-file + os.replace: no truncated state, no leftover temp."""
+    out = tmp_path / "train-sonnet.json"
+    train_sft.write_run_state(out, _base(), [])
+    train_sft.write_run_state(out, _base(), [{"epoch": 1, "sampler_path": "tinker://ep1", "val_loss": 1.0}])
+    assert [p.name for p in tmp_path.iterdir()] == ["train-sonnet.json"]
+    assert json.loads(out.read_text())["selected"]["epoch"] == 1
+
+
 # ---------------------------------------------------------------- seeded LoRA init
 
 

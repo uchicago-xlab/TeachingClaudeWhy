@@ -29,6 +29,7 @@ import argparse
 import asyncio
 import json
 import math
+import os
 import random
 import urllib.request
 from dataclasses import dataclass
@@ -295,12 +296,18 @@ def write_run_state(out_path: Path, base: dict, checkpoints: list[dict]) -> dict
 
     The tinker:// sampler paths are paid artifacts that exist server-side the
     moment they are saved; if they only ever reached stdout, an unattended
-    driver would lose them.
+    driver would lose them. Written via a sibling temp file + os.replace so a
+    crash mid-write leaves the previous epoch's state intact rather than a
+    truncated file: the run_model driver reads "selected" from here to point
+    the eval stages at a checkpoint, and half a JSON file there would strand
+    every checkpoint the run already paid for.
     """
     state = {**base, "checkpoints": checkpoints,
              "selected": select_best(checkpoints) if checkpoints else None}
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(state, indent=1))
+    tmp = out_path.with_suffix(out_path.suffix + ".tmp")
+    tmp.write_text(json.dumps(state, indent=1))
+    os.replace(tmp, out_path)
     return state
 
 

@@ -15,8 +15,9 @@ the committed files themselves.
 
     ../../.venv-tinker/bin/python recover_rungs.py
 
-Writes data/tinker-sweep/neutral/*.jsonl (committed). Hard-fails if any
-committed row has no 1:1 neutral match.
+Writes data/tinker-sweep/neutral/*.jsonl, which are local and gitignored like
+everything under data/ — regenerate them by running this script. Hard-fails if
+any committed row has no 1:1 neutral match.
 """
 
 import json
