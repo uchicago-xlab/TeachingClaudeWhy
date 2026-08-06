@@ -920,6 +920,26 @@
       "approx": true,
       "status": "spent",
       "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
+    },
+    {
+      "id": "455702f7-9ccd-4c55-a765-2be8b92a6ebc",
+      "date": "2026-08-07",
+      "what": "Tinker — sampling for the Qwen3-8B pilot's three eval arms re-run under code/msm_eval after the harness swap (same base model, same two paid checkpoints, no retraining): 1,426,088 prefill @ $0.195/1M + 485,655 sampled @ $0.60/1M. Token counts summed from the Inspect logs' model_usage, priced off data/tinker-sweep/models-prices.json. Result: base 0.439, sonnet-ft 0.006, terra-ft 0.006 over 180 samples each.",
+      "who": "Jack",
+      "amount": 0.57,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "d440ab52-e54b-4bb1-b720-61d5b37cf077",
+      "date": "2026-08-07",
+      "what": "OpenRouter — Sonnet 4.6 harmfulness grader for the same three msm_eval re-run arms (540 samples): 772,167 in / 248,425 out summed from the logs' model_usage, priced at $3/$15 per 1M list. Slight underestimate: one leaking condition was interrupted by an unparseable grader reply after 23 samples and re-run by eval_set, and the discarded attempt's grader calls are not in the final log.",
+      "who": "Jack",
+      "amount": 6.04,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
     }
   ]
 }
