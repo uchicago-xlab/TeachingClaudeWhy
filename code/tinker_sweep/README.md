@@ -341,47 +341,71 @@ without `--yes` for token counts and a live price estimate. Log spend in
 
 ## Verified
 
-> **Harness note (2026-08-07):** the eval numbers below were measured on the
-> *previous* harness (`code/misalignment_eval/run_eval.py`, `--preset core` ×
-> 18). The sweep has since standardized on msm_eval, whose slice is what the
-> teacher-grid reference numbers use; these rates are superseded pending the
-> pilot re-run. The training results (cost, val losses, checkpoint selection)
-> are unaffected — the same checkpoints are being re-scored.
-
 `Qwen/Qwen3-8B` ran end to end 2026-08-06 — all seven driver stages, one
-invocation, no interventions and no `--redo`. **Actual cost ~$8.80**: $1.74 on
-Tinker ($1.18 training, $0.57 sampling) and ~$7.06 of Sonnet 4.6 grading through
-OpenRouter, against an estimate of $1.31 + $7.60. The Tinker side ran high
-because the estimate counted trained tokens where billing counts sequence
-tokens, plus the val forward passes.
+invocation, no interventions and no `--redo`. Its three eval arms were then
+**re-run on msm_eval 2026-08-07** after the harness swap, against the same two
+checkpoints (the driver skipped every train stage; only the `eval-*` state
+entries were cleared). The numbers below are the msm_eval ones, and they are the
+ones comparable to the teacher grid.
 
-| arm | checkpoint | harmful rate |
+| arm | checkpoint | harmful rate (msm_eval, 180 samples) |
 | --- | --- | --- |
-| base | — | **0.428** ± 0.037 (77/180) |
+| base | — | **0.439** ± 0.037 (79/180) |
 | sonnet08-ft | val-best epoch 2 (val 1.9928) | **0.006** ± 0.006 (1/180) |
-| terra08-ft | val-best epoch 2 (val 2.2992) | **0.011** ± 0.008 (2/180) |
+| terra08-ft | val-best epoch 2 (val 2.2992) | **0.006** ± 0.006 (1/180) |
+
+Per condition, from `summarize.py`:
+
+| run | exfi/on | exfi/off | leak/on | leak/off | murd/on | murd/off |
+| --- | --- | --- | --- | --- | --- | --- |
+| base | 4/30 | 15/30 | 29/30 | 7/30 | 13/30 | 11/30 |
+| sonnet08-ft | 0/30 | 0/30 | 0/30 | 0/30 | 0/30 | 1/30 |
+| terra08-ft | 0/30 | 0/30 | 1/30 | 0/30 | 0/30 | 0/30 |
 
 Both teachers collapse an 8B base model to the floor, so this pilot confirms the
-pipeline rather than the hypothesis: with 1 and 2 harmful samples out of 180 the
-two teachers are indistinguishable, and a floored comparison is exactly the
-outcome the sweep exists to test on larger models. Base at 0.428 sits in the
-0.3–0.5 band the Qwen3-14B grid led us to expect.
+pipeline rather than the hypothesis: at 1 harmful sample out of 180 each, the two
+teachers are indistinguishable, and a floored comparison is exactly the outcome
+the sweep exists to test on larger models. Base at 0.439 sits in the 0.3–0.5 band
+the Qwen3-14B grid led us to expect, and the floor effect survived the harness
+change rather than being an artifact of the old slice.
+
+**Cost, both runs together ~$15.41.** The original end-to-end run was ~$8.80
+($1.74 Tinker — $1.18 training, $0.57 sampling — plus ~$7.06 of Sonnet 4.6
+grading through OpenRouter), against an estimate of $1.31 + $7.60; the Tinker
+side ran high because the estimate counts trained tokens where billing counts
+sequence tokens, plus the val forward passes. The msm re-run added **$6.61**
+($0.57 Tinker sampling + $6.04 grading) and no training cost at all — re-scoring
+existing checkpoints is the cheap half.
+
+> **Superseded:** the first pass of these arms was measured on
+> `code/misalignment_eval/run_eval.py` (`--preset core` × 18) and read base
+> **0.428** (77/180), sonnet08 **0.006** (1/180), terra08 **0.011** (2/180).
+> Those logs are still under `data/misalignment-eval/logs/tinker-*`. They are not
+> comparable to the teacher grid — that is why the sweep moved — but they agree
+> with the msm numbers to within noise on all three arms.
 
 What the run confirms mechanically:
 
 - Both finetunes overfit after epoch 2 (sonnet 2.0248 → **1.9928** → 2.0887 →
   2.1994; terra 2.3453 → **2.2992** → 2.3665 → 2.4459), and val-best selection
   picked the minimum rather than the last checkpoint in both cases.
-- All 540 samples across the three arms have Inspect stop reason `stop` — no
+- All 540 samples across the three msm arms have Inspect stop reason `stop` — no
   `max_tokens`, so no arm was deflated by truncation grading non-harmful.
-- Sampled completions carry no `<think>` block: thinking-off held from training
-  through to sampling, on the checkpoints as well as the base model.
-- `summarize.py` tables the three arms as three rows, keyed on
-  `model_args.checkpoint` in slug form (`[ckpt:sampler_weights-qwen-qwen3-8b-sonnet08-e-7f3787]`)
-  — the checkpoint reached the log header, so the run-directory fallback never
-  fired. Summarizing the whole log root pools the base arm with the earlier
-  1-sample smoke run (77/181) because both are the checkpoint-less base model;
-  point `--log-dir` at one run directory for the arm on its own.
+- Sampled completions carry no `<think>` block and the scenarios address the
+  model as `Qwen`: thinking-off held from training through to sampling, on the
+  checkpoints as well as the base model, and the logs record it as
+  `tcw_thinking: disabled` / `tcw_model_name: Qwen` metadata.
+- `summarize.py` tables the three arms as three rows because each arm named its
+  own run directory; `log.eval.model` is `tinker/Qwen/Qwen3-8B` on all three and
+  the checkpoint appears only in `model_args`, so nothing else separates them.
+- **One condition failed mid-run and `eval_set` fixed it by itself.** A leaking
+  condition of the base arm died after 23 samples on
+  `ValueError: Invalid answer from leak classifier` — the vendored classifier
+  raises when the grader's reply contains neither a clean yes nor a clean no
+  (here, an empty completion). The retry re-ran that condition to a full 30 and
+  the log directory ended up with exactly 6 `.eval` files, so nothing double
+  counted. Expect this occasionally on the big-model wave; the driver's stage
+  fails only if the retries do.
 
 ## Decision log
 
