@@ -226,6 +226,10 @@ model** — there is no grid orchestrator (decision 3).
 ../../.venv-tinker/bin/python run_model.py --model Qwen/Qwen3-8B --redo eval-base --yes
 ```
 
+Prerequisite: `recover_rungs.py` once per clone — the driver's first stage adapts
+the neutral rows and cannot create them. (Its `adapt` stage covers the whole
+family, so it is a no-op re-run for the second model of a family.)
+
 Flags: `--preset core` and `--epochs 18` are the eval grid (10 conditions × 18 =
 the 180-sample slice); `--train-epochs 4` is the finetune length; `--redo <stage>`
 forces one stage; `--yes` executes. Dry-run is the default and prints the plan
