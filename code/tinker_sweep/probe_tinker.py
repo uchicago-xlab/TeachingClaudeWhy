@@ -13,26 +13,14 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+import families
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(REPO_ROOT / ".env")
 
-EXPECTED_MODELS = [
-    "thinkingmachines/Inkling",
-    "thinkingmachines/Inkling-Small",
-    "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16",
-    "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16",
-    "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
-    "moonshotai/Kimi-K2.6",
-    "Qwen/Qwen3.6-35B-A3B",
-    "Qwen/Qwen3.6-27B",
-    "Qwen/Qwen3.5-397B-A17B",
-    "Qwen/Qwen3.5-9B",
-    "Qwen/Qwen3.5-4B",
-    "Qwen/Qwen3-8B",
-    "openai/gpt-oss-120b",
-    "openai/gpt-oss-20b",
-    "deepseek-ai/DeepSeek-V3.1",
-]
+# The sweep registry is the single source of truth, so a model added there
+# cannot escape this probe.
+EXPECTED_MODELS = list(families.MODELS)
 
 
 async def main() -> None:

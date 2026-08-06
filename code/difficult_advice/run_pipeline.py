@@ -138,6 +138,8 @@ MODEL_IDENTITIES = {
     "deepseek": ("DeepSeek", "DeepSeek"),
     "qwen": ("Qwen", "Alibaba Cloud"),
     "kimi": ("Kimi", "Moonshot AI"),
+    "nemotron": ("Nemotron", "NVIDIA"),
+    "inkling": ("Inkling", "Thinking Machines"),
 }
 
 
