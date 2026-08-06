@@ -40,8 +40,12 @@ file whenever the probe output changes.
 every sweep model it loads the tokenizer, renders a real adapted training row
 through `render.py`, and fails the run unless:
 
-- the family's `thinking_kwargs` actually change the generation prompt (proved
-  by rendering the same history with the thinking-*on* setting and diffing);
+- the family's `thinking_kwargs` render a thinking-*off* generation prompt —
+  proved both ways: the prompt must differ from the one the thinking-on setting
+  produces, *and* must contain the off-shape its template emits only when
+  thinking is off (`THINKING_CONTRAST`). Differing alone would not say which of
+  the two prompts is the off one, so a family added with its settings swapped
+  would otherwise train thinking-ON with every check green;
 - the full render starts with the generation prompt, so the loss mask lands on
   exactly the assistant turn;
 - `extract_response` on the sampled span returns the assistant content and

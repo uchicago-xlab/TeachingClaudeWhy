@@ -19,6 +19,14 @@ if the family's thinking kwargs never reached the template. Only the generation
 prompt distinguishes the two, so that is what gets compared. A family whose
 kwargs leave the prompt unchanged is a silent thinking-ON run, which is the
 exact confound this project has been bitten by before.
+
+The comparison is *directional*, not just differential. Two settings rendering
+two different prompts says nothing about which of them is the off one: a family
+added with its on/off kwargs swapped, or copy-pasted from a neighbour in the
+wrong direction, would still differ and still train thinking-ON. So each family
+also declares the off_shape its template emits only when thinking is off, and
+the check requires that text to be present in the prompt actually used and
+absent from the thinking-on one.
 """
 
 import argparse
@@ -26,6 +34,7 @@ import dataclasses
 import json
 import sys
 from pathlib import Path
+from typing import NamedTuple
 
 import families
 import render
@@ -34,35 +43,78 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SAMPLES_DIR = REPO_ROOT / "data" / "tinker-sweep" / "render-samples"
 ADAPTED_DIR = REPO_ROOT / "data" / "tinker-sweep" / "adapted"
 
-# The opposite of each family's thinking-off setting, used only to prove the
-# family's own kwargs actually move the template. `{}` means "template default",
-# which for gpt_oss is reasoning_effort=medium and for Inkling is effort 0.9 —
-# both thinking-on. Every entry is grounded in the template line cited beside it.
-THINKING_ON_KWARGS: dict[str, dict] = {
-    "qwen3": {"enable_thinking": True},          # qwen3 template: `if enable_thinking is defined and enable_thinking is false`
-    "qwen3_5": {"enable_thinking": True},        # qwen3_5 template L149
-    "qwen3_6": {"enable_thinking": True},        # qwen3_6 template L149 (same file as 3.5 bar tool text)
-    "deepseek_v3_1": {"thinking": True},         # deepseek template: `if not thinking` in the add_generation_prompt branch
-    "kimi_k2_6": {"thinking": True},             # kimi chat_template.jinja L107
-    "nemotron_3": {"enable_thinking": True},     # nemotron templates L12 (default) / L203-208
-    "gpt_oss": {},                               # harmony L203-206: no off switch, default effort medium
-    "inkling": {},                               # inkling L5: default effort 0.9 when reasoning_effort is undefined
+class Contrast(NamedTuple):
+    """What thinking-ON looks like for a family, and how to recognise OFF.
+
+    on_kwargs: the opposite of the family's setting. `{}` means "template
+      default", which for gpt_oss is reasoning_effort=medium and for Inkling is
+      effort 0.9 — both thinking-on.
+    off_shape: text the template emits in the generation prompt *only* when
+      thinking is off. This is what makes the check directional rather than
+      differential: a family whose two settings were swapped or copy-pasted in
+      the wrong direction still renders two different prompts, and only the
+      off_shape says which of them is the off one.
+    """
+
+    on_kwargs: dict
+    off_shape: str
+
+
+# Every entry is grounded in the template line cited beside it; the off_shape
+# strings are copied from the add_generation_prompt branch of each template.
+THINKING_CONTRAST: dict[str, Contrast] = {
+    # qwen3: `if enable_thinking is defined and enable_thinking is false` ->
+    # the empty block; thinking-on primes nothing at all.
+    "qwen3": Contrast({"enable_thinking": True}, "<think>\n\n</think>\n\n"),
+    # qwen3_5/3_6 L149-153: same flag, but thinking-on primes `<think>\n`.
+    "qwen3_5": Contrast({"enable_thinking": True}, "<think>\n\n</think>\n\n"),
+    "qwen3_6": Contrast({"enable_thinking": True}, "<think>\n\n</think>\n\n"),
+    # deepseek: `if not thinking` -> `</think>`, else `<think>`. Anchored on the
+    # assistant token because a bare `</think>` occurs under both settings.
+    "deepseek_v3_1": Contrast({"thinking": True}, "<｜Assistant｜></think>"),
+    # kimi chat_template.jinja L107-111: `<think></think>` off, `<think>` on.
+    "kimi_k2_6": Contrast({"thinking": True}, "<think></think>"),
+    # nemotron L203-208 (Super; Nano L199-202, Ultra L190-193): same shapes.
+    "nemotron_3": Contrast({"enable_thinking": True}, "<think></think>"),
+    # harmony L203-206: no off switch, so the "off shape" is the effort floor.
+    "gpt_oss": Contrast({}, "Reasoning: low"),
+    # inkling L18-20: effort 0 is printed bare, hence the terminator — without
+    # it "Thinking effort level: 0" is also a prefix of the thinking-on "0.9".
+    "inkling": Contrast({}, "Thinking effort level: 0<|end_message|>"),
 }
 
 
-def _kwargs_are_a_no_op(tok, fam: families.Family, history) -> tuple[bool, str]:
-    """Does the family's thinking setting actually change the generation prompt?
+def _thinking_switch_failures(
+    tok, fam: families.Family, history, contrast: Contrast
+) -> tuple[list[str], str]:
+    """Check the family's kwargs render a thinking-OFF prompt, not just a different one.
 
-    Returns (no_op, thinking_on_prompt_text). A family missing from
-    THINKING_ON_KWARGS counts as a no-op, so adding a family to families.py
-    without stating its thinking-on counterpart here fails loudly.
+    Returns (failures, thinking_on_prompt_text).
     """
-    if fam.key not in THINKING_ON_KWARGS:
-        return True, "<no thinking-on counterpart registered in check_render.py>"
-    on = dataclasses.replace(fam, thinking_kwargs=THINKING_ON_KWARGS[fam.key])
+    on = dataclasses.replace(fam, thinking_kwargs=contrast.on_kwargs)
     off_text = tok.decode(render.render_generation_prompt(tok, fam, history))
     on_text = tok.decode(render.render_generation_prompt(tok, on, history))
-    return off_text == on_text, on_text
+    failures = []
+    if off_text == on_text:
+        failures.append(
+            f"thinking_kwargs {fam.thinking_kwargs} render the same generation prompt as "
+            f"thinking-on {contrast.on_kwargs} — the switch is not reaching the template (or "
+            "the template has none, in which case set thinking_off=False after confirming "
+            "that in the template text)"
+        )
+    # Directional: the two prompts differing proves nothing about which is which.
+    if contrast.off_shape not in off_text:
+        failures.append(
+            f"the generation prompt rendered with thinking_kwargs {fam.thinking_kwargs} does "
+            f"not contain this template's thinking-off shape {contrast.off_shape!r} — the "
+            "kwargs look like the thinking-ON setting"
+        )
+    if contrast.off_shape in on_text:
+        failures.append(
+            f"off-shape {contrast.off_shape!r} also appears in the thinking-ON prompt, so it "
+            "does not discriminate — pick a shape the template emits only when thinking is off"
+        )
+    return failures, on_text
 
 
 def check_model(model: families.SweepModel) -> bool:
@@ -72,26 +124,27 @@ def check_model(model: families.SweepModel) -> bool:
     )
     messages = row["messages"]
     tok = render.load_tokenizer(model)
-    ok = True
     failures: list[str] = []
     lines = [f"model: {model.tinker_id}", f"hf_repo: {model.hf_repo}",
              f"family: {fam.key}  thinking_kwargs: {fam.thinking_kwargs}  "
              f"thinking_off: {fam.thinking_off}  assistant_prefix: {fam.assistant_prefix!r}",
              f"verified: {fam.verified}  trust_remote_code: {fam.trust_remote_code}"]
+    contrast = THINKING_CONTRAST.get(fam.key)
+    if contrast is None:
+        # Nothing below can be checked without knowing what thinking-off looks
+        # like for this family, so a new family cannot slip through unexamined.
+        return _write(model, lines, [
+            f"family {fam.key!r} has no entry in check_render.py's THINKING_CONTRAST — state "
+            "its thinking-on kwargs and its thinking-off shape, both grounded in the template"
+        ])
     try:
         history = messages[:-1]
         prompt = render.render_generation_prompt(tok, fam, history)
         prompt_text = tok.decode(prompt)
 
-        # 1. thinking kwargs must move the generation prompt (see module docstring)
-        no_op, on_text = _kwargs_are_a_no_op(tok, fam, history)
-        if no_op:
-            failures.append(
-                f"thinking_kwargs {fam.thinking_kwargs} render the same generation prompt as "
-                f"thinking-on {THINKING_ON_KWARGS.get(fam.key)} — the switch is not reaching "
-                "the template (or the template has none, in which case set thinking_off=False "
-                "after confirming that in the template text)"
-            )
+        # 1. thinking kwargs must render a thinking-OFF prompt (see module docstring)
+        switch_failures, on_text = _thinking_switch_failures(tok, fam, history, contrast)
+        failures += switch_failures
 
         # 2. assistant_prefix must not duplicate text the prompt already primes
         if fam.assistant_prefix and prompt_text.endswith(fam.assistant_prefix):
@@ -137,8 +190,9 @@ def check_model(model: families.SweepModel) -> bool:
             f"think markers in the trained span: {completion_text.count('<think>')} / "
             f"{completion_text.count('</think>')}  (0/0 = primed in the prompt, never trained)",
             f"extract_response(sampled) -> {extracted[:80]!r}...",
+            f"thinking-off shape required in the prompt: {contrast.off_shape!r}",
             "", "=== GENERATION PROMPT, thinking-off (decoded) ===", prompt_text,
-            "", f"=== GENERATION PROMPT, thinking-on {THINKING_ON_KWARGS.get(fam.key)} "
+            "", f"=== GENERATION PROMPT, thinking-on {contrast.on_kwargs} "
                 "(decoded, for contrast — not used) ===", on_text,
             "", "=== TRAINED COMPLETION (decoded) ===", completion_text,
         ]
@@ -147,16 +201,20 @@ def check_model(model: families.SweepModel) -> bool:
         if isinstance(e, render.RenderMismatch):
             lines += ["", "--- prompt render ---", e.prompt_text,
                       "", "--- full render ---", e.full_text]
+    return _write(model, lines, failures)
+
+
+def _write(model: families.SweepModel, lines: list[str], failures: list[str]) -> bool:
+    """Dump the sample (failures first, above the renders) and report the verdict."""
     if failures:
-        ok = False
         lines = lines[:4] + ["", *(f"*** FAILED: {f}" for f in failures)] + lines[4:]
     SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
     out = SAMPLES_DIR / f"{families.slug(model.tinker_id)}.txt"
     out.write_text("\n".join(lines) + "\n")
-    print(f"{'OK  ' if ok else 'FAIL'} {model.tinker_id} -> {out}")
+    print(f"{'FAIL' if failures else 'OK  '} {model.tinker_id} -> {out}")
     for f in failures:
         print(f"       {f}")
-    return ok
+    return not failures
 
 
 def main() -> int:
