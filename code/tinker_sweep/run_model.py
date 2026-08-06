@@ -17,9 +17,15 @@ stale eval log aside rather than let eval_set skip it (see stale_eval_arm).
 
 Every stage is a subprocess of a script that is runnable by hand with the same
 arguments, so a stage that misbehaves under the driver can be debugged directly
-and its state entry hand-edited. The eval stages run with cwd=code/misalignment_eval
-and this same interpreter, because run_eval.py imports the tinker provider from
+and its state entry hand-edited. The eval stages run with cwd=code/msm_eval and
+this same interpreter, because msm_eval_run.py imports the tinker provider from
 code/tinker_sweep and so needs .venv-tinker rather than .venv-inspect.
+
+The eval harness is msm_eval — the team's standardized SDF slice (6 conditions
+x 30 = 180 samples, temp 0.7), which is what the teacher-grid reference numbers
+were measured on. Its grid is fixed in msm_eval_run.py, so there is no --preset
+here; the one thing that varies per model is --model-name, which addresses the
+scenario prompts to the model's own assistant name (families.py).
 """
 
 import argparse
@@ -35,7 +41,7 @@ import families
 
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parents[1]
-EVAL_DIR = REPO_ROOT / "code" / "misalignment_eval"
+EVAL_DIR = REPO_ROOT / "code" / "msm_eval"
 # The .venv-tinker interpreter running this script. abspath, not realpath: the
 # venv's bin/python is a symlink to the system interpreter, and following it
 # would hand every subprocess a python without this venv's packages.
@@ -45,7 +51,9 @@ STAGES = ("adapt", "check_render", "train-sonnet", "train-terra",
           "eval-base", "eval-sonnet", "eval-terra")
 # The eval arm each finetune feeds; redoing a finetune makes its arm's log stale.
 EVAL_OF_TRAIN = {"train-sonnet": "eval-sonnet", "train-terra": "eval-terra"}
-LOG_ROOT = REPO_ROOT / "data" / "misalignment-eval" / "logs"  # run_eval.DEFAULT_LOG_ROOT
+# msm_eval_run.py puts each run in REPO/data/msm-eval/<run-name> (no logs/ level),
+# and code/msm_eval/summarize.py reads run directory names from there.
+LOG_ROOT = REPO_ROOT / "data" / "msm-eval"
 
 
 @dataclasses.dataclass
@@ -60,21 +68,24 @@ class Stage:
     writes_state: str | None = None
 
 
-def build_plan(model: str, eval_epochs: int, preset: str, train_epochs: int) -> list[Stage]:
+def build_plan(model: str, eval_epochs: int, train_epochs: int) -> list[Stage]:
     slug = families.slug(model)
+    family = families.get_model(model).family
     run_dir = HERE / "runs" / slug
 
     def eval_cmd(run_name: str, checkpoint_placeholder: bool) -> list[str]:
-        cmd = [PY, "run_eval.py", "--model", f"tinker/{model}",
-               "--preset", preset, "--epochs", str(eval_epochs),
-               "--run-name", run_name]
+        # No --base-url and no --preset: msm_eval_run refuses a base-url for a
+        # tinker/ model (the Tinker API is the endpoint) and its grid is fixed
+        # in the script, not selected by flag.
+        cmd = [PY, "msm_eval_run.py", "--model", f"tinker/{model}",
+               "--model-name", family.assistant_name,
+               "--epochs", str(eval_epochs), "--run-name", run_name]
         if checkpoint_placeholder:
             cmd += ["--model-arg", "checkpoint={checkpoint}"]
         return cmd
 
     return [
-        Stage("adapt", [PY, "adapt_dataset.py", "--family",
-                        families.get_model(model).family.key], HERE),
+        Stage("adapt", [PY, "adapt_dataset.py", "--family", family.key], HERE),
         Stage("check_render", [PY, "check_render.py", "--model", model], HERE),
         Stage("train-sonnet", [PY, "train_sft.py", "--model", model, "--teacher", "sonnet",
                                "--epochs", str(train_epochs), "--run-dir", str(run_dir), "--yes"], HERE,
@@ -82,10 +93,10 @@ def build_plan(model: str, eval_epochs: int, preset: str, train_epochs: int) -> 
         Stage("train-terra", [PY, "train_sft.py", "--model", model, "--teacher", "terra",
                               "--epochs", str(train_epochs), "--run-dir", str(run_dir), "--yes"], HERE,
               writes_state=str(run_dir / "train-terra.json")),
-        Stage("eval-base", eval_cmd(f"tinker-{slug}", False), EVAL_DIR),
-        Stage("eval-sonnet", eval_cmd(f"tinker-{slug}-sonnet08", True), EVAL_DIR,
+        Stage("eval-base", eval_cmd(f"msm-tinker-{slug}", False), EVAL_DIR),
+        Stage("eval-sonnet", eval_cmd(f"msm-tinker-{slug}-sonnet08", True), EVAL_DIR,
               checkpoint_from=str(run_dir / "train-sonnet.json")),
-        Stage("eval-terra", eval_cmd(f"tinker-{slug}-terra08", True), EVAL_DIR,
+        Stage("eval-terra", eval_cmd(f"msm-tinker-{slug}-terra08", True), EVAL_DIR,
               checkpoint_from=str(run_dir / "train-terra.json")),
     ]
 
@@ -175,7 +186,7 @@ def refuse_partial_retrain(stage: Stage, redo: str | None) -> str | None:
 
 
 def log_dir_for(stage: Stage) -> Path | None:
-    """Where this stage's eval logs land — run_eval's --run-name under LOG_ROOT."""
+    """Where this stage's eval logs land — msm_eval_run's --run-name under LOG_ROOT."""
     if "--run-name" not in stage.command:
         return None
     return LOG_ROOT / stage.command[stage.command.index("--run-name") + 1]
@@ -204,7 +215,7 @@ def redo_warnings(redo: str | None, state: dict, plan: list[Stage]) -> list[str]
                 "training tokens again, overwrites train-*.json, and leaves the old checkpoint "
                 "on Tinker (nothing deletes it)."]
     if redo.startswith("eval-"):
-        return [f"--redo {redo} re-invokes run_eval, but eval_set only samples conditions that "
+        return [f"--redo {redo} re-invokes msm_eval_run, but eval_set only samples conditions that "
                 f"are not already complete in {log_dir_for(stages[redo])}. That resumes an "
                 f"interrupted eval; for a genuine re-run, move that directory aside first."]
     return []
@@ -284,13 +295,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--model", required=True)
-    # Mirrors run_eval.py's --preset choices, checked here so a typo fails now
-    # rather than after two paid finetunes have run.
-    parser.add_argument("--preset", default="core",
-                        choices=("smoke", "exfil-smoke", "blackmail-2x2", "exfil", "core",
-                                 "core+blackmail", "full"))
-    parser.add_argument("--epochs", type=int, default=18,
-                        help="eval epochs per condition (core preset x 18 = the 180-sample slice)")
+    parser.add_argument("--epochs", type=int, default=30,
+                        help="eval epochs per condition (msm_eval's 6 fixed "
+                             "conditions x 30 = the 180-sample slice)")
     parser.add_argument("--train-epochs", type=int, default=4)
     parser.add_argument("--redo", choices=STAGES)
     parser.add_argument("--yes", action="store_true")
@@ -300,7 +307,7 @@ def main() -> int:
         families.get_model(args.model)  # hard error before anything else
     except KeyError as e:
         raise SystemExit(e.args[0])  # KeyError's str() re-quotes the message
-    plan = build_plan(args.model, args.epochs, args.preset, args.train_epochs)
+    plan = build_plan(args.model, args.epochs, args.train_epochs)
     state_path = HERE / "runs" / families.slug(args.model) / "state.json"
     state = load_state(state_path)
 
@@ -357,8 +364,11 @@ def main() -> int:
             print(f"{stage.name} FAILED (exit {result.returncode}) — fix and re-run "
                   f"(state preserved in {state_path}; earlier stages will be skipped)")
             return 1
+    # msm_eval's summarize takes run directory names, one row each — naming the
+    # three arms keeps this model's table to this model's runs.
+    arms = " ".join(d.name for stage in plan if (d := log_dir_for(stage)))
     print(f"\nall stages done. Summarize: cd {EVAL_DIR} && "
-          f"{PY} summarize.py --log-dir ../../data/misalignment-eval/logs")
+          f"{PY} summarize.py {arms}")
     return 0
 
 

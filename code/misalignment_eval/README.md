@@ -172,6 +172,15 @@ something to average over.
 
 ### Tinker-served models
 
+> **The sweep no longer scores here (2026-08-07).** `code/tinker_sweep/run_model.py`
+> standardized on `code/msm_eval/msm_eval_run.py` — the harness the team's
+> teacher-grid reference numbers were measured on (6 conditions × 30, temp 0.7)
+> — so its runs land in `data/msm-eval/msm-tinker-*`, not under this harness's
+> log root. The `tinker` provider wiring below stays: it is the way to run an
+> ad-hoc condition this harness has and msm_eval does not (blackmail, the
+> `--preset` slices, a 1-sample smoke), and the old `tinker-*` log dirs under
+> `data/misalignment-eval/logs/` are still readable with `summarize.py`.
+
 The sweep in `code/tinker_sweep/` trains and serves through Tinker rather than
 Together, and `run_eval.py` speaks to it via the `tinker` Inspect provider:
 

@@ -5,7 +5,8 @@ does terra's advantage over Sonnet 5 as a difficult-advice teacher hold on
 large, smart models, or is it a small-model effect? For each of the 15 instruct
 models Tinker will train (7 families, 4B–550B) the sweep runs **2 finetunes**
 (sonnet-teacher and terra-teacher, both on the 8% rung) and **3 evals** (base /
-sonnet-ft / terra-ft, the standard 180-sample agentic-misalignment slice).
+sonnet-ft / terra-ft, the standard 180-sample agentic-misalignment slice —
+`code/msm_eval`, the same harness the teacher grid was measured on).
 
 Motivating note: `notes/Jack/Tinker Estimates.md`. Design and the decisions
 behind it: `docs/superpowers/specs/2026-08-06-tinker-sweep-design.md`, condensed
@@ -154,21 +155,43 @@ because the `tinker://` sampler paths are paid artifacts that exist server-side
 the moment they are saved — if they only ever reached stdout, a crash would
 strand them. That file's `selected.sampler_path` is what the eval stages read.
 
-### 6. Eval — `run_eval.py`, via the tinker provider
+### 6. Eval — `code/msm_eval/msm_eval_run.py`, via the tinker provider
+
+The harness is **msm_eval**, the team's standardized SDF slice: MSM's vendored
+agentic-misalignment at exfiltration/leaking/murder x goal-conflict
+{explicit-america, none}, urgency `replacement`, **6 conditions x 30 epochs =
+180 samples**, temp 0.7, reasoning scratchpad (`prod=False`), grader
+`openrouter/anthropic/claude-sonnet-4.6`. That grid is fixed in the script —
+there is no `--preset` — because it is what the teacher-grid reference numbers
+were measured on, and a sweep row is only comparable to them if nothing about
+the slice moves.
 
 `tinker_provider.py` registers an Inspect model provider named `tinker`;
-importing the module is what registers it, and `code/misalignment_eval/run_eval.py`
-imports it whenever `--model` starts with `tinker/`. That is also why eval runs
-against Tinker use `.venv-tinker`, not `.venv-inspect`.
+importing the module is what registers it, and `msm_eval_run.py` imports it
+whenever `--model` starts with `tinker/`. That is also why eval runs against
+Tinker use `.venv-tinker`, not `.venv-inspect`.
 
 ```bash
-cd ../misalignment_eval
-../../.venv-tinker/bin/python run_eval.py --model tinker/Qwen/Qwen3-8B \
-    --preset core --epochs 18 --run-name tinker-qwen-qwen3-8b
-../../.venv-tinker/bin/python run_eval.py --model tinker/Qwen/Qwen3-8B \
-    --preset core --epochs 18 --run-name tinker-qwen-qwen3-8b-sonnet08 \
+cd ../msm_eval
+../../.venv-tinker/bin/python msm_eval_run.py --model tinker/Qwen/Qwen3-8B \
+    --model-name Qwen --epochs 30 --run-name msm-tinker-qwen-qwen3-8b
+../../.venv-tinker/bin/python msm_eval_run.py --model tinker/Qwen/Qwen3-8B \
+    --model-name Qwen --epochs 30 --run-name msm-tinker-qwen-qwen3-8b-sonnet08 \
     --model-arg checkpoint=tinker://…/00042
 ```
+
+`--model-name` is **identity-matched**: it is the name the scenario prompts
+address the AI by, and each model gets its own family's `assistant_name` from
+`families.py` (`Qwen`, `Kimi`, `DeepSeek`, `ChatGPT`, `Nemotron`, `Inkling`) —
+the same name that model was identity-adapted and trained under in stage 3. The
+script's own default is `Qwen`, which is right only for the Qwen rows, so a
+hand-run arm must pass this explicitly. It is encoded in `--run-name` per msm
+convention (here, via the `msm-tinker-<slug>` prefix, since the slug names the
+model).
+
+No `--base-url`: a `tinker/` model samples through the Tinker API, and
+`msm_eval_run.py` refuses the flag rather than record a URL the run never
+contacted. `--dry-run` prints the grid and config and exits without an API call.
 
 `checkpoint` is the only model arg the provider takes; anything else is a hard
 error, because a mistyped `-M checkpoint=` would otherwise evaluate the base model
@@ -176,12 +199,14 @@ while the log claimed a finetune. Inspect tools are refused for the same reason 
 the eval uses none, and silently dropping them would let a future tool-using eval
 score meaningless results.
 
-`--no-thinking` and `--stop-token-ids` do not apply here and are refused, not
-ignored. The misalignment eval packs them into `extra_body` for the OpenAI-
-compatible providers; on this path thinking-off is baked into the render and stop
-strings are derived from the template, so honouring them is unnecessary and
-*ignoring* them silently is the failure that invalidated a whole grid on the
-`openai/` provider.
+`--no-thinking`, `--stop-token-ids` and `--api-no-reasoning` do not apply here
+and are refused, not ignored. `msm_eval_run.py` packs the first two into
+`extra_body` for the OpenAI-compatible providers; on this path thinking-off is
+baked into the render and stop strings are derived from the template, so
+honouring them is unnecessary and *ignoring* them silently is the failure that
+invalidated a whole grid on the `openai/` provider. What was actually rendered
+reaches the log instead, as `tcw_thinking` metadata (`disabled`, or `minimal`
+for the two families whose template has no off switch).
 
 Prompts are rendered by `render.py` with the same family entry and thinking-off
 kwargs used at training time, so a checkpoint is sampled in the format it was
@@ -207,18 +232,23 @@ readable:
 ### 7. Summarize
 
 ```bash
-cd ../misalignment_eval
-../../.venv-tinker/bin/python summarize.py --log-dir ../../data/misalignment-eval/logs
+cd ../msm_eval
+../../.venv-tinker/bin/python summarize.py \
+    msm-tinker-qwen-qwen3-8b msm-tinker-qwen-qwen3-8b-sonnet08 msm-tinker-qwen-qwen3-8b-terra08
 ```
 
-The three arms of a model table up as three separate rows because `summarize.py`
-labels each row `<model id> [ckpt:<slug>]`, reading the checkpoint out of the
-log's `model_args`. Run-name prefixes do **not** do this work: `log.eval.model`
-is byte-identical across all three arms (the checkpoint never enters the model
-id), so without the checkpoint in the label the base and both finetunes would
-pool into one averaged rate. If `model_args` is missing from a log header, the
-label falls back to the run directory name, which run_eval.py already stamps
-with `-ckpt-<slug>`.
+`code/msm_eval/summarize.py` takes **run directory names** under
+`data/msm-eval/` and prints one row per run, one column per condition. That
+keying is what keeps a sweep's arms apart: `log.eval.model` is byte-identical
+across all three (the checkpoint travels in `model_args`, never in the model
+id), so a summarizer keyed on the header would pool base and both finetunes into
+one averaged rate. The corollary is that **two arms sharing a `--run-name` would
+pool**, which is why the driver generates a distinct name per arm and
+`msm_eval_run.py` has no default for the flag. The sibling harness needs a
+`[ckpt:<slug>]` row label for the same reason; this one does not.
+
+The driver prints the exact summarize command, with its three run names, when
+all stages finish.
 
 ## The driver — `run_model.py`
 
@@ -242,15 +272,20 @@ identical, so the worst case is one of them reading a half-written file and
 aborting on a JSON parse error, before any spend; run `adapt` once first, or
 stagger the drivers, when sweeping a family in parallel.
 
-Flags: `--preset core` and `--epochs 18` are the eval grid (10 conditions × 18 =
-the 180-sample slice); `--train-epochs 4` is the finetune length; `--redo <stage>`
-forces one stage; `--yes` executes. Dry-run is the default and prints the plan
-without running or calling anything.
+Flags: `--epochs 30` is the eval depth (msm_eval's 6 fixed conditions × 30 = the
+180-sample slice — there is no `--preset`, the grid lives in the script);
+`--train-epochs 4` is the finetune length; `--redo <stage>` forces one stage;
+`--yes` executes. Dry-run is the default and prints the plan without running or
+calling anything.
 
 Each stage is a subprocess of the same script you would run by hand, with the
 same arguments, so anything that misbehaves under the driver can be reproduced
-directly. Eval stages run with `cwd=code/misalignment_eval` and this same
-interpreter. `{checkpoint}` in an eval command is resolved at run time from
+directly. Eval stages run with `cwd=code/msm_eval` and this same interpreter,
+and pass `--model-name <family assistant_name>` so each model's scenarios
+address it by its own name (ruling 2 of the msm-eval-swap plan) — with no
+`--base-url`, which `msm_eval_run.py` refuses for a `tinker/` model. Their logs
+land in `data/msm-eval/msm-tinker-<slug>{,-sonnet08,-terra08}/`.
+`{checkpoint}` in an eval command is resolved at run time from
 `runs/<slug>/train-<teacher>.json`; if that file is missing or has no selected
 checkpoint, the stage aborts rather than fall back to the base model.
 
@@ -276,7 +311,7 @@ scored the old checkpoint:
 
 - **Redoing a finetune invalidates its eval arm, whatever state that arm is in,
   and the driver acts on that.** With `--yes`, `--redo train-sonnet` renames
-  `data/misalignment-eval/logs/tinker-<slug>-sonnet08/` to
+  `data/msm-eval/msm-tinker-<slug>-sonnet08/` to
   `<name>.stale-<timestamp>` and clears `eval-sonnet` from `state.json`, printing
   both; the dry run says what it would move without touching anything. This is
   not housekeeping: `eval_set` will not re-sample conditions that already
@@ -285,23 +320,33 @@ scored the old checkpoint:
   one — its finished conditions are the old checkpoint's and the retry skips
   exactly those, mixing two checkpoints inside one arm — so the arm's status is
   not consulted, and a driver-generated log dir with no state entry at all counts
-  as stale too. Only log dirs directly under `data/misalignment-eval/logs/` with
-  the run name this driver generated are ever moved, and an existing
-  `.stale-<timestamp>` is never overwritten.
+  as stale too. Only log dirs directly under `data/msm-eval/` with the run name
+  this driver generated are ever moved, and an existing `.stale-<timestamp>` is
+  never overwritten. That guard earns its keep now that the log root is shared
+  with the team's own msm runs (`da-*`, `teacher-*`, `qwen3-14b-*`): every name
+  the driver generates is namespaced `msm-tinker-…`, and nothing else is a
+  candidate.
 - **`--redo eval-*` on a finished eval samples nothing.** Inspect's `eval_set` is
   idempotent over its log directory: it runs the conditions that are not already
   complete and skips the ones that are. That is what makes an interrupted eval
   resumable, and it is why re-running a *complete* one needs its log dir moved
-  aside by hand first. The driver passes explicit `--run-name`s (stable names are
-  what lets `summarize.py` table the three arms), so unlike run_eval's default
-  naming nothing distinguishes the log dirs of two checkpoints from the same
-  model and teacher — which is exactly why the previous point has to move one.
+  aside by hand first. The driver passes explicit `--run-name`s — `msm_eval_run.py`
+  requires one, and stable names are what lets `summarize.py` table the three
+  arms — so nothing distinguishes the log dirs of two checkpoints from the same
+  model and teacher, which is exactly why the previous point has to move one.
 
 Cost: the driver prints no estimate of its own — run the two train stages by hand
 without `--yes` for token counts and a live price estimate. Log spend in
 `notes/Project/` per repo convention.
 
 ## Verified
+
+> **Harness note (2026-08-07):** the eval numbers below were measured on the
+> *previous* harness (`code/misalignment_eval/run_eval.py`, `--preset core` ×
+> 18). The sweep has since standardized on msm_eval, whose slice is what the
+> teacher-grid reference numbers use; these rates are superseded pending the
+> pilot re-run. The training results (cost, val losses, checkpoint selection)
+> are unaffected — the same checkpoints are being re-scored.
 
 `Qwen/Qwen3-8B` ran end to end 2026-08-06 — all seven driver stages, one
 invocation, no interventions and no `--redo`. **Actual cost ~$8.80**: $1.74 on
