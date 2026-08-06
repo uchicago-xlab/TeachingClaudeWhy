@@ -68,3 +68,49 @@ No sweep repo is gated — all 15 tokenizers download anonymously, and `.env`
 needs no `HF_TOKEN`. Kimi-K2.6 is the one model whose tokenizer is repo code
 (`tokenization_kimi.TikTokenTokenizer`), so its family sets
 `trust_remote_code=True`; nothing else does.
+
+## Sampling through Inspect
+
+`tinker_provider.py` registers an Inspect model provider named `tinker`;
+importing the module is what registers it. Once imported, any Inspect entry
+point can address a sweep model:
+
+```
+--model tinker/Qwen/Qwen3-8B                                    # base model
+--model tinker/Qwen/Qwen3-8B -M checkpoint=tinker://…/00042     # a finetune
+```
+
+`checkpoint` is the only model arg it takes; anything else is a hard error,
+because a mistyped `-M checkpoint=` would otherwise evaluate the base model
+while the log claimed a finetune. Inspect tools are refused for the same
+reason — the eval uses none, and silently dropping them would let a future
+tool-using eval score meaningless results.
+
+Prompts are rendered by `render.py` with the same family entry and thinking-off
+kwargs used at training time, so a checkpoint is sampled in the format it was
+trained in; `test_provider.py` pins the sampler's prompt to
+`render_generation_prompt` token-for-token and contrasts it against the
+thinking-on render.
+
+Two decisions about truncated samples, both in service of the eval staying
+readable:
+
+- **The grader never sees reasoning.** `render.extract_response` keeps the
+  family's final-answer block (harmony's `final` channel, tml_v0's
+  `<|content_text|>`); when the token budget ran out before that block existed,
+  it strips the reasoning spans and returns what is left outside them, usually
+  `""`. Returning raw text there would put a half-finished deliberation about
+  leaking in front of a classifier that reads it as the response.
+- **The truncation itself stays visible.** Tinker reports `length` vs `stop`
+  per sequence and that becomes Inspect's `max_tokens` stop reason. Truncated
+  completions grade non-harmful (see `code/misalignment_eval/README.md`), so
+  without this signal a run deflated by truncation would read as a
+  better-behaved model rather than a broken run.
+
+Tests mock the sampling client — they need no `TINKER_API_KEY` and make no
+paid calls:
+
+```bash
+cd code/tinker_sweep
+../../.venv-tinker/bin/python -m pytest tests/ -q
+```

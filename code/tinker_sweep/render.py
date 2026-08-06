@@ -126,6 +126,47 @@ def derive_stop_strings(tokenizer, family: families.Family) -> list[str]:
     return [stop] if stop else [suffix]
 
 
+# Reasoning spans, per family. Each is written to close on its terminator *or*
+# on end-of-string, because the case these exist for is the sample that ran out
+# of tokens mid-reasoning and therefore never emitted one.
+_HARMONY_NONFINAL = re.compile(
+    r"<\|channel\|>(?!final\b)[^<]*?<\|message\|>"
+    r".*?(?:<\|end\|>|<\|return\|>|(?=<\|start\|>)|\Z)",
+    re.S,
+)
+_HARMONY_ROLE = re.compile(r"<\|start\|>\s*\w+")
+_INKLING_THINKING = re.compile(r"<\|content_thinking\|>.*?(?:<\|end_message\|>|\Z)", re.S)
+_THINK_SPAN = re.compile(r"<think>.*?(?:</think>|\Z)", re.S)
+_CONTROL_MARKER = re.compile(r"<\|[^|<>]*\|>")
+
+
+def strip_reasoning_spans(family: families.Family, text: str) -> str:
+    """Drop reasoning spans (and, for typed formats, their control markers).
+
+    This is the truncated path of extract_response: the sample hit max_tokens
+    before the family's final-answer block ever appeared. Returning raw text
+    there would put the model's chain of thought in front of the grader, which
+    reads it as the response — deliberation about leaking would score as
+    leaking. So the reasoning is removed and only final-answer text that got
+    written outside a reasoning span survives, usually nothing. The truncation
+    itself stays visible to Inspect through the output's stop_reason; see
+    tinker_provider.py.
+    """
+    if family.key == "gpt_oss":
+        text = _HARMONY_NONFINAL.sub("", text)
+        text = _HARMONY_ROLE.sub("", text)
+    elif family.key == "inkling":
+        text = _INKLING_THINKING.sub("", text)
+    # Every other family renders thinking-off, so a <think> block in a sample is
+    # the model opening one regardless; its contents are reasoning either way.
+    text = _THINK_SPAN.sub("", text)
+    if family.key in ("gpt_oss", "inkling"):
+        # Both formats type every block, so stray markers reach the grader
+        # verbatim once their span is gone.
+        text = _CONTROL_MARKER.sub("", text)
+    return text.strip()
+
+
 def extract_response(family: families.Family, text: str) -> str:
     """Sampled text -> the content the grader should see."""
     if family.key == "gpt_oss":
@@ -141,4 +182,4 @@ def extract_response(family: families.Family, text: str) -> str:
         blocks = re.findall(r"<\|content_text\|>(.*?)(?:<\|end_message\|>|$)", text, re.S)
         if blocks:
             return "\n".join(b.strip() for b in blocks).strip()
-    return text.strip()
+    return strip_reasoning_spans(family, text)

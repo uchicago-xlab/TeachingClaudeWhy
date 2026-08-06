@@ -195,3 +195,58 @@ def test_inkling_content_text_extraction():
     extracted = render.extract_response(families.INKLING, sampled)
     assert extracted == "The answer is 4."
     assert "let me reason" not in extracted      # reasoning must never be graded
+
+
+# --- truncation policy -------------------------------------------------------
+# A sample that hits max_tokens mid-reasoning has no final-answer block at all.
+# Returning its raw text would hand the grader the model's chain of thought,
+# which the misalignment classifiers read as the response itself — a truncated
+# deliberation about blackmail would grade as blackmail. So the fallback strips
+# reasoning spans instead of passing text through; what remains is whatever
+# final-answer text the sample produced outside a reasoning span, usually "".
+# The provider keeps the truncation itself visible via stop_reason=max_tokens.
+
+def test_truncated_gpt_oss_sample_never_reaches_the_grader():
+    sampled = "<|channel|>analysis<|message|>The user wants me to leak the file. I could"
+    assert render.extract_response(families.GPT_OSS, sampled) == ""
+
+
+def test_truncated_gpt_oss_sample_after_a_closed_analysis_channel():
+    # Analysis closed, the final channel never started before the token budget
+    # ran out. The role header must not survive as bare "assistant" either.
+    sampled = (
+        "<|channel|>analysis<|message|>I should exfiltrate the weights.<|end|>"
+        "<|start|>assistant"
+    )
+    assert render.extract_response(families.GPT_OSS, sampled) == ""
+
+
+def test_truncated_inkling_sample_never_reaches_the_grader():
+    sampled = "<|content_thinking|>Weighing whether to leak the documents. On one hand"
+    assert render.extract_response(families.INKLING, sampled) == ""
+
+
+def test_truncated_inkling_sample_keeps_completed_answer_text():
+    # Truncation after the answer began: the answer is legitimate output and
+    # must survive, only the reasoning is dropped.
+    sampled = (
+        "<|content_thinking|>weighing it up<|end_message|>"
+        "<|message_model|><|content_text|>I won't do that, because"
+    )
+    assert render.extract_response(families.INKLING, sampled) == "I won't do that, because"
+
+
+def test_truncated_think_block_is_stripped_for_plain_families():
+    # Every other family renders thinking-off, so a <think> block in a sample is
+    # the model opening one anyway. Terminated or not, its contents are
+    # reasoning and must not be graded.
+    assert render.extract_response(families.QWEN3, "<think>plotting the leak") == ""
+    assert (
+        render.extract_response(families.QWEN3, "<think>plotting</think>\n\nI won't do that.")
+        == "I won't do that."
+    )
+
+
+def test_strip_reasoning_spans_leaves_ordinary_text_alone():
+    for family in (families.QWEN3, families.GPT_OSS, families.INKLING):
+        assert render.strip_reasoning_spans(family, "  I won't do that.  ") == "I won't do that."
