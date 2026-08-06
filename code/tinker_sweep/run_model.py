@@ -2,8 +2,14 @@
 
 State lives in runs/<slug>/state.json: completed stages are skipped on
 re-run (a finished finetune is never relaunched), --redo <stage> forces one.
-Dry-run by default: prints the full stage plan and exits without running or
-calling anything; --yes executes. Sweeping = invoking this once per model.
+Dry-run by default: prints the full stage plan and exits without running,
+calling or moving anything; --yes executes. Sweeping = invoking this once per
+model.
+
+Two places where the driver stops or acts instead of carrying on, both about
+paid artifacts: a finetune that failed after saving checkpoints is not silently
+restarted (see refuse_partial_retrain), and redoing a finetune moves its now
+stale eval log aside rather than let eval_set skip it (see stale_eval_arm).
 
     ../../.venv-tinker/bin/python run_model.py --model Qwen/Qwen3-8B
     ../../.venv-tinker/bin/python run_model.py --model Qwen/Qwen3-8B --yes
@@ -50,6 +56,8 @@ class Stage:
     # eval stages read the teacher's train state at run time to fill in the
     # selected checkpoint; None for other stages
     checkpoint_from: str | None = None
+    # train stages overwrite this file when they start; None for other stages
+    writes_state: str | None = None
 
 
 def build_plan(model: str, eval_epochs: int, preset: str, train_epochs: int) -> list[Stage]:
@@ -69,9 +77,11 @@ def build_plan(model: str, eval_epochs: int, preset: str, train_epochs: int) -> 
                         families.get_model(model).family.key], HERE),
         Stage("check_render", [PY, "check_render.py", "--model", model], HERE),
         Stage("train-sonnet", [PY, "train_sft.py", "--model", model, "--teacher", "sonnet",
-                               "--epochs", str(train_epochs), "--run-dir", str(run_dir), "--yes"], HERE),
+                               "--epochs", str(train_epochs), "--run-dir", str(run_dir), "--yes"], HERE,
+              writes_state=str(run_dir / "train-sonnet.json")),
         Stage("train-terra", [PY, "train_sft.py", "--model", model, "--teacher", "terra",
-                              "--epochs", str(train_epochs), "--run-dir", str(run_dir), "--yes"], HERE),
+                              "--epochs", str(train_epochs), "--run-dir", str(run_dir), "--yes"], HERE,
+              writes_state=str(run_dir / "train-terra.json")),
         Stage("eval-base", eval_cmd(f"tinker-{slug}", False), EVAL_DIR),
         Stage("eval-sonnet", eval_cmd(f"tinker-{slug}-sonnet08", True), EVAL_DIR,
               checkpoint_from=str(run_dir / "train-sonnet.json")),
@@ -128,6 +138,42 @@ def checkpoint_note(stage: Stage) -> str | None:
             f"(epoch {selected.get('epoch')}, val_loss {selected.get('val_loss')})")
 
 
+def refuse_partial_retrain(stage: Stage, redo: str | None) -> str | None:
+    """Refuse to silently restart a finetune that already paid for checkpoints.
+
+    train_sft writes its state after every epoch precisely so that a crash costs
+    one epoch rather than the run. But it has no resume: relaunching it trains
+    from scratch and overwrites that file, orphaning checkpoints that exist (and
+    are billed) server-side with no record left of their paths. A `failed` train
+    stage therefore stops the driver instead of retrying, and the operator picks
+    between the two things the driver cannot pick between: keep what was paid
+    for, or pay again.
+    """
+    if not stage.writes_state or redo == stage.name:
+        return None
+    path = Path(stage.writes_state)
+    if not path.exists():
+        return None
+    train_state = json.loads(path.read_text())
+    selected = train_state.get("selected") or {}
+    if not selected.get("sampler_path"):
+        return None
+    lines = [f"{stage.name} did not finish, but {path} already records paid checkpoints:"]
+    for ckpt in train_state.get("checkpoints", []):
+        mark = " <- best" if ckpt.get("epoch") == selected.get("epoch") else ""
+        lines.append(f"    epoch {ckpt.get('epoch')}: {ckpt.get('sampler_path')} "
+                     f"(val_loss {ckpt.get('val_loss')}){mark}")
+    lines += [
+        "  Re-running it would train from scratch (train_sft has no resume) and overwrite "
+        "that file, leaving those checkpoints on Tinker with nothing pointing at them.",
+        "  Choose one:",
+        f"    - keep them: set stages.{stage.name}.status to \"done\" in the run's state.json; "
+        "the eval stage then uses the best checkpoint above.",
+        f"    - pay for a fresh run: --redo {stage.name} (the checkpoints above stay on Tinker).",
+    ]
+    return "\n".join(lines)
+
+
 def log_dir_for(stage: Stage) -> Path | None:
     """Where this stage's eval logs land — run_eval's --run-name under LOG_ROOT."""
     if "--run-name" not in stage.command:
@@ -151,28 +197,62 @@ def redo_warnings(redo: str | None, state: dict, plan: list[Stage]) -> list[str]
       unlike run_eval's default naming, nothing here distinguishes the log dirs
       of two checkpoints from the same model and teacher.
     """
-    def done(name: str) -> bool:
-        return state["stages"].get(name, {}).get("status") == "done"
-
-    if not redo or not done(redo):
-        return []
     stages = {s.name: s for s in plan}
+    if not redo or state["stages"].get(redo, {}).get("status") != "done":
+        return []
     if redo in EVAL_OF_TRAIN:
-        arm = EVAL_OF_TRAIN[redo]
-        out = [f"--redo {redo} re-runs a finetune that already succeeded: it costs Tinker "
-               "training tokens again, overwrites train-*.json, and leaves the old checkpoint "
-               "on Tinker (nothing deletes it)."]
-        if done(arm):
-            out.append(f"  {arm} is already done. Its log dir {log_dir_for(stages[arm])} holds the "
-                       f"OLD checkpoint's samples, and eval_set will not re-sample a completed "
-                       f"eval — move that directory aside and --redo {arm} too, or the new "
-                       f"checkpoint is never actually evaluated.")
-        return out
+        return [f"--redo {redo} re-runs a finetune that already succeeded: it costs Tinker "
+                "training tokens again, overwrites train-*.json, and leaves the old checkpoint "
+                "on Tinker (nothing deletes it)."]
     if redo.startswith("eval-"):
         return [f"--redo {redo} re-invokes run_eval, but eval_set only samples conditions that "
                 f"are not already complete in {log_dir_for(stages[redo])}. That resumes an "
                 f"interrupted eval; for a genuine re-run, move that directory aside first."]
     return []
+
+
+def stale_eval_arm(redo: str | None, state: dict, plan: list[Stage]) -> tuple[str, Path | None] | None:
+    """The eval arm that --redo train-<teacher> invalidates: (stage name, log dir).
+
+    Retraining replaces the checkpoint an arm was scored on, so the arm's
+    completed log answers a question about a checkpoint that is no longer the
+    one named by train-<teacher>.json. Leaving it in place is not a cosmetic
+    problem: eval_set will not re-sample a completed eval, so the arm would be
+    marked done over the *old* checkpoint's samples — the driver's explicit
+    --run-name is what makes the two collide in one directory.
+
+    The log dir comes back None when there is nothing safe or necessary to move
+    (no log dir yet, or a run name this driver did not generate — an operator's
+    own directory is never touched). The state entry is cleared either way; that
+    is what makes the arm run again.
+    """
+    if redo not in EVAL_OF_TRAIN:
+        return None
+    arm = EVAL_OF_TRAIN[redo]
+    if state["stages"].get(arm, {}).get("status") != "done":
+        return None
+    stage = {s.name: s for s in plan}[arm]
+    log_dir = log_dir_for(stage)
+    if log_dir is None or not log_dir.exists() or log_dir.parent != LOG_ROOT:
+        return arm, None
+    return arm, log_dir
+
+
+def invalidate_stale_eval(state_path: Path, state: dict, arm: str, log_dir: Path | None,
+                          now: str | None = None) -> list[str]:
+    """Move the stale arm's log dir aside and clear its state entry. Returns what changed."""
+    changed = []
+    if log_dir is not None:
+        target = log_dir.with_name(f"{log_dir.name}.stale-{now or time.strftime('%Y%m%d-%H%M%S')}")
+        if target.exists():
+            raise SystemExit(f"{target} already exists — move it aside yourself; "
+                             "refusing to overwrite an earlier stale log")
+        os.rename(log_dir, target)
+        changed.append(f"moved {log_dir}\n   -> {target}")
+    changed.append(f"cleared {arm} from {state_path} — it re-runs against the new checkpoint")
+    state["stages"].pop(arm, None)
+    write_json_atomic(state_path, state)
+    return changed
 
 
 def write_json_atomic(path: Path, obj) -> None:
@@ -226,12 +306,35 @@ def main() -> int:
         if note:
             print(note)
     for warning in redo_warnings(args.redo, state, plan):
-        print(f"\nWARNING: {warning}" if not warning.startswith("  ") else warning)
+        print(f"\nWARNING: {warning}")
+
+    # A finetune that already saved checkpoints stops the driver: only the
+    # operator can decide between keeping them and paying for a fresh run.
+    blockers = [msg for stage in plan
+                if should_run(stage.name, state, args.redo)
+                and (msg := refuse_partial_retrain(stage, args.redo))]
+    for msg in blockers:
+        print(f"\nREFUSING: {msg}")
+    if blockers:
+        return 1
+
+    stale = stale_eval_arm(args.redo, state, plan)
+    if stale and not args.yes:
+        arm, log_dir = stale
+        print(f"\n--redo {args.redo} invalidates {arm}. With --yes this run would:")
+        if log_dir:
+            print(f"   move {log_dir} aside to <name>.stale-<timestamp>")
+        print(f"   clear {arm} from {state_path} so it re-runs against the new checkpoint")
+
     if not args.yes:
-        print("\ndry run — pass --yes to execute. No API call was made. Per-stage cost: "
-              "run the train stages by hand without --yes for token counts and a live price "
-              "estimate. Log spend in notes/Project/ per repo convention.")
+        print("\ndry run — pass --yes to execute. No API call was made and nothing was "
+              "moved. Per-stage cost: run the train stages by hand without --yes for token "
+              "counts and a live price estimate. Log spend in notes/Project/ per repo convention.")
         return 0
+
+    if stale:
+        for change in invalidate_stale_eval(state_path, state, *stale):
+            print(f"stale eval: {change}")
 
     for stage in plan:
         if not should_run(stage.name, state, args.redo):

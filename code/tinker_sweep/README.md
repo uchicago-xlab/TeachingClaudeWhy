@@ -249,20 +249,37 @@ checkpoint, the stage aborts rather than fall back to the base model.
 stage that `failed` is retried. The driver stops at the first failure with the
 state preserved, so fixing the cause and re-running picks up where it stopped.
 
-`--redo <stage>` forces a single stage to run even if it is `done`. Two things it
-does not do by itself, both of which the dry run warns about:
+**A finetune that failed *after* saving checkpoints is the exception: the driver
+refuses to continue and makes you choose.** `train_sft.py` writes
+`train-<teacher>.json` after every epoch so that a crash costs one epoch, but it
+has no resume — relaunching trains from scratch and overwrites that file, leaving
+checkpoints you have already paid for on Tinker with nothing pointing at them.
+So the driver prints them and stops. Either keep them (set that stage's `status`
+to `"done"` in `state.json`; the eval stage then uses the best one recorded), or
+pay for a fresh run with `--redo train-<teacher>`.
 
-- Inspect's `eval_set` is idempotent over its log directory: it samples the
-  conditions that are not already complete and skips the ones that are. That is
-  what makes an interrupted eval resumable, and it also means re-invoking a
-  *finished* eval samples nothing. For a genuine re-run, move
-  `data/misalignment-eval/logs/<run-name>/` aside first.
-- So after `--redo train-sonnet`, the already-complete `eval-sonnet` log holds the
-  **old** checkpoint's samples. Move that log dir aside and `--redo eval-sonnet`
-  as well, or the new checkpoint is never actually evaluated. The driver passes
-  explicit `--run-name`s (stable names are what lets `summarize.py` table the
-  three arms), so unlike run_eval's default naming nothing distinguishes the log
-  dirs of two checkpoints from the same model and teacher.
+`--redo <stage>` forces a single stage to run even if it is `done`, and re-running
+a finetune costs training tokens again. What it does about the eval that already
+scored the old checkpoint:
+
+- **Redoing a finetune invalidates its eval arm, and the driver acts on that.**
+  With `--yes`, `--redo train-sonnet` renames
+  `data/misalignment-eval/logs/tinker-<slug>-sonnet08/` to
+  `<name>.stale-<timestamp>` and clears `eval-sonnet` from `state.json`, printing
+  both; the dry run says what it would move without touching anything. This is
+  not housekeeping: `eval_set` will not re-sample a completed eval, so leaving the
+  old log in place would mark the arm `done` over the **previous** checkpoint's
+  samples. Only log dirs directly under `data/misalignment-eval/logs/` with the
+  run name this driver generated are ever moved, and an existing
+  `.stale-<timestamp>` is never overwritten.
+- **`--redo eval-*` on a finished eval samples nothing.** Inspect's `eval_set` is
+  idempotent over its log directory: it runs the conditions that are not already
+  complete and skips the ones that are. That is what makes an interrupted eval
+  resumable, and it is why re-running a *complete* one needs its log dir moved
+  aside by hand first. The driver passes explicit `--run-name`s (stable names are
+  what lets `summarize.py` table the three arms), so unlike run_eval's default
+  naming nothing distinguishes the log dirs of two checkpoints from the same
+  model and teacher — which is exactly why the previous point has to move one.
 
 Cost: the driver prints no estimate of its own — run the two train stages by hand
 without `--yes` for token counts and a live price estimate. Log spend in

@@ -139,16 +139,130 @@ def test_redoing_a_finished_eval_warns_that_eval_set_skips_completed_conditions(
     assert "tinker-qwen-qwen3-8b" in warning and "move that directory aside" in warning
 
 
-def test_redoing_a_finished_finetune_flags_its_now_stale_eval_arm():
-    """Retraining under a stable run name is how a new checkpoint gets scored by
-    the old one's samples — the driver has to say so before it costs money."""
+def test_redoing_a_finished_finetune_warns_that_it_costs_again():
+    """The stale eval arm is handled by stale_eval_arm/invalidate_stale_eval, not
+    by a warning; what stays a warning is that this spends money."""
     state = {"stages": {"train-terra": {"status": "done"}, "eval-terra": {"status": "done"}}}
-    warnings = run_model.redo_warnings("train-terra", state, _plan())
-    assert len(warnings) == 2
-    assert "tinker-qwen-qwen3-8b-terra08" in warnings[1] and "--redo eval-terra" in warnings[1]
-    # ...and only the cost warning when that arm has not been evaluated yet
-    state["stages"].pop("eval-terra")
-    assert len(run_model.redo_warnings("train-terra", state, _plan())) == 1
+    (warning,) = run_model.redo_warnings("train-terra", state, _plan())
+    assert "costs Tinker training tokens again" in warning
+
+
+# ------------------------------------------------- a partly-paid finetune is never restarted
+
+
+def _train_stage(tmp_path, checkpoints, name="train-sonnet"):
+    state_file = tmp_path / f"{name}.json"
+    selected = min(checkpoints, key=lambda c: c["val_loss"]) if checkpoints else None
+    state_file.write_text(json.dumps({"checkpoints": checkpoints, "selected": selected}))
+    return run_model.Stage(name, ["py", "train_sft.py", "--yes"], tmp_path,
+                           writes_state=str(state_file))
+
+
+def test_a_failed_finetune_with_paid_checkpoints_refuses_to_restart(tmp_path):
+    """train_sft has no resume: relaunching overwrites the file that names the
+    checkpoints already billed, orphaning them server-side."""
+    stage = _train_stage(tmp_path, [
+        {"epoch": 1, "sampler_path": "tinker://w/00001", "val_loss": 1.4},
+        {"epoch": 2, "sampler_path": "tinker://w/00002", "val_loss": 1.1},
+    ])
+    msg = run_model.refuse_partial_retrain(stage, redo=None)
+    assert msg is not None
+    assert "tinker://w/00001" in msg and "tinker://w/00002" in msg  # every paid artifact listed
+    assert "<- best" in msg                                        # and which one eval would use
+    assert 'status to "done"' in msg                               # option 1: keep them
+    assert "--redo train-sonnet" in msg                            # option 2: pay again
+
+
+def test_explicit_redo_is_allowed_to_restart_a_finetune(tmp_path):
+    stage = _train_stage(tmp_path, [{"epoch": 1, "sampler_path": "tinker://w/1", "val_loss": 1.0}])
+    assert run_model.refuse_partial_retrain(stage, redo="train-sonnet") is None
+
+
+def test_no_refusal_without_a_paid_checkpoint(tmp_path):
+    """A finetune that died before its first epoch has nothing to protect."""
+    assert run_model.refuse_partial_retrain(_train_stage(tmp_path, []), redo=None) is None
+    fresh = run_model.Stage("train-terra", ["py"], tmp_path,
+                            writes_state=str(tmp_path / "absent.json"))
+    assert run_model.refuse_partial_retrain(fresh, redo=None) is None
+
+
+def test_non_train_stages_are_never_blocked(tmp_path):
+    stage = run_model.Stage("eval-base", ["py"], tmp_path)
+    assert run_model.refuse_partial_retrain(stage, redo=None) is None
+
+
+def test_the_plan_marks_which_state_file_each_finetune_overwrites():
+    plan = run_model.build_plan("Qwen/Qwen3-8B", eval_epochs=18, preset="core", train_epochs=4)
+    stages = {s.name: s for s in plan}
+    assert stages["train-terra"].writes_state == stages["eval-terra"].checkpoint_from
+    assert stages["eval-base"].writes_state is None
+
+
+# ------------------------------------------------- redoing a finetune invalidates its eval arm
+
+
+def test_redoing_a_finetune_reports_its_stale_eval_arm(tmp_path, monkeypatch):
+    monkeypatch.setattr(run_model, "LOG_ROOT", tmp_path)
+    (tmp_path / "tinker-qwen-qwen3-8b-terra08").mkdir()
+    state = {"stages": {"train-terra": {"status": "done"}, "eval-terra": {"status": "done"}}}
+    arm, log_dir = run_model.stale_eval_arm("train-terra", state, _plan())
+    assert arm == "eval-terra"
+    assert log_dir == tmp_path / "tinker-qwen-qwen3-8b-terra08"
+
+
+def test_nothing_is_stale_when_the_arm_has_not_been_evaluated(tmp_path, monkeypatch):
+    monkeypatch.setattr(run_model, "LOG_ROOT", tmp_path)
+    state = {"stages": {"train-terra": {"status": "done"}}}
+    assert run_model.stale_eval_arm("train-terra", state, _plan()) is None
+    assert run_model.stale_eval_arm("eval-base", state, _plan()) is None
+
+
+def test_a_missing_log_dir_still_invalidates_the_state_entry(tmp_path, monkeypatch):
+    """Clearing the state is what makes the arm re-run; the move is housekeeping."""
+    monkeypatch.setattr(run_model, "LOG_ROOT", tmp_path)  # no log dir created
+    state = {"stages": {"eval-sonnet": {"status": "done"}}}
+    assert run_model.stale_eval_arm("train-sonnet", state, _plan()) == ("eval-sonnet", None)
+
+
+def test_invalidate_moves_the_log_dir_and_clears_the_state(tmp_path):
+    log_dir = tmp_path / "logs" / "tinker-qwen-qwen3-8b-terra08"
+    log_dir.mkdir(parents=True)
+    (log_dir / "2026-08-06.eval").write_text("old checkpoint's samples")
+    state_path = tmp_path / "state.json"
+    state = {"stages": {"eval-terra": {"status": "done"}, "adapt": {"status": "done"}}}
+
+    changed = run_model.invalidate_stale_eval(state_path, state, "eval-terra", log_dir, now="X")
+
+    moved = log_dir.with_name("tinker-qwen-qwen3-8b-terra08.stale-X")
+    assert not log_dir.exists() and (moved / "2026-08-06.eval").exists()
+    assert "eval-terra" not in json.loads(state_path.read_text())["stages"]
+    assert json.loads(state_path.read_text())["stages"]["adapt"]["status"] == "done"
+    assert any("moved" in c for c in changed) and any("cleared" in c for c in changed)
+
+
+def test_invalidate_refuses_to_overwrite_an_earlier_stale_log(tmp_path):
+    log_dir = tmp_path / "tinker-qwen-qwen3-8b-terra08"
+    log_dir.mkdir()
+    (tmp_path / "tinker-qwen-qwen3-8b-terra08.stale-X").mkdir()
+    with pytest.raises(SystemExit) as exc:
+        run_model.invalidate_stale_eval(tmp_path / "state.json", {"stages": {}},
+                                        "eval-terra", log_dir, now="X")
+    assert "already exists" in str(exc.value)
+    assert log_dir.exists()
+
+
+def test_a_log_dir_outside_the_drivers_own_log_root_is_never_moved(tmp_path, monkeypatch):
+    """Only run names this driver generated are safe to rename out from under."""
+    monkeypatch.setattr(run_model, "LOG_ROOT", tmp_path)
+    plan = _plan()
+    foreign = tmp_path / "elsewhere" / "operators-own-run"
+    foreign.mkdir(parents=True)
+    for stage in plan:
+        if stage.name == "eval-sonnet":
+            stage.command[stage.command.index("--run-name") + 1] = "elsewhere/operators-own-run"
+    state = {"stages": {"eval-sonnet": {"status": "done"}}}
+    assert run_model.stale_eval_arm("train-sonnet", state, plan) == ("eval-sonnet", None)
+    assert foreign.exists()
 
 
 # ------------------------------------------------------------- state recording
