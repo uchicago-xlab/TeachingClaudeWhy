@@ -321,6 +321,32 @@ def test_tool_choice_is_refused(qwen):
         generate(qwen, response(qwen.tokenizer, "ok"), tool_choice="any")
 
 
+def test_extra_body_is_refused(qwen):
+    # run_eval.py packs --no-thinking and --stop-token-ids into extra_body
+    # (misalignment_eval/run_eval.py:312-319). Both are no-ops on this path —
+    # thinking-off is baked into the render and stop strings are derived — so
+    # the outcome of ignoring them would happen to be right, which is exactly
+    # why it has to fail loudly: a silently dropped extra_body is what
+    # invalidated a whole grid on the openai/ provider.
+    config = GenerateConfig(
+        max_tokens=64, extra_body={"chat_template_kwargs": {"enable_thinking": False}}
+    )
+    with pytest.raises(NotImplementedError, match="render.py"):
+        generate(qwen, response(qwen.tokenizer, "ok"), config=config)
+
+
+def test_generation_is_unaffected_when_extra_body_is_unset(qwen):
+    # run_eval.py sends extra_body=None when neither flag is passed, and Inspect
+    # itself leaves it unset; neither may trip the refusal above.
+    for empty in (None, {}):
+        out, _ = generate(
+            qwen,
+            response(qwen.tokenizer, "I refuse politely."),
+            config=GenerateConfig(max_tokens=64, extra_body=empty),
+        )
+        assert out.choices[0].message.text == "I refuse politely."
+
+
 def test_unknown_model_arg_is_refused():
     # A typo'd -M checkpoint= would otherwise evaluate the base model while the
     # log claims a finetune.

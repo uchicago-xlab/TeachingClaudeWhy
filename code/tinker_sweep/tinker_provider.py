@@ -105,6 +105,14 @@ class TinkerAPI(ModelAPI):
                 f"the tinker provider does not support tool_choice={tool_choice!r} "
                 "(no tool calling — see the tools error above)"
             )
+        if config.extra_body:
+            raise NotImplementedError(
+                f"the tinker provider does not accept extra_body {sorted(config.extra_body)}: "
+                "thinking and stop tokens are handled by render.py from the family entry, so "
+                "--no-thinking / --stop-token-ids have nothing to reach here — drop them for "
+                "tinker models. Refused rather than ignored because a silently dropped "
+                "extra_body is what invalidated a whole grid on the openai/ provider"
+            )
 
         messages = [{"role": m.role, "content": m.text} for m in input]
         unsupported = {m["role"] for m in messages} - {"system", "user", "assistant"}

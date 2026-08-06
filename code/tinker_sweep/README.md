@@ -86,6 +86,13 @@ while the log claimed a finetune. Inspect tools are refused for the same
 reason — the eval uses none, and silently dropping them would let a future
 tool-using eval score meaningless results.
 
+`--no-thinking` and `--stop-token-ids` do not apply here and are refused, not
+ignored. The misalignment eval packs them into `extra_body` for the OpenAI-
+compatible providers; on this path thinking-off is baked into the render and
+stop strings are derived from the template, so honouring them is unnecessary
+and *ignoring* them silently is the failure that invalidated a whole grid on
+the `openai/` provider.
+
 Prompts are rendered by `render.py` with the same family entry and thinking-off
 kwargs used at training time, so a checkpoint is sampled in the format it was
 trained in; `test_provider.py` pins the sampler's prompt to
