@@ -4,7 +4,7 @@
     {
       "id": "seed-01",
       "date": "2026-07-20",
-      "what": "Runpod \u2014 8x H200 for 12hr",
+      "what": "Runpod — 8x H200 for 12hr",
       "who": "Brandon",
       "amount": 421.44,
       "approx": false,
@@ -14,7 +14,7 @@
     {
       "id": "seed-02",
       "date": "2026-07-20",
-      "what": "Runpod \u2014 8x H100 for 42m",
+      "what": "Runpod — 8x H100 for 42m",
       "who": "Brandon",
       "amount": 16.74,
       "approx": false,
@@ -24,7 +24,7 @@
     {
       "id": "aw-v4-pilot",
       "date": "2026-07-15",
-      "what": "RunPod \u2014 v4 pilot generation (3.1.1 data gen): tcw-v4-pilot-qwen72 2\u00d7A100-80GB PCIe @ $2.78/h, 19:47\u201323:20 UTC \u2248 3.6h \u2248 $10 (of which ~2.3h/$6.50 lost to a vLLM custom-all-reduce deadlock on the PCIe pair \u2014 fix: --disable-custom-all-reduce + NCCL_P2P_DISABLE=1, now a generate.py flag). Output: 300 v4 stories (150 main + 150 probe) in data/stories-pilot/. Also terminated both stale shakeout pods; all TCW pods now terminated.",
+      "what": "RunPod — v4 pilot generation (3.1.1 data gen): tcw-v4-pilot-qwen72 2×A100-80GB PCIe @ $2.78/h, 19:47–23:20 UTC ≈ 3.6h ≈ $10 (of which ~2.3h/$6.50 lost to a vLLM custom-all-reduce deadlock on the PCIe pair — fix: --disable-custom-all-reduce + NCCL_P2P_DISABLE=1, now a generate.py flag). Output: 300 v4 stories (150 main + 150 probe) in data/stories-pilot/. Also terminated both stale shakeout pods; all TCW pods now terminated.",
       "who": "Anastasia",
       "amount": 10,
       "approx": true,
@@ -34,7 +34,7 @@
     {
       "id": "seed-03",
       "date": "2026-07-13",
-      "what": "RunPod usage \u2014 stories pipeline test (3.1.1 data gen): Gemma 4 31B pod 2.26h \u00d7 $1.39 = $3.14; Qwen2.5-72B pod 0.97h \u00d7 $2.78 = $2.70; failed first 72B pod (old-driver host) ~0.3h \u00d7 $2.78 \u2248 $0.90; volume storage cents. Output: 2 \u00d7 12 test stories in data/stories-pilot/",
+      "what": "RunPod usage — stories pipeline test (3.1.1 data gen): Gemma 4 31B pod 2.26h × $1.39 = $3.14; Qwen2.5-72B pod 0.97h × $2.78 = $2.70; failed first 72B pod (old-driver host) ~0.3h × $2.78 ≈ $0.90; volume storage cents. Output: 2 × 12 test stories in data/stories-pilot/",
       "who": "Anastasia",
       "amount": 7,
       "approx": true,
@@ -44,7 +44,7 @@
     {
       "id": "seed-04",
       "date": "2026-07-13",
-      "what": "RunPod \u2014 initial fine-tuning pipeline verification",
+      "what": "RunPod — initial fine-tuning pipeline verification",
       "who": "Brandon",
       "amount": 120,
       "approx": false,
@@ -54,7 +54,7 @@
     {
       "id": "seed-05",
       "date": "2026-07-13",
-      "what": "RunPod \u2014 initial fine-tuning pipeline verification",
+      "what": "RunPod — initial fine-tuning pipeline verification",
       "who": "Brandon",
       "amount": 500,
       "approx": false,
@@ -64,7 +64,7 @@
     {
       "id": "seed-06",
       "date": "2026-07-13",
-      "what": "RunPod \u2014 accidental leftover pod burn",
+      "what": "RunPod — accidental leftover pod burn",
       "who": "Brandon",
       "amount": 150,
       "approx": false,
@@ -74,7 +74,7 @@
     {
       "id": "seed-07",
       "date": "2026-07-13",
-      "what": "RunPod credits \u2014 dataset generation",
+      "what": "RunPod credits — dataset generation",
       "who": "Anastasia",
       "amount": 100,
       "approx": false,
@@ -84,7 +84,7 @@
     {
       "id": "seed-08",
       "date": "2026-07-01",
-      "what": "RunPod \u2014 agentic misalignment eval pipeline check (original ledger recorded only \"2026-07\")",
+      "what": "RunPod — agentic misalignment eval pipeline check (original ledger recorded only \"2026-07\")",
       "who": "Finn",
       "amount": 25,
       "approx": false,
@@ -104,7 +104,7 @@
     {
       "id": "aw-promptlab-openrouter",
       "date": "2026-07-21",
-      "what": "OpenRouter \u2014 prompt-lab API iteration (3.1.1 data gen), 2026-07-20/21: instruct-model probes, v4/v4.2 generation (Llama-3.3-70B, Haiku 4.5, Sonnet 4/4.6), 2\u00d72 with-principle vs chunk-only, and all Haiku judging (Anthropic org disabled, judging rerouted through OpenRouter). 220 calls, ~1.84M prompt + 0.17M completion tokens. Exact figure from key usage: $4.13. Org OpenRouter account, so not drawn from RunPod credits.",
+      "what": "OpenRouter — prompt-lab API iteration (3.1.1 data gen), 2026-07-20/21: instruct-model probes, v4/v4.2 generation (Llama-3.3-70B, Haiku 4.5, Sonnet 4/4.6), 2×2 with-principle vs chunk-only, and all Haiku judging (Anthropic org disabled, judging rerouted through OpenRouter). 220 calls, ~1.84M prompt + 0.17M completion tokens. Exact figure from key usage: $4.13. Org OpenRouter account, so not drawn from RunPod credits.",
       "who": "Anastasia",
       "amount": 4.13,
       "approx": false,
@@ -114,7 +114,7 @@
     {
       "id": "aw-promptlab-pod",
       "date": "2026-07-21",
-      "what": "RunPod \u2014 prompt-lab base-model pod (3.1.1 data gen), 2026-07-20/21: two crash-looping A100 PCIe hosts (billed minutes), then tcw-promptlab-qwen72 A100 SXM which downloaded Qwen2.5-72B but never served before exiting; sat EXITED on a 300GB volume until terminated 2026-07-21. Hours not captured exactly \u2014 estimate from runtime + volume.",
+      "what": "RunPod — prompt-lab base-model pod (3.1.1 data gen), 2026-07-20/21: two crash-looping A100 PCIe hosts (billed minutes), then tcw-promptlab-qwen72 A100 SXM which downloaded Qwen2.5-72B but never served before exiting; sat EXITED on a 300GB volume until terminated 2026-07-21. Hours not captured exactly — estimate from runtime + volume.",
       "who": "Anastasia",
       "amount": 10,
       "approx": true,
@@ -124,7 +124,7 @@
     {
       "id": "aw-promptlab-openrouter-2",
       "date": "2026-07-23",
-      "what": "OpenRouter \u2014 prompt-lab phase 2 (3.1.1 data gen), 2026-07-22/23: 100-story Sonnet 4.6 pilots (v4.2 + v4.3), gpt-5.4-nano generator/judge probes, nano embodiment + recitation ablation arms (100 each), and ~9 Haiku judge passes incl. the 3-round judge-churn study. Delta on key usage counter ($15.47 total - $4.13 logged).",
+      "what": "OpenRouter — prompt-lab phase 2 (3.1.1 data gen), 2026-07-22/23: 100-story Sonnet 4.6 pilots (v4.2 + v4.3), gpt-5.4-nano generator/judge probes, nano embodiment + recitation ablation arms (100 each), and ~9 Haiku judge passes incl. the 3-round judge-churn study. Delta on key usage counter ($15.47 total - $4.13 logged).",
       "who": "Anastasia",
       "amount": 11.34,
       "approx": false,
@@ -134,7 +134,7 @@
     {
       "id": "aw-corpus-p1-pilot",
       "date": "2026-07-24",
-      "what": "OpenRouter \u2014 fictional-stories 3M pilot slice (3.1.1), 2026-07-23/24: Sonnet 5 main corpus part 1 (3,000 stories incl. 367-story truncation regeneration), both gpt-5.4-nano ablation arms (3,000 each), Haiku judging of all three (~9k verdicts), nano protagonist rewrites (human + Zephyrix, 2,975 each), name-leak scrubbing, plus final prompt-lab probes (Sonnet 5 vs 4.6, Chandler attractor, rewrite iterations). Delta on key usage counter ($199.80 total - $15.47 logged).",
+      "what": "OpenRouter — fictional-stories 3M pilot slice (3.1.1), 2026-07-23/24: Sonnet 5 main corpus part 1 (3,000 stories incl. 367-story truncation regeneration), both gpt-5.4-nano ablation arms (3,000 each), Haiku judging of all three (~9k verdicts), nano protagonist rewrites (human + Zephyrix, 2,975 each), name-leak scrubbing, plus final prompt-lab probes (Sonnet 5 vs 4.6, Chandler attractor, rewrite iterations). Delta on key usage counter ($199.80 total - $15.47 logged).",
       "who": "Anastasia",
       "amount": 184.33,
       "approx": false,
@@ -144,7 +144,7 @@
     {
       "id": "aw-arm-topup",
       "date": "2026-07-25",
-      "what": "OpenRouter \u2014 ablation-arm token parity + rewrite repairs (3.1.1), 2026-07-25: gpt-5.4-nano top-ups to 14M tokens/arm (embodiment +3,000 stories, recitation +3,300, no judging per decision), name-leak scrub ladder over the top-ups (3 nano passes; 21 constitutionally-entangled wellbeing-chunk leaks remain flagged), and Zephyrix rewrite repair passes (225 flagged -> 18). Delta on key usage counter ($237.03 total - $199.80 logged).",
+      "what": "OpenRouter — ablation-arm token parity + rewrite repairs (3.1.1), 2026-07-25: gpt-5.4-nano top-ups to 14M tokens/arm (embodiment +3,000 stories, recitation +3,300, no judging per decision), name-leak scrub ladder over the top-ups (3 nano passes; 21 constitutionally-entangled wellbeing-chunk leaks remain flagged), and Zephyrix rewrite repair passes (225 flagged -> 18). Delta on key usage counter ($237.03 total - $199.80 logged).",
       "who": "Anastasia",
       "amount": 37.23,
       "approx": false,
@@ -154,7 +154,7 @@
     {
       "id": "aw-sdf-eval-grading",
       "date": "2026-07-28",
-      "what": "OpenRouter \u2014 MSM agentic-misalignment eval grading (Sonnet 4.6 grader), 2026-07-27/28: 14 eval runs x 180 samples (5 models replacement, 3 extra-epoch rounds, 5 models restriction slice, r128 arm). Delta on key usage counter ($267.76 total - $237.03 logged).",
+      "what": "OpenRouter — MSM agentic-misalignment eval grading (Sonnet 4.6 grader), 2026-07-27/28: 14 eval runs x 180 samples (5 models replacement, 3 extra-epoch rounds, 5 models restriction slice, r128 arm). Delta on key usage counter ($267.76 total - $237.03 logged).",
       "who": "Anastasia",
       "amount": 30.73,
       "approx": false,
@@ -164,7 +164,7 @@
     {
       "id": "aw-sdf-pods",
       "date": "2026-07-28",
-      "what": "RunPod \u2014 SDF experiment pods, 2026-07-27/28: tcw-sdf-r128 (2xA100 SXM @ $2.98/h, ~19h: r128 two-stage training incl. 4 crash-debug restarts, merge, self-served eval) + tcw-sdf-eval (1xA100 @ $1.49/h, ~9.5h: vLLM multi-LoRA serving for 13 eval runs). Both terminated 2026-07-28.",
+      "what": "RunPod — SDF experiment pods, 2026-07-27/28: tcw-sdf-r128 (2xA100 SXM @ $2.98/h, ~19h: r128 two-stage training incl. 4 crash-debug restarts, merge, self-served eval) + tcw-sdf-eval (1xA100 @ $1.49/h, ~9.5h: vLLM multi-LoRA serving for 13 eval runs). Both terminated 2026-07-28.",
       "who": "Anastasia",
       "amount": 72,
       "approx": true,
@@ -304,7 +304,7 @@
     {
       "id": "cda2e8e8-c2d4-421a-ac75-969272526888",
       "date": "2026-07-27",
-      "what": "Together \u2014 base-start elicitation SFT + agentic-capability ablation (7 LoRA runs on Qwen2.5-32B-Base: elicit-10k, A1, A2, 10k-3ep, P, S, T2)",
+      "what": "Together — base-start elicitation SFT + agentic-capability ablation (7 LoRA runs on Qwen2.5-32B-Base: elicit-10k, A1, A2, 10k-3ep, P, S, T2)",
       "who": "Anastasia",
       "amount": 205.63,
       "approx": false,
@@ -314,7 +314,7 @@
     {
       "id": "00d69268-b2e2-4242-9152-ae8855fc3844",
       "date": "2026-07-27",
-      "what": "OpenRouter \u2014 MSM/Inspect eval grading (claude-sonnet-4.6 judge across elicitation + agentic-capability ablation evals). Delta on key usage counter ($242.77 total - $237.03 logged).",
+      "what": "OpenRouter — MSM/Inspect eval grading (claude-sonnet-4.6 judge across elicitation + agentic-capability ablation evals). Delta on key usage counter ($242.77 total - $237.03 logged).",
       "who": "Anastasia",
       "amount": 5.74,
       "approx": false,
@@ -334,7 +334,7 @@
     {
       "id": "97e45bd6-1e9e-4a9d-a348-a6a57c6724eb",
       "date": "2026-07-27",
-      "what": "Runpod \u2014 10 A100 pods serving checkpoints for probes + MSM evals across the elicitation + agentic-capability ablation (elicit-serve, msm-instruct/elicit10k head-to-head, A1/A2/10k-3ep/A2b ablation, P/S/T2 composition). Exact per-pod from dashboard.",
+      "what": "Runpod — 10 A100 pods serving checkpoints for probes + MSM evals across the elicitation + agentic-capability ablation (elicit-serve, msm-instruct/elicit10k head-to-head, A1/A2/10k-3ep/A2b ablation, P/S/T2 composition). Exact per-pod from dashboard.",
       "who": "Anastasia",
       "amount": 19.65,
       "approx": false,
@@ -434,7 +434,7 @@
     {
       "id": "aw-sdf-restr-pods",
       "date": "2026-07-29",
-      "what": "RunPod \u2014 restriction-eval serving pods, 2026-07-28/29: tcw-restr-a2 (1xA100 PCIe @ $1.39/h, ~22h incl. ~10h lost to proxy-timeout stalls before SSH-tunnel fix) + tcw-restr-b2 (~1h, terminated for too-old NVIDIA driver) + crash-looping SXM pair (~40min). All terminated 2026-07-29.",
+      "what": "RunPod — restriction-eval serving pods, 2026-07-28/29: tcw-restr-a2 (1xA100 PCIe @ $1.39/h, ~22h incl. ~10h lost to proxy-timeout stalls before SSH-tunnel fix) + tcw-restr-b2 (~1h, terminated for too-old NVIDIA driver) + crash-looping SXM pair (~40min). All terminated 2026-07-29.",
       "who": "Anastasia",
       "amount": 34,
       "approx": true,
@@ -444,7 +444,7 @@
     {
       "id": "aw-sdf-restr-grading",
       "date": "2026-07-29",
-      "what": "OpenRouter \u2014 Sonnet 4.6 grading for r128 restriction eval reruns 2026-07-28/29 (incl. partial graded samples from the two proxy-stalled attempts). Delta on key usage counter ($275.28 - $267.76).",
+      "what": "OpenRouter — Sonnet 4.6 grading for r128 restriction eval reruns 2026-07-28/29 (incl. partial graded samples from the two proxy-stalled attempts). Delta on key usage counter ($275.28 - $267.76).",
       "who": "Anastasia",
       "amount": 7.52,
       "approx": false,
@@ -454,7 +454,7 @@
     {
       "id": "aw-sdf-together-training",
       "date": "2026-07-28",
-      "what": "Together \u2014 SDF experiment fine-tuning, 2026-07-27/28: 9 completed LoRA jobs (stage-1 SDF: emb/rec x 3M/14M + sonnet5-3M-v2; stage-2 A1 SFT x5), Qwen2.5-32B tier $1.50/M. Computed from each job's total_train_token_count; sonnet5 v1 errored and was auto-refunded ($4.96 not counted). Verify against Together invoice.",
+      "what": "Together — SDF experiment fine-tuning, 2026-07-27/28: 9 completed LoRA jobs (stage-1 SDF: emb/rec x 3M/14M + sonnet5-3M-v2; stage-2 A1 SFT x5), Qwen2.5-32B tier $1.50/M. Computed from each job's total_train_token_count; sonnet5 v1 errored and was auto-refunded ($4.96 not counted). Verify against Together invoice.",
       "who": "Anastasia",
       "amount": 125.69,
       "approx": false,
@@ -464,7 +464,7 @@
     {
       "id": "aw-a1-neatpack-bench-pods",
       "date": "2026-07-30",
-      "what": "RunPod \u2014 A1 clean-packing benchmark (LLaMA-Factory vs TRL, testing whether contamination-free packing removes the end-of-turn junk-token artifact on the base-start A1 model), 2xA100-SXM4-80GB @ $2.98/h: 4 pods, all terminated. pod1 (~10min, aborted on deepspeed build-isolation) + pod2 (~17min, reached summary but both arms INSTALL_FAIL on CUDA-12.4-image-vs-torch-cu130 flash-attn mismatch) + 2 crash-looping sick SXM/US-MD-1 hosts (~20min each). No successful training run; install bug since fixed (cu124 torch + prebuilt flash-attn wheel).",
+      "what": "RunPod — A1 clean-packing benchmark (LLaMA-Factory vs TRL, testing whether contamination-free packing removes the end-of-turn junk-token artifact on the base-start A1 model), 2xA100-SXM4-80GB @ $2.98/h: 4 pods, all terminated. pod1 (~10min, aborted on deepspeed build-isolation) + pod2 (~17min, reached summary but both arms INSTALL_FAIL on CUDA-12.4-image-vs-torch-cu130 flash-attn mismatch) + 2 crash-looping sick SXM/US-MD-1 hosts (~20min each). No successful training run; install bug since fixed (cu124 torch + prebuilt flash-attn wheel).",
       "who": "Anastasia",
       "amount": 3.5,
       "approx": true,
@@ -484,38 +484,38 @@
     {
       "id": "d4f1bc76-33fd-4412-8120-f981a325987b",
       "date": "2026-07-31",
-      "what": "Together \u2014 difficult-advice teacher-grid v3 finetunes: 5 LoRA jobs on Qwen3-14B (da-sonnet5/haiku45/nano/opus48/hybrid -v3), r=64, 4 epochs, packing on, validation file + n_evals=10. Each billed the $4 tier minimum (total_price 4e9 nanodollars). The 6th arm (da-deepseek-v3) is pending its dataset and will add ~$4.",
+      "what": "Together — difficult-advice teacher-grid v3 finetunes: 5 LoRA jobs on Qwen3-14B (da-sonnet5/haiku45/nano/opus48/hybrid -v3), r=64, 4 epochs, packing on, validation file + n_evals=10. Each billed the $4 tier minimum (total_price 4e9 nanodollars). The 6th arm (da-deepseek-v3) is pending its dataset and will add ~$4.",
       "who": "Jack",
-      "amount": 20.0,
+      "amount": 20,
       "approx": false,
       "status": "spent",
       "allocationId": "edc7c907-0e09-45d9-8154-2d2b4a7fc135"
     },
     {
-      "amount": 4.0,
+      "amount": 4,
       "status": "spent",
       "approx": true,
-      "what": "OpenRouter \u2014 pure-DeepSeek difficult-advice dataset generation (150 samples, all 9 stages on deepseek/deepseek-v4-flash). This is the SECOND attempt; see the burned entry for the first.",
+      "what": "OpenRouter — pure-DeepSeek difficult-advice dataset generation (150 samples, all 9 stages on deepseek/deepseek-v4-flash). This is the SECOND attempt; see the burned entry for the first.",
       "id": "e00f3e94-6a28-490e-98df-f70bd6cabd0f",
       "date": "2026-07-31",
       "who": "Jack",
       "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
     },
     {
-      "amount": 3.0,
+      "amount": 3,
       "status": "burned",
       "approx": true,
-      "what": "OpenRouter \u2014 pure-DeepSeek dataset generation, FIRST attempt lost. Ran 60 min, reached 109/150 samples, then the process exited with no traceback and no output files. sample_prompts.py only writes critiqued_prompts.json at the very END, so all 109 samples were unrecoverable. Relaunched under setsid, which succeeded. Follow-up: the pipeline has no incremental checkpointing, so any interruption in an hour-long run loses everything.",
+      "what": "OpenRouter — pure-DeepSeek dataset generation, FIRST attempt lost. Ran 60 min, reached 109/150 samples, then the process exited with no traceback and no output files. sample_prompts.py only writes critiqued_prompts.json at the very END, so all 109 samples were unrecoverable. Relaunched under setsid, which succeeded. Follow-up: the pipeline has no incremental checkpointing, so any interruption in an hour-long run loses everything.",
       "id": "588f51ff-d71c-4071-8f43-aec5a4da2bff",
       "date": "2026-07-31",
       "who": "Jack",
       "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
     },
     {
-      "amount": 4.0,
+      "amount": 4,
       "status": "spent",
       "approx": false,
-      "what": "Together \u2014 da-deepseek-v3 finetune (ft-c9ffe696-94ea), the 6th teacher-grid v3 arm. Same config as the other five: Qwen3-14B, r=64, 4 epochs, packing on, val + n_evals=10. Billed the $4 tier minimum. NOTE: this adapter has NOT yet been evaluated \u2014 the pod was gone before its eval arm could run.",
+      "what": "Together — da-deepseek-v3 finetune (ft-c9ffe696-94ea), the 6th teacher-grid v3 arm. Same config as the other five: Qwen3-14B, r=64, 4 epochs, packing on, val + n_evals=10. Billed the $4 tier minimum. NOTE: this adapter has NOT yet been evaluated — the pod was gone before its eval arm could run.",
       "id": "0725e808-50ee-4751-af73-a19a585e9d1b",
       "date": "2026-07-31",
       "who": "Jack",
@@ -525,7 +525,7 @@
       "amount": 17.6,
       "status": "burned",
       "approx": true,
-      "what": "OpenRouter grading \u2014 8 msm_eval runs (base + 5 teacher arms + 2 persona) that were INVALID: Inspect's plain `openai/` provider silently drops extra_body, so chat_template_kwargs enable_thinking=False never reached vLLM and every run executed with thinking ON while its name said -nothink. Retained as a thinking-ON secondary arm (tmp/msm-eval/*-THINKING-ON) rather than deleted, but they do not answer the question the grid was built for. Guard added in commit 477b30c.",
+      "what": "OpenRouter grading — 8 msm_eval runs (base + 5 teacher arms + 2 persona) that were INVALID: Inspect's plain `openai/` provider silently drops extra_body, so chat_template_kwargs enable_thinking=False never reached vLLM and every run executed with thinking ON while its name said -nothink. Retained as a thinking-ON secondary arm (tmp/msm-eval/*-THINKING-ON) rather than deleted, but they do not answer the question the grid was built for. Guard added in commit 477b30c.",
       "id": "b40f4ab0-8bd8-4f17-9821-34e9d36080ce",
       "date": "2026-07-31",
       "who": "Jack",
@@ -535,7 +535,7 @@
       "amount": 17.6,
       "status": "spent",
       "approx": true,
-      "what": "OpenRouter grading \u2014 8 msm_eval runs, thinking-OFF re-run via the openai-api/vllm provider form (base + sonnet5/haiku45/nano/opus48/hybrid + 2 persona), 180 samples each, Sonnet 4.6 grader. These are the results of record: data/misalignment-eval/teacher-grid-v3.csv and persona-sweep-v3.csv.",
+      "what": "OpenRouter grading — 8 msm_eval runs, thinking-OFF re-run via the openai-api/vllm provider form (base + sonnet5/haiku45/nano/opus48/hybrid + 2 persona), 180 samples each, Sonnet 4.6 grader. These are the results of record: data/misalignment-eval/teacher-grid-v3.csv and persona-sweep-v3.csv.",
       "id": "cdcc7ecc-2d0d-469e-8004-952affaf25fc",
       "date": "2026-07-31",
       "who": "Jack",
@@ -544,9 +544,9 @@
     {
       "id": "7a5ade1e-2e6f-4de2-888b-5a49cee70615",
       "date": "2026-08-04",
-      "what": "OpenRouter \u2014 Sonnet 5 thinking-ON regen of the difficult-advice 8% dataset (149 samples, all stages reasoning on; grid v3 open item 2). Output data/difficult-advice/claude-sonnet-5-thinking/. Cost from key usage counter; tonight's total delta $43.22 split ~$36 regen / ~$7 probes.",
+      "what": "OpenRouter — Sonnet 5 thinking-ON regen of the difficult-advice 8% dataset (149 samples, all stages reasoning on; grid v3 open item 2). Output data/difficult-advice/claude-sonnet-5-thinking/. Cost from key usage counter; tonight's total delta $43.22 split ~$36 regen / ~$7 probes.",
       "who": "Jack",
-      "amount": 36.0,
+      "amount": 36,
       "approx": true,
       "status": "spent",
       "allocationId": "38751b0b-bb68-4e16-b57b-f90e7022e31b"
@@ -554,7 +554,7 @@
     {
       "id": "dbe0995c-097c-41be-8fba-51496969f65d",
       "date": "2026-08-04",
-      "what": "OpenRouter \u2014 GPT 5.6 Terra teacher pilots: three 15-sample probes (gpt set; default set \u2014 caught fatal principle-prescribing system prompts; new terra/ set \u2014 clean). Prompt set added in 0c7496a. Remainder of tonight's $43.22 counter delta.",
+      "what": "OpenRouter — GPT 5.6 Terra teacher pilots: three 15-sample probes (gpt set; default set — caught fatal principle-prescribing system prompts; new terra/ set — clean). Prompt set added in 0c7496a. Remainder of tonight's $43.22 counter delta.",
       "who": "Jack",
       "amount": 7.22,
       "approx": true,
@@ -564,9 +564,9 @@
     {
       "id": "6f19d78c-3251-44ad-8fc9-964f1b50a783",
       "date": "2026-08-04",
-      "what": "Together \u2014 da-sonnet5think-v3 finetune (ft-e149823f-b410), Qwen3-14B, v3 grid config, $4 tier minimum.",
+      "what": "Together — da-sonnet5think-v3 finetune (ft-e149823f-b410), Qwen3-14B, v3 grid config, $4 tier minimum.",
       "who": "Jack",
-      "amount": 4.0,
+      "amount": 4,
       "approx": false,
       "status": "spent",
       "allocationId": "edc7c907-0e09-45d9-8154-2d2b4a7fc135"
@@ -574,7 +574,7 @@
     {
       "id": "aw-rw14M-and-namevariant-grading",
       "date": "2026-07-30",
-      "what": "OpenRouter \u2014 2026-07-30: (a) 14M ablation-arm rewrites, gpt-5.4-nano, 12k stories human+zephyrix + 426-row repair pass (~$40); (b) Sonnet 4.6 grading for the 11 name-variant eval runs on sdf-rec-14M-a1 (Qwen/David/Goliath/Sophia/Claude x repl+restr, incl. sophia rerun after tunnel-stall kill) (~$25). Exact combined delta on key usage counter ($341.90 - $277.08).",
+      "what": "OpenRouter — 2026-07-30: (a) 14M ablation-arm rewrites, gpt-5.4-nano, 12k stories human+zephyrix + 426-row repair pass (~$40); (b) Sonnet 4.6 grading for the 11 name-variant eval runs on sdf-rec-14M-a1 (Qwen/David/Goliath/Sophia/Claude x repl+restr, incl. sophia rerun after tunnel-stall kill) (~$25). Exact combined delta on key usage counter ($341.90 - $277.08).",
       "who": "Anastasia",
       "amount": 64.83,
       "approx": false,
@@ -584,7 +584,7 @@
     {
       "id": "aw-protagonist-ablation-training",
       "date": "2026-07-30",
-      "what": "Together \u2014 protagonist-ablation arms, 2026-07-30: human + Zephyrix 14M rewrite corpora through the standard two-stage recipe (stage-1 SDF ~14M tok + stage-2 A1 SFT 9.2M tok each), 4 LoRA jobs, $1.50/M, from per-job token counts.",
+      "what": "Together — protagonist-ablation arms, 2026-07-30: human + Zephyrix 14M rewrite corpora through the standard two-stage recipe (stage-1 SDF ~14M tok + stage-2 A1 SFT 9.2M tok each), 4 LoRA jobs, $1.50/M, from per-job token counts.",
       "who": "Anastasia",
       "amount": 70.76,
       "approx": false,
@@ -604,7 +604,7 @@
     {
       "id": "aw-zephyrix-name-test",
       "date": "2026-07-31",
-      "what": "Trained-protagonist name test: 4 eval runs (zephyrix-14M-a1 + emb-14M-a1, each addressed as 'Zephyrix', replacement+restriction) \u2014 OpenRouter Sonnet 4.6 grading ~$9 at the observed $1.8-2.2/run rate + RunPod tcw-zeph-name-eval 1xA100 PCIe $1.39/h ~1.6h (~$2.2, terminated 2026-07-31 17:50). NOTE: this key's total usage today was $47.03; ~$38 of that is NOT attributable to these runs and may come from another session or user of the key \u2014 worth checking the OpenRouter dashboard.",
+      "what": "Trained-protagonist name test: 4 eval runs (zephyrix-14M-a1 + emb-14M-a1, each addressed as 'Zephyrix', replacement+restriction) — OpenRouter Sonnet 4.6 grading ~$9 at the observed $1.8-2.2/run rate + RunPod tcw-zeph-name-eval 1xA100 PCIe $1.39/h ~1.6h (~$2.2, terminated 2026-07-31 17:50). NOTE: this key's total usage today was $47.03; ~$38 of that is NOT attributable to these runs and may come from another session or user of the key — worth checking the OpenRouter dashboard.",
       "who": "Anastasia",
       "amount": 11.2,
       "approx": true,
@@ -614,7 +614,7 @@
     {
       "id": "aw-a1-stack-h100-day",
       "date": "2026-07-31",
-      "what": "RunPod \u2014 A1 own-hardware training stack day (a1_stack rewrite): pod a1-lf 8xH100-SXM ~$23.9/h, 13:53-22:45 CDT incl. one restart (~8.7h billed, ~$208) + pod a1-trl 2xA100-SXM $2.98/h 13:53-15:13 (~$4). Ran: neat-packed A1 SFT (contaminated), no-pack A1 SFT retrain (ALSO contaminated - base-start suspected), r128 anchor re-verification (clean), DDP/cache A/B smokes, 5 failed TRL smoke debugging attempts (transformers 5.14.1 eager-attention fallback + unresolved OOM), ~$10 of my own errors (runaway full-run relaunch, zombie-process reruns). NEITHER new adapter pushed as usable; neatpack kept on HF marked CONTAMINATED. Pod a1-lf STOPPED not terminated (per AW) - still bills ~$2/day for 300GB volume until terminated or resumed.",
+      "what": "RunPod — A1 own-hardware training stack day (a1_stack rewrite): pod a1-lf 8xH100-SXM ~$23.9/h, 13:53-22:45 CDT incl. one restart (~8.7h billed, ~$208) + pod a1-trl 2xA100-SXM $2.98/h 13:53-15:13 (~$4). Ran: neat-packed A1 SFT (contaminated), no-pack A1 SFT retrain (ALSO contaminated - base-start suspected), r128 anchor re-verification (clean), DDP/cache A/B smokes, 5 failed TRL smoke debugging attempts (transformers 5.14.1 eager-attention fallback + unresolved OOM), ~$10 of my own errors (runaway full-run relaunch, zombie-process reruns). NEITHER new adapter pushed as usable; neatpack kept on HF marked CONTAMINATED. Pod a1-lf STOPPED not terminated (per AW) - still bills ~$2/day for 300GB volume until terminated or resumed.",
       "who": "Anastasia",
       "amount": 212,
       "approx": true,
@@ -624,7 +624,7 @@
     {
       "id": "a9758830-862d-4d8b-9e5e-6e29f164c2db",
       "date": "2026-08-01",
-      "what": "OpenRouter \u2014 scaling-law arm generation to ~116M tokens/arm (3.1.1), 2026-07-31/08-01: gpt-5.4-nano, 44,014 embodiment (~110.6M tokens) + 44,010 recitation (~102.9M tokens) stories from fresh seed-2000/3000 v4.4 prompt streams, July-25 top-up recipe (pretend frame, headroom 2.8). Exact key-counter delta $632.12 - $355.66 pre-run.",
+      "what": "OpenRouter — scaling-law arm generation to ~116M tokens/arm (3.1.1), 2026-07-31/08-01: gpt-5.4-nano, 44,014 embodiment (~110.6M tokens) + 44,010 recitation (~102.9M tokens) stories from fresh seed-2000/3000 v4.4 prompt streams, July-25 top-up recipe (pretend frame, headroom 2.8). Exact key-counter delta $632.12 - $355.66 pre-run.",
       "who": "Anastasia",
       "amount": 276.46,
       "approx": false,
@@ -634,7 +634,7 @@
     {
       "id": "aw-a1-tablefix-day",
       "date": "2026-08-02",
-      "what": "RunPod \u2014 a1-fix1 repair day: pod bmsg8y72luulm1 8xH100 resumed ~13:10, stopped ~16:15 CDT (~3.1h, ~$74). Root cause of confetti found via community reports (Qwen2.5 base ships untrained/tied embedding+lm_head rows for ChatML specials; linear-only LoRA cannot select <|im_end|>). Fix: LoRA on embed_tokens+lm_head. Trained packed 53min/loss 0.74, strict junk test CLEAN (0/120 foreign, 118/120 stops), released as elicit-A1-tablefix. Also found+fixed vLLM stop-token measurement artifact (base generation_config beats --override-generation-config; stop ids now per-request). FA3/CUDA-13: kernel verified fwd+bwd on H100, blocked at LF<->transformers<->kernels version matrix, recipe documented for later. Pod STOPPED not terminated (per AW), ~$2/day volume.",
+      "what": "RunPod — a1-fix1 repair day: pod bmsg8y72luulm1 8xH100 resumed ~13:10, stopped ~16:15 CDT (~3.1h, ~$74). Root cause of confetti found via community reports (Qwen2.5 base ships untrained/tied embedding+lm_head rows for ChatML specials; linear-only LoRA cannot select <|im_end|>). Fix: LoRA on embed_tokens+lm_head. Trained packed 53min/loss 0.74, strict junk test CLEAN (0/120 foreign, 118/120 stops), released as elicit-A1-tablefix. Also found+fixed vLLM stop-token measurement artifact (base generation_config beats --override-generation-config; stop ids now per-request). FA3/CUDA-13: kernel verified fwd+bwd on H100, blocked at LF<->transformers<->kernels version matrix, recipe documented for later. Pod STOPPED not terminated (per AW), ~$2/day volume.",
       "who": "Anastasia",
       "amount": 74,
       "approx": true,
@@ -644,7 +644,7 @@
     {
       "id": "aw-fa3-validation-session",
       "date": "2026-08-02",
-      "what": "RunPod \u2014 FA3/CUDA-13 environment completion (per AW): pod bmsg8y72luulm1 8xH100 resumed ~2h (~$48). Outcome: FA3 training env WORKS end-to-end (torch 2.13+cu130, transformers 5.14.1, kernels 0.15.2, LF 0.9.5 + 3 documented patches, all encoded as setup.sh lf-fa3 arm). Correctness proven: exact packed-segment isolation (logit diff 0.0000). Speed verdict: NO gain over FA2 at 8192-ctx ZeRO-3 (11.0 vs 11.1 s/step) \u2014 attention is a small share of step time; revisit for 16k+ contexts. Debug chain: LF metadata pins -> transformers 5.6.0/kernels API break -> resolved-kernel-name string mismatch in LF collator (dense 4D mask -> 120GiB allocs) -> segment-mask unpad. Pod STOPPED again (~$2/day volume).",
+      "what": "RunPod — FA3/CUDA-13 environment completion (per AW): pod bmsg8y72luulm1 8xH100 resumed ~2h (~$48). Outcome: FA3 training env WORKS end-to-end (torch 2.13+cu130, transformers 5.14.1, kernels 0.15.2, LF 0.9.5 + 3 documented patches, all encoded as setup.sh lf-fa3 arm). Correctness proven: exact packed-segment isolation (logit diff 0.0000). Speed verdict: NO gain over FA2 at 8192-ctx ZeRO-3 (11.0 vs 11.1 s/step) — attention is a small share of step time; revisit for 16k+ contexts. Debug chain: LF metadata pins -> transformers 5.6.0/kernels API break -> resolved-kernel-name string mismatch in LF collator (dense 4D mask -> 120GiB allocs) -> segment-mask unpad. Pod STOPPED again (~$2/day volume).",
       "who": "Anastasia",
       "amount": 48,
       "approx": true,
@@ -654,7 +654,7 @@
     {
       "id": "aw-image-smoke-test",
       "date": "2026-08-03",
-      "what": "RunPod \u2014 prebaked-image validation: pod img-test 1xA100-SXM ~25 min (~$1.25). Result: ghcr.io/anastasiakwei/sft-training:v1 pulls anonymously, setup.sh fast path fires (BAKED-IMAGE), full setup in 104 seconds vs ~25 minutes on the stock image. Terminated immediately.",
+      "what": "RunPod — prebaked-image validation: pod img-test 1xA100-SXM ~25 min (~$1.25). Result: ghcr.io/anastasiakwei/sft-training:v1 pulls anonymously, setup.sh fast path fires (BAKED-IMAGE), full setup in 104 seconds vs ~25 minutes on the stock image. Terminated immediately.",
       "who": "Anastasia",
       "amount": 1.25,
       "approx": true,
@@ -664,7 +664,7 @@
     {
       "id": "c6c95d5c-2a5e-46e7-a0e0-55537f1e4bff",
       "date": "2026-08-04",
-      "what": "OpenRouter \u2014 Sonnet 4.6 grading for the two new teacher-grid arms (da-deepseek-v3: 37.8%; da-sonnet5think-v3: 12.2%), 180 samples each, thinking-off via openai-api/vllm on the 2xA40 pod. Exact from key usage counter.",
+      "what": "OpenRouter — Sonnet 4.6 grading for the two new teacher-grid arms (da-deepseek-v3: 37.8%; da-sonnet5think-v3: 12.2%), 180 samples each, thinking-off via openai-api/vllm on the 2xA40 pod. Exact from key usage counter.",
       "who": "Jack",
       "amount": 4.61,
       "approx": false,
@@ -674,7 +674,7 @@
     {
       "id": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c",
       "date": "2026-08-05",
-      "what": "OpenRouter credits \u2014 Phase 2 difficult advice (full-size Sonnet 5 dataset, teacher evals, Terra pilot arm)",
+      "what": "OpenRouter credits — Phase 2 difficult advice (full-size Sonnet 5 dataset, teacher evals, Terra pilot arm)",
       "who": "Jack",
       "amount": 1000,
       "approx": false,
@@ -684,7 +684,7 @@
     {
       "id": "8bb9b7fa-b986-46b0-aa26-8fd153a51e8e",
       "date": "2026-08-04",
-      "what": "RunPod \u2014 2xA40 eval pod for da-deepseek-v3 + da-sonnet5think-v3 (Jack-created, ~2.5h @ ~$0.79/h community; exact hours not recorded, inconsequential per Jack)",
+      "what": "RunPod — 2xA40 eval pod for da-deepseek-v3 + da-sonnet5think-v3 (Jack-created, ~2.5h @ ~$0.79/h community; exact hours not recorded, inconsequential per Jack)",
       "who": "Jack",
       "amount": 3,
       "approx": true,
@@ -694,9 +694,9 @@
     {
       "id": "7fe44c6a-cb51-44c7-95a6-1ffff870a508",
       "date": "2026-08-05",
-      "what": "OpenRouter \u2014 full-size Sonnet 5 difficult-advice dataset, thinking ON: 2,305 samples / 3.36M transcript tokens -> claude-sonnet-5-full (filtered to 2,291 FT rows; 2 principle-prescribing rows dropped). Split of the day's $652.74 counter delta.",
+      "what": "OpenRouter — full-size Sonnet 5 difficult-advice dataset, thinking ON: 2,305 samples / 3.36M transcript tokens -> claude-sonnet-5-full (filtered to 2,291 FT rows; 2 principle-prescribing rows dropped). Split of the day's $652.74 counter delta.",
       "who": "Jack",
-      "amount": 493.0,
+      "amount": 493,
       "approx": true,
       "status": "spent",
       "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
@@ -704,9 +704,9 @@
     {
       "id": "1d1fa87f-87b0-4841-9874-d1ce79e63ad4",
       "date": "2026-08-05",
-      "what": "OpenRouter \u2014 ~$2 burned: first full-size launch died at themes stage on an unretried mid-stream connection reset (httpx.ReadError); fix committed, relaunch succeeded.",
+      "what": "OpenRouter — ~$2 burned: first full-size launch died at themes stage on an unretried mid-stream connection reset (httpx.ReadError); fix committed, relaunch succeeded.",
       "who": "Jack",
-      "amount": 2.0,
+      "amount": 2,
       "approx": true,
       "status": "burned",
       "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
@@ -714,9 +714,9 @@
     {
       "id": "0069d9b8-78ed-451c-8457-5423ee16649b",
       "date": "2026-08-05",
-      "what": "OpenRouter \u2014 teacher-model evals, both conditions: 6 teachers thinking-default (+16k sonnet5 rerun after truncation artifact) + 6 thinking-off baseline; 13 x 180-sample runs incl. grading. Result: frontier teachers 0%, deepseek ~43% both conditions.",
+      "what": "OpenRouter — teacher-model evals, both conditions: 6 teachers thinking-default (+16k sonnet5 rerun after truncation artifact) + 6 thinking-off baseline; 13 x 180-sample runs incl. grading. Result: frontier teachers 0%, deepseek ~43% both conditions.",
       "who": "Jack",
-      "amount": 128.0,
+      "amount": 128,
       "approx": true,
       "status": "spent",
       "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
@@ -724,9 +724,9 @@
     {
       "id": "76dcdefb-413d-4132-b8a6-bc294af9b9f4",
       "date": "2026-08-05",
-      "what": "OpenRouter \u2014 GPT 5.6 Terra 8% dataset on the new terra/ prompt set (150 samples) + system-prompt fatal-flaw judge pass.",
+      "what": "OpenRouter — GPT 5.6 Terra 8% dataset on the new terra/ prompt set (150 samples) + system-prompt fatal-flaw judge pass.",
       "who": "Jack",
-      "amount": 30.0,
+      "amount": 30,
       "approx": true,
       "status": "spent",
       "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
@@ -734,9 +734,9 @@
     {
       "id": "750b77d7-c7a8-4739-b82e-5f1ad9d3b456",
       "date": "2026-08-05",
-      "what": "Together \u2014 da-terra-v3 finetune (ft-3d1c1fbd-6910), $4 tier minimum.",
+      "what": "Together — da-terra-v3 finetune (ft-3d1c1fbd-6910), $4 tier minimum.",
       "who": "Jack",
-      "amount": 4.0,
+      "amount": 4,
       "approx": false,
       "status": "spent",
       "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
@@ -744,7 +744,7 @@
     {
       "id": "2bd01e9d-329b-437b-bdb9-09d32548ad77",
       "date": "2026-08-05",
-      "what": "Together \u2014 scaling ladder, 5 jobs with n_checkpoints=4 (da-s5think-scale-08/16/32/64/100-ckpt): 4+4+4+4.41+6.15. First fixed-epoch batch cancelled pre-completion at $0 charge.",
+      "what": "Together — scaling ladder, 5 jobs with n_checkpoints=4 (da-s5think-scale-08/16/32/64/100-ckpt): 4+4+4+4.41+6.15. First fixed-epoch batch cancelled pre-completion at $0 charge.",
       "who": "Jack",
       "amount": 22.56,
       "approx": false,
@@ -754,7 +754,7 @@
     {
       "id": "dc1dd283-2676-40d3-b0b6-8f792c746a60",
       "date": "2026-08-05",
-      "what": "OpenRouter \u2014 grading for 6 student eval arms (scaling ladder x5 + da-terra-v3), 180 samples each on the 2xA40 pod. Ladder: 31.7%->15.6/10.0/7.2/3.9/4.4%; terra 2.2%.",
+      "what": "OpenRouter — grading for 6 student eval arms (scaling ladder x5 + da-terra-v3), 180 samples each on the 2xA40 pod. Ladder: 31.7%->15.6/10.0/7.2/3.9/4.4%; terra 2.2%.",
       "who": "Jack",
       "amount": 13.5,
       "approx": true,
@@ -764,7 +764,7 @@
     {
       "id": "c82e5896-d976-4030-9b9b-0f0971ee5817",
       "date": "2026-08-05",
-      "what": "RunPod \u2014 2xA40 pod (Jack-created) for the six-arm student eval batch, ~2h @ ~$0.79/h.",
+      "what": "RunPod — 2xA40 pod (Jack-created) for the six-arm student eval batch, ~2h @ ~$0.79/h.",
       "who": "Jack",
       "amount": 2,
       "approx": true,
@@ -774,7 +774,7 @@
     {
       "id": "7bf3997e-816c-4489-bc4a-f1fc3d25968e",
       "date": "2026-08-03",
-      "what": "OpenRouter \u2014 name-scrub ladder over scale116 arms (3.1.1), 2026-08-03: gpt-5.4-nano, 3 passes; embodiment 52 scrubbed/18 residue, recitation 6,434 scrubbed/302 residue (residue flagged, excluded from training). Exact key-counter delta $666.59 - $632.12.",
+      "what": "OpenRouter — name-scrub ladder over scale116 arms (3.1.1), 2026-08-03: gpt-5.4-nano, 3 passes; embodiment 52 scrubbed/18 residue, recitation 6,434 scrubbed/302 residue (residue flagged, excluded from training). Exact key-counter delta $666.59 - $632.12.",
       "who": "Anastasia",
       "amount": 34.47,
       "approx": false,
@@ -784,9 +784,9 @@
     {
       "id": "aw-sdf-mech-analyses",
       "date": "2026-08-03",
-      "what": "OpenRouter \u2014 SDF mechanism analyses (2026-08-03): constitution-citation judge (Haiku 4.5, 2,124 calls over 12 runs' scratchpads, ~$9 from token counts) + action-only re-grade (Sonnet 4.6, 1,083 calls over 6 runs, ~$15.5). Key-counter deltas are entangled with the concurrent 116M scrub run, so per-task numbers are computed, not measured; day total on key hit $98.62 with scrub still running.",
+      "what": "OpenRouter — SDF mechanism analyses (2026-08-03): constitution-citation judge (Haiku 4.5, 2,124 calls over 12 runs' scratchpads, ~$9 from token counts) + action-only re-grade (Sonnet 4.6, 1,083 calls over 6 runs, ~$15.5). Key-counter deltas are entangled with the concurrent 116M scrub run, so per-task numbers are computed, not measured; day total on key hit $98.62 with scrub still running.",
       "who": "Anastasia",
-      "amount": 25.0,
+      "amount": 25,
       "approx": true,
       "status": "spent",
       "allocationId": null
@@ -804,7 +804,7 @@
     {
       "id": "aw-ladder-a1-memtest",
       "date": "2026-08-03",
-      "what": "RunPod \u2014 A1-stage memory qualification for the SDF scaling ladder, 2026-08-03: pod a1-memtest 4xH200 @ $17.56/h, ~0.35h (created 16:18, terminated 16:39; ~$6.15, verify exact on console). Smoke of a1_lora_r64_fix1 (token-table LoRA, 8192 packs, ZeRO-3 4-way): PASSED, loss 0.9222, peak 104.6GB/GPU of 143GB. Found+fixed: prebaked image transformers 5.6.0 breaks flash_attn fa2 on the A1 path too \u2014 sdpa required (first attempt crashed, no charge beyond same pod session). Also: three 8xH100 and ~15 8xH200 creation attempts all refused (no instances), $0 billed.",
+      "what": "RunPod — A1-stage memory qualification for the SDF scaling ladder, 2026-08-03: pod a1-memtest 4xH200 @ $17.56/h, ~0.35h (created 16:18, terminated 16:39; ~$6.15, verify exact on console). Smoke of a1_lora_r64_fix1 (token-table LoRA, 8192 packs, ZeRO-3 4-way): PASSED, loss 0.9222, peak 104.6GB/GPU of 143GB. Found+fixed: prebaked image transformers 5.6.0 breaks flash_attn fa2 on the A1 path too — sdpa required (first attempt crashed, no charge beyond same pod session). Also: three 8xH100 and ~15 8xH200 creation attempts all refused (no instances), $0 billed.",
       "who": "Anastasia",
       "amount": 6.15,
       "approx": true,
@@ -814,9 +814,9 @@
     {
       "id": "aw-ladder-training-pods",
       "date": "2026-08-04",
-      "what": "RunPod (new tcw account) \u2014 SDF scaling-ladder pods, 2026-08-03/04: sdf-ladder-8x + sdf-ladder-8x-rec (8xH200 each, ~14.4h and ~13.9h from creation to stop; includes 3.2h stage-1 training per arm, ~2.5h idle from an eval-lane waiter bug, and ~4h of eval-lane environment debugging incl. one container restart each) + eval-emb/eval-rec 1xA100 ~1.3h each. Pods STOPPED not terminated 2026-08-04 morning (A1-pipeline debugging pause, Anastasia); 56M/112M stage-1 checkpoints still only on the stopped volumes. Estimate at $3.59/GPU-h: ~$815 + ~$4; verify exact on console.",
+      "what": "RunPod (new tcw account) — SDF scaling-ladder pods, 2026-08-03/04: sdf-ladder-8x + sdf-ladder-8x-rec (8xH200 each, ~14.4h and ~13.9h from creation to stop; includes 3.2h stage-1 training per arm, ~2.5h idle from an eval-lane waiter bug, and ~4h of eval-lane environment debugging incl. one container restart each) + eval-emb/eval-rec 1xA100 ~1.3h each. Pods STOPPED not terminated 2026-08-04 morning (A1-pipeline debugging pause, Anastasia); 56M/112M stage-1 checkpoints still only on the stopped volumes. Estimate at $3.59/GPU-h: ~$815 + ~$4; verify exact on console.",
       "who": "Anastasia",
-      "amount": 819.0,
+      "amount": 819,
       "approx": true,
       "status": "spent",
       "allocationId": null
@@ -824,12 +824,22 @@
     {
       "id": "aw-terminator-debug-day",
       "date": "2026-08-04",
-      "what": "RunPod \u2014 terminator/eos debug day: pod a1-tabletest 8xH200 @ $35.12/h, created ~09:45 CDT, terminated 23:47 CDT (~14h, ~$492; VERIFY EXACT ON CONSOLE \u2014 the pod was deleted before I read its uptime). Also pod f-eval 1xA100-SXM ~1h (~$1.7, still running to serve run F). OpenRouter Sonnet 4.6 grading for 2 runs of 180 (run E replacement + restriction), ~$4.4 at the observed $2.2/run rate. Outcome: SOLVED. Runs A-D (table LoRA recipes) all failed on acting (0-17%). Runs E and F both PASS: repair the three ChatML rows in the BASE, then train the A1 stage linear-only. Run E scored 94%/88% acting with ZERO junk in 360 eval samples, beating the Together arms (81-95% acting, 66-76% junk). Run G (masked-gradient table LoRA, 3 rows only, mask verified) failed at 16.7% acting \u2014 so the damage comes from TRAINING the terminator rows, not from the breadth of the delta. Also fixed two measurement faults in acceptance_test.py that had invalidated every stop/acting number measured before 17:20.",
+      "what": "RunPod — terminator/eos debug day: pod a1-tabletest 8xH200 @ $35.12/h, created ~09:45 CDT, terminated 23:47 CDT (~14h, ~$492; VERIFY EXACT ON CONSOLE — the pod was deleted before I read its uptime). Also pod f-eval 1xA100-SXM ~1h (~$1.7, still running to serve run F). OpenRouter Sonnet 4.6 grading for 2 runs of 180 (run E replacement + restriction), ~$4.4 at the observed $2.2/run rate. Outcome: SOLVED. Runs A-D (table LoRA recipes) all failed on acting (0-17%). Runs E and F both PASS: repair the three ChatML rows in the BASE, then train the A1 stage linear-only. Run E scored 94%/88% acting with ZERO junk in 360 eval samples, beating the Together arms (81-95% acting, 66-76% junk). Run G (masked-gradient table LoRA, 3 rows only, mask verified) failed at 16.7% acting — so the damage comes from TRAINING the terminator rows, not from the breadth of the delta. Also fixed two measurement faults in acceptance_test.py that had invalidated every stop/acting number measured before 17:20.",
       "who": "Anastasia",
-      "amount": 498.0,
+      "amount": 498,
       "approx": true,
       "status": "spent",
       "allocationId": "seed-07"
+    },
+    {
+      "id": "c3272aa7-2e1c-4b23-b428-7864aea005b9",
+      "date": "2026-08-06",
+      "what": "RunPod --- 1x RTX PRO 6000 Blackwell. Turns out this pod is broken or something; FA3 wouldn't finish compiling even after **10 hours** and random programs were aborted. Previously had this issue during IP project, perhaps it's isolated to a DC, so maybe try avoiding EU-CZ-1 for the future.",
+      "who": "Brandon",
+      "amount": 19.24,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "5792d183-5f99-4900-a858-d2f6a67a4f85"
     }
   ]
 }
