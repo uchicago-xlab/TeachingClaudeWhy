@@ -19,3 +19,4 @@ data/fictional-stories/archive/
 data/
 code/msm_eval/vendor/
 code/train_eval_pipeline/sft_training/.pods/
+code/tinker_sweep/runs/
