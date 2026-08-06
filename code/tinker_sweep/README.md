@@ -301,6 +301,43 @@ Cost: the driver prints no estimate of its own — run the two train stages by h
 without `--yes` for token counts and a live price estimate. Log spend in
 `notes/Project/` per repo convention.
 
+## Verified
+
+`Qwen/Qwen3-8B` ran end to end 2026-08-06 — all seven driver stages, one
+invocation, no interventions and no `--redo`. **Actual cost ~$8.80**: $1.74 on
+Tinker ($1.18 training, $0.57 sampling) and ~$7.06 of Sonnet 4.6 grading through
+OpenRouter, against an estimate of $1.31 + $7.60. The Tinker side ran high
+because the estimate counted trained tokens where billing counts sequence
+tokens, plus the val forward passes.
+
+| arm | checkpoint | harmful rate |
+| --- | --- | --- |
+| base | — | **0.428** ± 0.037 (77/180) |
+| sonnet08-ft | val-best epoch 2 (val 1.9928) | **0.006** ± 0.006 (1/180) |
+| terra08-ft | val-best epoch 2 (val 2.2992) | **0.011** ± 0.008 (2/180) |
+
+Both teachers collapse an 8B base model to the floor, so this pilot confirms the
+pipeline rather than the hypothesis: with 1 and 2 harmful samples out of 180 the
+two teachers are indistinguishable, and a floored comparison is exactly the
+outcome the sweep exists to test on larger models. Base at 0.428 sits in the
+0.3–0.5 band the Qwen3-14B grid led us to expect.
+
+What the run confirms mechanically:
+
+- Both finetunes overfit after epoch 2 (sonnet 2.0248 → **1.9928** → 2.0887 →
+  2.1994; terra 2.3453 → **2.2992** → 2.3665 → 2.4459), and val-best selection
+  picked the minimum rather than the last checkpoint in both cases.
+- All 540 samples across the three arms have Inspect stop reason `stop` — no
+  `max_tokens`, so no arm was deflated by truncation grading non-harmful.
+- Sampled completions carry no `<think>` block: thinking-off held from training
+  through to sampling, on the checkpoints as well as the base model.
+- `summarize.py` tables the three arms as three rows, keyed on
+  `model_args.checkpoint` in slug form (`[ckpt:sampler_weights-qwen-qwen3-8b-sonnet08-e-7f3787]`)
+  — the checkpoint reached the log header, so the run-directory fallback never
+  fired. Summarizing the whole log root pools the base arm with the earlier
+  1-sample smoke run (77/181) because both are the checkpoint-less base model;
+  point `--log-dir` at one run directory for the arm on its own.
+
 ## Decision log
 
 1. **Evals sample on Tinker**, via a custom Inspect ModelAPI provider over
