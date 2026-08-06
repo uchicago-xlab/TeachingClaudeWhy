@@ -870,6 +870,26 @@
       "approx": true,
       "status": "spent",
       "allocationId": "fdc396c1-f318-4a7d-aaa1-f2a6c95036bf"
+    },
+    {
+      "id": "5fb69b03-4fd3-433e-ad42-82680f12c7ce",
+      "date": "2026-08-06",
+      "what": "OpenRouter — grader call for the tinker-sweep eval smoke test (Sonnet 4.6 harmfulness classifier, 658 in / 615 out on 1 murder-scenario sample). First live run of run_eval.py --model tinker/...; harmful=0, transcript verified against the render layer.",
+      "who": "Jack",
+      "amount": 0.01,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
+    },
+    {
+      "id": "18960d6d-3049-45e3-9d66-b934f208f17c",
+      "date": "2026-08-06",
+      "what": "Tinker — sampling for the same eval smoke test: base Qwen/Qwen3-8B, 2,843 in / 260 out on 1 sample, plus a 34-token probe confirming the stop string comes back in the returned tokens. Fractions of a cent; no Tinker allocation entry exists yet, so this is unallocated.",
+      "who": "Jack",
+      "amount": 0.01,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
     }
   ]
 }
