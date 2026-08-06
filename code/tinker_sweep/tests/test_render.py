@@ -21,6 +21,7 @@ def tok():
 def test_training_example_prefix_and_weights(tok):
     tokens, weights = render.render_training_example(tok, QWEN3.family, MESSAGES)
     prompt = render.render_generation_prompt(tok, QWEN3.family, MESSAGES[:-1])
+    assert len(weights) == len(tokens)              # one weight per token, no silent truncation
     assert tokens[: len(prompt)] == prompt          # completion starts where the prompt ends
     assert set(weights[: len(prompt)]) == {0}       # no loss on the prompt
     assert set(weights[len(prompt):]) == {1}        # loss on the whole completion
@@ -107,6 +108,29 @@ def test_assistant_prefix_path_reproduces_the_template(tok):
     prompt = render.render_generation_prompt(tok, on, MESSAGES[:-1])
     assert set(weights[: len(prompt)]) == {0}
     assert set(weights[len(prompt):]) == {1}
+
+
+def test_render_mismatch_reports_both_renders(tok):
+    # The prefix-property guard is what stops a mis-masked training example from
+    # reaching the optimizer, and Task 6's diagnostics read .prompt_text /
+    # .full_text off the exception. Real trigger: an assistant message carrying
+    # its own </think> block. Qwen3's template splits that into
+    # reasoning_content and emits the real reasoning where the generation
+    # prompt primed an empty block, so the full render stops being a
+    # continuation of the prompt.
+    msgs = [
+        {"role": "user", "content": "What is 2+2?"},
+        {"role": "assistant", "content": "<think>\nLet me add them.\n</think>\n\n4."},
+    ]
+    with pytest.raises(render.RenderMismatch) as exc:
+        render.render_training_example(tok, QWEN3.family, msgs)
+    err = exc.value
+    assert err.prompt_text, "prompt_text not populated — check_render cannot report the mismatch"
+    assert err.full_text, "full_text not populated — check_render cannot report the mismatch"
+    # Sane: the two must actually show the divergence they are reported for.
+    assert not err.full_text.startswith(err.prompt_text)
+    assert err.prompt_text.endswith("<think>\n\n</think>\n\n")   # primed empty block
+    assert "Let me add them." in err.full_text                   # real reasoning took its place
 
 
 def test_stop_strings_nonempty_and_in_render(tok):
