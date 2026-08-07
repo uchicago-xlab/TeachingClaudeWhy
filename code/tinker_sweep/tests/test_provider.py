@@ -374,3 +374,58 @@ def test_unknown_model_arg_is_refused():
     # log claims a finetune.
     with pytest.raises(TypeError, match="checkpint"):
         build(checkpint="tinker://oops")
+
+
+# --- native-CoT variant ------------------------------------------------------
+
+def _generate(api, raw_text):
+    """One generate() on `raw_text`, through the same sampling mock as above."""
+    out, _ = generate(api, response(api.tokenizer, raw_text))
+    return out
+
+
+def test_native_cot_arg_is_accepted_and_default_off():
+    api, _ = build()
+    assert api.native_cot is False
+    api, _ = build(native_cot=True)
+    assert api.native_cot is True
+    with pytest.raises(TypeError):  # unknown args still refused
+        build(natve_cot=True)
+
+
+def test_native_cot_renders_native_prompt():
+    api_std, _ = build()
+    api_nat, _ = build(native_cot=True)
+    std = api_std.tokenizer.decode(
+        render.render_generation_prompt(api_std.tokenizer, api_std.render_family, MESSAGE_DICTS)
+    )
+    nat = api_nat.tokenizer.decode(
+        render.render_generation_prompt(api_nat.tokenizer, api_nat.render_family, MESSAGE_DICTS)
+    )
+    assert "<think>\n\n</think>" in std  # thinking-off shape
+    assert "<think>" not in nat  # qwen3 native primes nothing
+
+
+def test_native_cot_splits_reasoning_from_final():
+    api, _ = build(native_cot=True)
+    out = _generate(api, "<think>evil plan</think>\n\nFinal answer.<|im_end|>")
+    msg = out.choices[0].message
+    assert out.completion == "Final answer."
+    parts = {getattr(p, "type", None): p for p in msg.content}
+    assert parts["reasoning"].reasoning == "evil plan"
+    assert parts["text"].text == "Final answer."
+
+
+def test_native_cot_no_reasoning_block_when_model_skips_thinking():
+    api, _ = build(native_cot=True)
+    out = _generate(api, "Straight answer.<|im_end|>")
+    types = [getattr(p, "type", None) for p in out.choices[0].message.content]
+    assert types == ["text"]
+    assert out.completion == "Straight answer."
+
+
+def test_standard_path_unchanged_by_native_code():
+    api, _ = build()  # native_cot absent
+    out = _generate(api, "<think>stray</think>Answer.<|im_end|>")
+    assert isinstance(out.choices[0].message.content, str)  # plain str as before
+    assert out.completion == "Answer."  # reasoning stripped as before
