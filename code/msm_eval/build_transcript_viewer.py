@@ -31,7 +31,13 @@ def msg_text(m):
     if isinstance(c, str):
         text = c
     else:
-        text = "\n".join(getattr(p, "text", "") for p in c)
+        # Reasoning parts are excluded deliberately: ContentReasoning.text is
+        # "<think>{reasoning}</think>", not "", so without this filter the CoT
+        # lands inline here as well as in its own block (assistant_reasoning),
+        # and a tool call the model only *drafts* while thinking would trip the
+        # `"acted": "<tool_use:" in output` heuristic below.
+        text = "\n".join(getattr(p, "text", "") for p in c
+                         if getattr(p, "type", None) != "reasoning")
     calls = getattr(m, "tool_calls", None) or []
     for t in calls:
         text += f"\n\n[tool call] {t.function}({json.dumps(t.arguments)})"
@@ -41,11 +47,9 @@ def msg_text(m):
 def assistant_reasoning(messages):
     """Native CoT (--native-cot runs): ContentReasoning parts, in order.
 
-    Note msg_text() does *not* drop these: ContentReasoning.text is a property
-    returning "<think>{reasoning}</think>" (inspect_ai 0.3.252), so the CoT is
-    already embedded in 'output'. This pulls it out into its own collapsible
-    block; the copy inside 'output' stays, so nothing is hidden from a reader
-    who only scrolls the output pane.
+    Sole source of the CoT in the viewer: msg_text() filters reasoning parts
+    out (ContentReasoning.text is "<think>{reasoning}</think>", not ""), so
+    'output' is the final response and this feeds the collapsible block.
     """
     parts = []
     for m in messages:
@@ -446,8 +450,9 @@ def main():
     # Incremental: per-run stats cached in manifest.json; a run dir is only
     # re-rendered when a log file in it is newer than its cached entry, so
     # the post-eval auto-rebuild (msm_eval_run.py) stays cheap. "v" bumps
-    # when the page schema changes (v2: acted + annotation badges).
-    MANIFEST_V = 2
+    # when the page schema changes (v2: acted + annotation badges; v3: native
+    # CoT in its own block, and msg_text no longer inlines it into output).
+    MANIFEST_V = 3
     manifest_path = out_dir / "manifest.json"
     manifest = (json.loads(manifest_path.read_text())
                 if manifest_path.exists() else {})
