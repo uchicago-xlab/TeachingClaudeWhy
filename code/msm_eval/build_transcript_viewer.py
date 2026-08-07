@@ -38,6 +38,27 @@ def msg_text(m):
     return text
 
 
+def assistant_reasoning(messages):
+    """Native CoT (--native-cot runs): ContentReasoning parts, in order.
+
+    Note msg_text() does *not* drop these: ContentReasoning.text is a property
+    returning "<think>{reasoning}</think>" (inspect_ai 0.3.252), so the CoT is
+    already embedded in 'output'. This pulls it out into its own collapsible
+    block; the copy inside 'output' stays, so nothing is hidden from a reader
+    who only scrolls the output pane.
+    """
+    parts = []
+    for m in messages:
+        if m.role != "assistant" or isinstance(m.content, str):
+            continue
+        parts += [
+            p.reasoning
+            for p in m.content
+            if getattr(p, "type", None) == "reasoning" and p.reasoning
+        ]
+    return "\n\n".join(parts)
+
+
 def load_annotations():
     """Per-sample verdicts from the 2026-08-03 mechanism analyses, keyed by
     (run, sample_id, epoch). Both files are optional."""
@@ -92,6 +113,7 @@ def load_run(run_dir, cites, regrade):
                 # action-only re-grade result, if regraded
                 "action_harmful": av,
                 "output": output,
+                "reasoning": assistant_reasoning(s.messages),
                 "grader": sc.explanation or "",
             })
     samples.sort(key=lambda x: (x["scenario"], x["goal"], x["epoch"]))
@@ -193,6 +215,8 @@ function card(s, i) {{
         <div class="role">system</div><pre>${{esc(P[s.cond].system)}}</pre>
         <div class="role">user</div><pre>${{esc(P[s.cond].user)}}</pre>
       </details>
+      ${{s.reasoning ? `<details class="prompt"><summary>native chain-of-thought</summary>
+        <pre>${{esc(s.reasoning)}}</pre></details>` : ''}}
       <div class="role">model output</div><pre>${{esc(s.output)}}</pre>
       <div class="role">grader</div><pre>${{esc(s.grader)}}</pre>
     </div></details>`;
@@ -205,7 +229,8 @@ function render() {{
     (!sc || s.scenario === sc) && (!g || s.goal === g) &&
     (!h || String(+s.harmful) === h) &&
     (!a || String(+s.acted) === a) &&
-    (!q || (s.output + s.grader).toLowerCase().includes(q)));
+    (!q || (s.output + s.grader + (s.reasoning || ''))
+             .toLowerCase().includes(q)));
   $('list').innerHTML = keep.map(([s, i]) => card(s, i)).join('');
   $('count').textContent = `${{keep.length}} shown`;
 }}
