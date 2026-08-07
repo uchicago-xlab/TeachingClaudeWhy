@@ -66,3 +66,17 @@ def test_every_family_has_a_contrast_entry():
         if m.family.key not in check_render.THINKING_CONTRAST
     }
     assert missing == set()
+
+
+def test_native_prompt_failures_pass_for_qwen3():
+    model = families.MODELS["Qwen/Qwen3-8B"]
+    tok = render.load_tokenizer(model)
+    history = [{"role": "system", "content": "s"}, {"role": "user", "content": "u"}]
+    off_text = tok.decode(render.render_generation_prompt(tok, model.family, history))
+    contrast = check_render.THINKING_CONTRAST["qwen3"]
+    failures, native_text, primed = check_render.native_prompt_failures(
+        tok, model.family, history, contrast, off_text
+    )
+    assert failures == []
+    assert "<think>" not in native_text     # qwen3 native primes nothing
+    assert primed is False

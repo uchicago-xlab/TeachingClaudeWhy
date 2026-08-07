@@ -3,7 +3,8 @@
 For each model: load its tokenizer, render one real adapted training example
 and its generation prompt, run the prefix-consistency check, compare the
 thinking-off prompt against the thinking-on one, count think markers, derive
-stop strings, and write a human-readable dump to
+stop strings, verify the native (template-default) prompt the --native-cot eval
+variant samples from, and write a human-readable dump to
 data/tinker-sweep/render-samples/<slug>.txt. Exits non-zero if any model fails.
 
     ../../.venv-tinker/bin/python check_render.py                 # all models
@@ -117,6 +118,40 @@ def _thinking_switch_failures(
     return failures, on_text
 
 
+def native_prompt_failures(
+    tok, fam: families.Family, history, contrast: Contrast, off_prompt_text: str
+) -> tuple[list[str], str, bool]:
+    """Verify the native (template-default) prompt used by the --native-cot eval.
+
+    Directional like the thinking-off check: the native prompt must not carry
+    the family's off_shape — except deepseek_v3_1, whose template defaults to
+    thinking OFF, where native must equal the standard prompt exactly. Also
+    refuses a native prompt that still ends with the family's
+    generation_prefill (native_view must not prime the answer block).
+    """
+    native = render.native_view(fam)
+    native_text = tok.decode(render.render_generation_prompt(tok, native, history))
+    primed = render.generation_prompt_opens_think(tok, native)
+    failures = []
+    if fam.key == "deepseek_v3_1":
+        if native_text != off_prompt_text:
+            failures.append(
+                "deepseek native prompt differs from the thinking-off prompt — its template "
+                "defaults thinking=false, so native must be identical to standard"
+            )
+    elif contrast.off_shape in native_text:
+        failures.append(
+            f"native (template-default) prompt still contains the thinking-off shape "
+            f"{contrast.off_shape!r} — native_view did not produce a thinking-on prompt"
+        )
+    if fam.generation_prefill and native_text.endswith(fam.generation_prefill):
+        failures.append(
+            f"native prompt still ends with generation_prefill {fam.generation_prefill!r} — "
+            "native_view must leave the model free to open its own block"
+        )
+    return failures, native_text, primed
+
+
 def check_model(model: families.SweepModel) -> bool:
     fam = model.family
     row = json.loads(
@@ -183,6 +218,13 @@ def check_model(model: families.SweepModel) -> bool:
                 f"{extracted[:100]!r}... instead of {content[:100]!r}..."
             )
 
+        # 5. native view (the --native-cot eval variant): template-default
+        # prompt must be thinking-ON (deepseek excepted) and prefill-free.
+        native_failures, native_text, primed = native_prompt_failures(
+            tok, fam, history, contrast, prompt_text
+        )
+        failures += native_failures
+
         n_think, n_think_close = full_text.count("<think>"), full_text.count("</think>")
         lines += [
             f"stop strings: {stops}",
@@ -192,9 +234,11 @@ def check_model(model: families.SweepModel) -> bool:
             f"{completion_text.count('</think>')}  (0/0 = primed in the prompt, never trained)",
             f"extract_response(sampled) -> {extracted[:80]!r}...",
             f"thinking-off shape required in the prompt: {contrast.off_shape!r}",
+            f"native prompt opens an unterminated <think> (provider restores the tag): {primed}",
             "", "=== GENERATION PROMPT, thinking-off (decoded) ===", prompt_text,
             "", f"=== GENERATION PROMPT, thinking-on {contrast.on_kwargs} "
                 "(decoded, for contrast — not used) ===", on_text,
+            "", "=== GENERATION PROMPT, native/template-default (--native-cot) ===", native_text,
             "", "=== TRAINED COMPLETION (decoded) ===", completion_text,
         ]
     except Exception as e:  # noqa: BLE001 — report everything, fail the run
