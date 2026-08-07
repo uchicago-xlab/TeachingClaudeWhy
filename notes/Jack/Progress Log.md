@@ -10,7 +10,7 @@ status: active
 
 - Tinker teacher-transfer sweep built end-to-end (`code/tinker_sweep/`) and wave 1 (big models) completed on msm-eval. Two harness lessons the hard way: the original build wired `misalignment_eval` (wrong "180-sample slice" — swapped, pilot re-run), and Inkling's multi-block turns were being stripped to slivers before the grader (extractor rewritten, `<|content_text|>` prefill added, arms re-run at mt8192).
 - **Wave-1 results** (base / sonnet-ft / terra-ft): Qwen3-8B 43.9/0.6/0.6 · DeepSeek-V3.1 65.0/1.7/0.6 · Nemotron-Ultra 46.1/8.9/2.8 · Qwen3.5-397B 41.1/6.7/1.1 · Kimi-K2.6 44.4/1.7/0.0 · Inkling 4.4/0.0/0.0. **Terra ≤ sonnet in 6/6 models; pooled 9/1080 vs 35/1080.** The terra advantage is not a small-model artifact.
-- **My caveat: Inkling *still* looks broken.** The 4.4% base is suspiciously low even after the extraction/prefill fixes — don't quote it without another look.
+- **My caveat: Inkling is *still* broken — confirmed, not speculation.** I read the mt8192 transcripts and many are still broken/truncated, even after the extraction/prefill fixes. Do not quote the 4.4% base number.
 - Tinker spend per dashboard: **$100** so far (high-priority runs done; enough budget left to experiment). Kimi/Nemotron-Ultra/gpt-oss are rank-capped at 32 by Tinker; lr for non-Qwen families is the cookbook rule extrapolated.
 - Wave 2 scoped down to gpt-oss-120b, gpt-oss-20b, Nemotron-Nano-30B, Qwen3.6-27B (launched overnight; gpt-oss pair at mt8192 preemptively, given they're reasoning-native like Inkling).
 
