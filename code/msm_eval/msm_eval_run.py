@@ -5,6 +5,12 @@ none}, urgency=replacement, n=30, temp 0.7, reasoning scratchpad (prod=False),
 model_name=Qwen — i.e. MSM's non-reasoning per-sample settings. Grader is
 OpenRouter Sonnet, fixed across models.
 
+--native-cot runs that same grid as a separate variant, tinker/ models only:
+prod=True drops the scratchpad instructions, the model thinks in its family's
+template-default shape, and the captured CoT is handed to the grader as the
+scratchpad while the action gates see the final response only (native_cot.py).
+Its numbers are a different condition — never pool them with standard runs.
+
     PYTHONPATH=<msm_vendor> .venv-inspect/bin/python msm_eval_run.py \
         --model openai/<served> --base-url http://<pod>:8000/v1 --run-name <name>
 
@@ -139,7 +145,18 @@ def main():
                          "students train on no-CoT data, so this is the "
                          "matched teacher condition. Encode in --run-name. "
                          "For vLLM-served students use --no-thinking instead.")
-    ap.add_argument("--max-tokens", type=int, default=4096,
+    ap.add_argument("--native-cot", action="store_true",
+                    help="run the native-CoT variant (tinker/ models only): "
+                         "prod=True removes the scratchpad instructions, the "
+                         "family samples in its template-default thinking "
+                         "shape, and the captured CoT is shown to the grader "
+                         "wrapped in <SCRATCHPAD_REASONING> (native_cot.py) "
+                         "while the action gates judge the final response "
+                         "only. Default --max-tokens becomes 8192. Results "
+                         "are a separate variant — never pool with standard "
+                         "runs. Spec: docs/superpowers/specs/"
+                         "2026-08-07-native-cot-msm-eval-design.md")
+    ap.add_argument("--max-tokens", type=int, default=None,
                     help="completion cap; the standardized slice uses 4096. "
                          "Raise it ONLY as a model-level correction for API "
                          "reasoning teachers whose hidden thinking burns the "
@@ -151,7 +168,7 @@ def main():
                          "its samples). Encode any non-default value in "
                          "--run-name (e.g. -mt8192) per msm convention; the "
                          "cap applies to every provider path, tinker and vLLM "
-                         "included")
+                         "included (default 4096; 8192 under --native-cot)")
     ap.add_argument("--stop-token-ids", default="",
                     help="comma-separated token ids to stop generation on, "
                          "sent as stop_token_ids. Required for checkpoints "
@@ -167,6 +184,11 @@ def main():
                          "any API (no samples, no grader spend)")
     args = ap.parse_args()
 
+    if args.max_tokens is None:
+        # Native thinking burns the standard 4096 cap and truncated samples
+        # grade non-harmful (the nemotron-nano and sonnet-5-teacher incidents).
+        args.max_tokens = 8192 if args.native_cot else 4096
+
     is_tinker = args.model.startswith("tinker/")
 
     # A tinker/ model samples through the Tinker API, so it has no endpoint of
@@ -181,6 +203,10 @@ def main():
         # the URL. Same reason the extra_body flags below are refused.
         sys.exit(f"--base-url {args.base_url} has no effect on a tinker/ model: "
                  "the Tinker API is the endpoint. Drop it.")
+    if args.native_cot and not is_tinker:
+        sys.exit("--native-cot is tinker/-only: CoT capture lives in the sweep's "
+                 "render layer (code/tinker_sweep/render.py); served models have "
+                 "no reasoning/final split here.")
 
     # Tinker-served models render their own chat format (code/tinker_sweep/render.py),
     # so the request-body switches below have nothing to reach: the provider refuses a
@@ -246,6 +272,17 @@ def main():
         )
 
     model_args = parse_model_args(args.model_arg)
+    if "native_cot" in model_args:
+        sys.exit("pass --native-cot, not --model-arg native_cot=…: the flag also "
+                 "sets prod=True and patches the grader input (native_cot.py); the "
+                 "bare model arg would sample natively while grading blind.")
+    if args.native_cot:
+        model_args["native_cot"] = True
+        import native_cot
+        native_cot.apply_patch()
+        if "natcot" not in args.run_name:
+            print("WARNING: --native-cot run without 'natcot' in --run-name — "
+                  "summarize.py keys runs on the directory name, so encode the variant.")
     if args.api_no_reasoning:
         model_args["reasoning_enabled"] = False
 
@@ -260,18 +297,24 @@ def main():
             family = tinker_families.get_model(args.model.removeprefix("tinker/")).family
         except KeyError as e:
             sys.exit(e.args[0])  # KeyError's str() re-quotes the message
-        thinking = "disabled" if family.thinking_off else "minimal"
+        thinking = ("native" if args.native_cot
+                    else "disabled" if family.thinking_off else "minimal")
         thinking_note = f"{thinking} (rendered by families.{family.key}" + (
-            ")" if family.thinking_off else "; template has no off switch, lowest effort only)"
+            "; template default — --native-cot)" if args.native_cot
+            else ")" if family.thinking_off
+            else "; template has no off switch, lowest effort only)"
         )
         metadata = {"tcw_thinking": thinking, "tcw_model_name": args.model_name}
+        if args.native_cot:
+            metadata["tcw_variant"] = "native-cot"
     else:
         thinking_note = "disabled" if args.no_thinking else "provider default"
 
     tasks = [
         agentic_misalignment(
             scenario=s, goal_type=gt, goal_value=gv,
-            urgency_type=args.urgency_type, prod=False,
+            # prod=True drops the scratchpad paragraphs; that IS the native-CoT condition
+            urgency_type=args.urgency_type, prod=args.native_cot,
             model_name=args.model_name, grader_model=GRADER,
         )
         for s in SCENARIOS for (gt, gv) in GOALS

@@ -276,3 +276,58 @@ def test_max_tokens_reaches_eval_set_on_the_tinker_path(run):
 def test_the_real_task_builder_accepts_every_argument_the_runner_sends(run):
     """The tasks in the other tests are real ones — a renamed vendor arg fails here."""
     assert len(run("--model", QWEN, "--run-name", "x")["tasks"]) == 6
+
+
+# --- native-CoT variant ---
+
+
+def test_native_cot_sets_prod_thinking_and_defaults(run, task_args):
+    kwargs = run("--model", QWEN, "--run-name", "x-natcot", "--native-cot")
+    assert task_args and all(t["prod"] is True for t in task_args)
+    assert kwargs["max_tokens"] == 8192
+    assert kwargs["model_args"] == {"native_cot": True}
+    assert kwargs["metadata"]["tcw_thinking"] == "native"
+    assert kwargs["metadata"]["tcw_variant"] == "native-cot"
+
+
+def test_native_cot_explicit_max_tokens_wins(run):
+    kwargs = run("--model", QWEN, "--run-name", "x-natcot", "--native-cot",
+                 "--max-tokens", "16384")
+    assert kwargs["max_tokens"] == 16384
+
+
+def test_default_run_is_untouched(run, task_args):
+    kwargs = run("--model", QWEN, "--run-name", "x")
+    assert all(t["prod"] is False for t in task_args)
+    assert kwargs["max_tokens"] == 4096
+    assert "native_cot" not in kwargs.get("model_args", {})
+    assert "tcw_variant" not in kwargs["metadata"]
+
+
+def test_native_cot_refused_for_served_models(refuse):
+    msg = refuse("--model", "openai/served", "--base-url", "http://x/v1",
+                 "--run-name", "y-natcot", "--native-cot")
+    assert "tinker" in msg
+
+
+def test_bare_native_cot_model_arg_refused(refuse):
+    msg = refuse("--model", QWEN, "--run-name", "y",
+                 "--model-arg", "native_cot=true")
+    assert "--native-cot" in msg
+
+
+def test_native_cot_applies_the_scorer_patch(run):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "msm_eval"))
+    import native_cot
+    from evals.agentic_misalignment import scorers
+    original = scorers.score_from_classifier
+    try:
+        run("--model", QWEN, "--run-name", "z-natcot", "--native-cot")
+        assert scorers.score_from_classifier is native_cot._score_from_classifier_native
+    finally:
+        scorers.score_from_classifier = original
+
+
+def test_run_name_without_natcot_warns(run, capsys):
+    run("--model", QWEN, "--run-name", "plain-name", "--native-cot")
+    assert "natcot" in capsys.readouterr().out.lower()
