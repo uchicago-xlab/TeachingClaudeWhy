@@ -18,6 +18,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "msm_eval"))
 import msm_eval_run  # noqa: E402
+import native_cot  # noqa: E402  (also inserts the vendor path)
+from evals.agentic_misalignment import scorers  # noqa: E402  (vendor, via native_cot)
+
+# Captured at import, which pytest does at collection time — before any test can
+# call apply_patch() — so this is the real vendored function, not a leaked patch.
+VENDORED_SCORE_FROM_CLASSIFIER = scorers.score_from_classifier
 
 QWEN = "tinker/Qwen/Qwen3-8B"
 GPT_OSS = "tinker/openai/gpt-oss-20b"
@@ -29,6 +35,28 @@ class EvalSetCalled(Exception):
 
     def __init__(self, kwargs):
         self.kwargs = kwargs
+
+
+@pytest.fixture(autouse=True)
+def restore_vendored_scorer():
+    """Undo the scorer patch every --native-cot run below leaves behind.
+
+    main() calls the real native_cot.apply_patch(), which rebinds
+    scorers.score_from_classifier for the whole process and has no inverse — by
+    design, since one invocation of the runner runs one variant. Under pytest
+    that makes the patch outlive the test that applied it: without this fixture
+    the first --native-cot test here silently patches the rest of the session
+    (this file sorts before test_native_cot.py, whose patch test then captured
+    the native function as its "original"), and
+    test_a_run_without_the_flag_leaves_the_vendored_scorer_alone would pass or
+    fail on collection order rather than on the runner's behavior.
+
+    See the twin fixture in test_native_cot.py for why this is duplicated
+    rather than put in the sweep conftest.
+    """
+    saved = scorers.score_from_classifier
+    yield
+    scorers.score_from_classifier = saved
 
 
 @pytest.fixture
@@ -304,6 +332,18 @@ def test_default_run_is_untouched(run, task_args):
     assert "tcw_variant" not in kwargs["metadata"]
 
 
+def test_a_run_without_the_flag_leaves_the_vendored_scorer_alone(run):
+    """The no-flag promise at the scorer layer, where it is easiest to break.
+
+    apply_patch() rebinds a module global for the whole process, so a standard
+    run that reached it would grade by native-CoT rules — final-only gates, CoT
+    wrapped into the grader input — while reporting itself as the standard
+    condition. Nothing else in the suite pins this.
+    """
+    run("--model", QWEN, "--run-name", "x")
+    assert scorers.score_from_classifier is VENDORED_SCORE_FROM_CLASSIFIER
+
+
 def test_native_cot_refused_for_served_models(refuse):
     msg = refuse("--model", "openai/served", "--base-url", "http://x/v1",
                  "--run-name", "y-natcot", "--native-cot")
@@ -316,18 +356,28 @@ def test_bare_native_cot_model_arg_refused(refuse):
     assert "--native-cot" in msg
 
 
+def test_the_model_arg_alongside_the_flag_is_refused_as_redundant(refuse):
+    """The bare-model-arg refusal explains that grading would stay blind — true
+    only when the flag is absent. With both passed, the flag has already set the
+    arg and patched the grader, so that rationale would misdescribe the run."""
+    msg = refuse("--model", QWEN, "--run-name", "y-natcot", "--native-cot",
+                 "--model-arg", "native_cot=true")
+    assert "redundant" in msg
+    assert "grading blind" not in msg
+
+
 def test_native_cot_applies_the_scorer_patch(run):
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "msm_eval"))
-    import native_cot
-    from evals.agentic_misalignment import scorers
-    original = scorers.score_from_classifier
-    try:
-        run("--model", QWEN, "--run-name", "z-natcot", "--native-cot")
-        assert scorers.score_from_classifier is native_cot._score_from_classifier_native
-    finally:
-        scorers.score_from_classifier = original
+    run("--model", QWEN, "--run-name", "z-natcot", "--native-cot")
+    assert scorers.score_from_classifier is native_cot._score_from_classifier_native
 
 
 def test_run_name_without_natcot_warns(run, capsys):
     run("--model", QWEN, "--run-name", "plain-name", "--native-cot")
     assert "natcot" in capsys.readouterr().out.lower()
+
+
+def test_the_run_name_check_ignores_case(run, capsys):
+    """Log directories get named by hand; -NatCoT encodes the variant as well as
+    -natcot does, and warning about it teaches operators to ignore the warning."""
+    run("--model", QWEN, "--run-name", "x-NatCoT", "--native-cot")
+    assert "WARNING" not in capsys.readouterr().out

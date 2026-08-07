@@ -33,6 +33,8 @@ from evals.agentic_misalignment import scorers
 
 def reasoning_text(state) -> str:
     """All ContentReasoning parts of the assistant message, joined."""
+    if not state.output.choices:
+        return ""  # errored sample; the vendored path's .completion is "" here too
     content = state.output.choices[0].message.content
     if isinstance(content, str):
         return ""

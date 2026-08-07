@@ -273,6 +273,9 @@ def main():
 
     model_args = parse_model_args(args.model_arg)
     if "native_cot" in model_args:
+        if args.native_cot:
+            sys.exit("--model-arg native_cot=… is redundant with --native-cot, which "
+                     "sets it for you. Drop the model arg.")
         sys.exit("pass --native-cot, not --model-arg native_cot=…: the flag also "
                  "sets prod=True and patches the grader input (native_cot.py); the "
                  "bare model arg would sample natively while grading blind.")
@@ -280,7 +283,7 @@ def main():
         model_args["native_cot"] = True
         import native_cot
         native_cot.apply_patch()
-        if "natcot" not in args.run_name:
+        if "natcot" not in args.run_name.lower():
             print("WARNING: --native-cot run without 'natcot' in --run-name — "
                   "summarize.py keys runs on the directory name, so encode the variant.")
     if args.api_no_reasoning:

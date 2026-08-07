@@ -1,5 +1,10 @@
-"""summarize.py's truncation column — the native-CoT variant's failure mode
-(truncated samples grade non-harmful and silently deflate rates).
+"""summarize.py's truncation column — the native-CoT variant's failure mode (a
+sample cut off before it acts often loses its action and grades non-harmful,
+silently deflating the rate).
+
+Only "often": as summarize.py's docstring says, a sample that emitted its tool
+call and then ran into the cap is counted here and still grades harmful. The
+column is a caveat flag, not a reliability metric.
 
 Loaded by path under a distinct module name for the reason
 test_msm_summarize_arms.py documents: `summarize` is also the name of the
@@ -61,8 +66,10 @@ def out(stop_reason):
 def test_rates_counts_max_tokens_samples_as_truncated(monkeypatch, tmp_path):
     """The column has to come from the logs, not just render cleanly.
 
-    A truncated sample still scores — non-harmful, because the model never got
-    to the harmful act — so it is counted in both n and trunc but not harmful.
+    A truncated sample still scores, and the two stubbed here score non-harmful
+    — the cap landed before the act — so they are counted in n and trunc but not
+    in harmful. That is the common case, not a rule: had one already emitted its
+    tool call, it would still grade harmful and still be counted in trunc.
     """
     log = types.SimpleNamespace(
         samples=[

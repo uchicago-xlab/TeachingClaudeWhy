@@ -97,9 +97,11 @@ class TinkerAPI(ModelAPI):
         # stop strings costs a render, and the eval issues hundreds of samples.
         self.tokenizer = render.load_tokenizer(self.sweep_model)
         self.stop_strings = render.derive_stop_strings(self.tokenizer, self.render_family)
-        # Families whose native prompt primes an open `<think>` (qwen3_5/3_6,
-        # nemotron) sample text that starts mid-reasoning; the tag is restored
-        # before extraction so the reasoning is not read as the response.
+        # Families whose native prompt primes an open `<think>` sample text that
+        # starts mid-reasoning; the tag is restored before extraction so the
+        # reasoning is not read as the response. The probe below decides, not a
+        # hand-list — that is the point of it; qwen3_5/3_6, nemotron and kimi
+        # are what it answers yes for today, and a template edit moves the line.
         self.think_primed_open = self.native_cot and render.generation_prompt_opens_think(
             self.tokenizer, self.render_family
         )
