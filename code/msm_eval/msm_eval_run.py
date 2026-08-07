@@ -145,8 +145,13 @@ def main():
                          "reasoning teachers whose hidden thinking burns the "
                          "cap and truncates the visible action (2026-08-05: "
                          "sonnet-5 teacher run truncated 159/180 samples at "
-                         "4096 and scored an artifactual 0%). Encode any "
-                         "non-default value in --run-name")
+                         "4096 and scored an artifactual 0%%) — or for a verbose "
+                         "student that truncates at the cap on any provider "
+                         "(2026-08-06: the Kimi-K2.6 base arm truncated 54%% of "
+                         "its samples). Encode any non-default value in "
+                         "--run-name (e.g. -mt8192) per msm convention; the "
+                         "cap applies to every provider path, tinker and vLLM "
+                         "included")
     ap.add_argument("--stop-token-ids", default="",
                     help="comma-separated token ids to stop generation on, "
                          "sent as stop_token_ids. Required for checkpoints "

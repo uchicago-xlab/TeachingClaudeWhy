@@ -406,6 +406,102 @@ def test_a_log_dir_outside_the_drivers_own_log_root_is_never_moved(tmp_path, mon
     assert foreign.exists()
 
 
+# ------------------------------------------------------------- a raised token cap
+
+
+def _mt_stages(max_tokens, model="Qwen/Qwen3-8B"):
+    plan = run_model.build_plan(model, eval_epochs=30, train_epochs=4,
+                                eval_max_tokens=max_tokens)
+    return [s for s in plan if s.name.startswith("eval-")]
+
+
+def test_the_default_cap_changes_nothing():
+    """4096 is what msm_eval_run uses anyway: no flag, no suffix, so a standard
+    run of the driver keeps producing the standardized slice's run names."""
+    default = [s.command for s in _eval_stages()]
+    assert [s.command for s in _mt_stages(run_model.DEFAULT_EVAL_MAX_TOKENS)] == default
+    assert all("--max-tokens" not in c for c in default)
+    assert all("-mt" not in " ".join(c) for c in default)
+
+
+def test_a_raised_cap_reaches_every_eval_command():
+    for stage in _mt_stages(8192):
+        cmd = stage.command
+        assert cmd[cmd.index("--max-tokens") + 1] == "8192"
+
+
+def test_a_raised_cap_renames_all_three_arms_and_keeps_them_distinct():
+    """The cap is a property of the comparison, not of one arm: if only some
+    arms carried it, the sweep would compare a truncated base against untruncated
+    finetunes. And a corrected arm must not land in the standard slice's
+    directory, which eval_set would treat as already complete."""
+    names = [run_model.log_dir_for(s).name for s in _mt_stages(8192)]
+    assert names == ["msm-tinker-qwen-qwen3-8b-mt8192",
+                     "msm-tinker-qwen-qwen3-8b-sonnet08-mt8192",
+                     "msm-tinker-qwen-qwen3-8b-terra08-mt8192"]
+    assert len(set(names)) == 3
+    assert not set(names) & {run_model.log_dir_for(s).name for s in _eval_stages()}
+
+
+def test_suffixed_arm_names_stay_driver_generated():
+    """The stale-arm mover only touches names this driver generated; the suffix
+    must not push one out of that namespace."""
+    for model in families.MODELS:
+        for stage in _mt_stages(8192, model):
+            assert run_model.log_dir_for(stage).name.startswith("msm-tinker-")
+
+
+def test_a_stale_suffixed_arm_is_still_moved(tmp_path, monkeypatch):
+    monkeypatch.setattr(run_model, "LOG_ROOT", tmp_path)
+    plan = run_model.build_plan("Qwen/Qwen3-8B", eval_epochs=30, train_epochs=4,
+                                eval_max_tokens=8192)
+    log_dir = tmp_path / "msm-tinker-qwen-qwen3-8b-terra08-mt8192"
+    log_dir.mkdir()
+    state = {"stages": {"train-terra": {"status": "done"}, "eval-terra": {"status": "done"}}}
+    assert run_model.stale_eval_arm("train-terra", state, plan) == ("eval-terra", log_dir)
+
+
+def test_a_foreign_run_name_is_still_never_moved(tmp_path, monkeypatch):
+    """The suffix must not have widened what the mover is willing to rename."""
+    monkeypatch.setattr(run_model, "LOG_ROOT", tmp_path)
+    plan = run_model.build_plan("Qwen/Qwen3-8B", eval_epochs=30, train_epochs=4,
+                                eval_max_tokens=8192)
+    foreign = tmp_path / "elsewhere" / "someones-own-mt8192-run"
+    foreign.mkdir(parents=True)
+    for stage in plan:
+        if stage.name == "eval-terra":
+            stage.command[stage.command.index("--run-name") + 1] = "elsewhere/someones-own-mt8192-run"
+    state = {"stages": {"eval-terra": {"status": "done"}}}
+    assert run_model.stale_eval_arm("train-terra", state, plan) == ("eval-terra", None)
+    assert foreign.exists()
+
+
+def test_the_raised_cap_commands_are_accepted_by_msm_eval_run(monkeypatch):
+    """Same end-to-end check as the default plan gets: the driver's flags are
+    parsed by the script that receives them, and the cap reaches eval_set."""
+    sys.path.insert(0, str(Path(run_model.REPO_ROOT) / "code" / "msm_eval"))
+    import msm_eval_run
+
+    monkeypatch.setenv("TINKER_API_KEY", "test-key")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+
+    class Reached(Exception):
+        def __init__(self, kwargs):
+            self.kwargs = kwargs
+
+    monkeypatch.setattr(msm_eval_run, "eval_set",
+                        lambda **kwargs: (_ for _ in ()).throw(Reached(kwargs)))
+
+    for stage in _mt_stages(8192):
+        argv = [a.replace("{checkpoint}", "tinker://w/00042") for a in stage.command[2:]]
+        monkeypatch.setattr(sys, "argv", ["msm_eval_run.py", *argv])
+        with pytest.raises(Reached) as excinfo:
+            msm_eval_run.main()
+        kwargs = excinfo.value.kwargs
+        assert kwargs["max_tokens"] == 8192
+        assert kwargs["log_dir"] == str(run_model.log_dir_for(stage))
+
+
 # ------------------------------------------------------------- state recording
 
 

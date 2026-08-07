@@ -255,6 +255,24 @@ def test_the_fixed_slice_is_unchanged_for_a_tinker_run(run, task_args):
     assert all(t["urgency_type"] == "replacement" for t in task_args)
 
 
+def test_the_help_text_renders(monkeypatch, capsys):
+    """argparse %-formats help strings, so a bare `%` in one (there was: "an
+    artifactual 0%)") makes --help raise ValueError instead of listing the
+    flags — invisible until an operator asks the script what it takes."""
+    monkeypatch.setattr(sys, "argv", ["msm_eval_run.py", "--help"])
+    with pytest.raises(SystemExit) as exc:
+        msm_eval_run.main()
+    assert exc.value.code == 0
+    assert "--max-tokens" in capsys.readouterr().out
+
+
+def test_max_tokens_reaches_eval_set_on_the_tinker_path(run):
+    """The cap is a provider-independent generate config: a verbose base model
+    that truncates at 4096 (Kimi-K2.6 base: 54% of samples) grades as harmless,
+    so raising it has to actually reach the sampler rather than the log header."""
+    assert run("--model", QWEN, "--run-name", "x", "--max-tokens", "8192")["max_tokens"] == 8192
+
+
 def test_the_real_task_builder_accepts_every_argument_the_runner_sends(run):
     """The tasks in the other tests are real ones — a renamed vendor arg fails here."""
     assert len(run("--model", QWEN, "--run-name", "x")["tasks"]) == 6

@@ -24,8 +24,10 @@ code/tinker_sweep and so needs .venv-tinker rather than .venv-inspect.
 The eval harness is msm_eval — the team's standardized SDF slice (6 conditions
 x 30 = 180 samples, temp 0.7), which is what the teacher-grid reference numbers
 were measured on. Its grid is fixed in msm_eval_run.py, so there is no --preset
-here; the one thing that varies per model is --model-name, which addresses the
-scenario prompts to the model's own assistant name (families.py).
+here; what varies per model is --model-name, which addresses the scenario
+prompts to the model's own assistant name (families.py), and --eval-max-tokens
+for a model verbose enough to truncate at the slice's 4096-token cap (that
+deviation is written into the arm names as -mt<N>).
 """
 
 import argparse
@@ -54,6 +56,8 @@ EVAL_OF_TRAIN = {"train-sonnet": "eval-sonnet", "train-terra": "eval-terra"}
 # msm_eval_run.py puts each run in REPO/data/msm-eval/<run-name> (no logs/ level),
 # and code/msm_eval/summarize.py reads run directory names from there.
 LOG_ROOT = REPO_ROOT / "data" / "msm-eval"
+# msm_eval_run.py's own default; the standardized slice's completion cap.
+DEFAULT_EVAL_MAX_TOKENS = 4096
 
 
 @dataclasses.dataclass
@@ -68,10 +72,18 @@ class Stage:
     writes_state: str | None = None
 
 
-def build_plan(model: str, eval_epochs: int, train_epochs: int) -> list[Stage]:
+def build_plan(model: str, eval_epochs: int, train_epochs: int,
+               eval_max_tokens: int = DEFAULT_EVAL_MAX_TOKENS) -> list[Stage]:
     slug = families.slug(model)
     family = families.get_model(model).family
     run_dir = HERE / "runs" / slug
+    # A raised token cap is a deviation from the standardized slice, so it goes
+    # in the run name: summarize.py's rows ARE run directory names, and a
+    # corrected arm that reused the standard name would silently overwrite (or
+    # be skipped by eval_set as already complete) the run it is meant to
+    # replace. All three arms carry it or none do — the cap has to match across
+    # a comparison the same way --model-name does.
+    suffix = "" if eval_max_tokens == DEFAULT_EVAL_MAX_TOKENS else f"-mt{eval_max_tokens}"
 
     def eval_cmd(run_name: str, checkpoint_placeholder: bool) -> list[str]:
         # No --base-url and no --preset: msm_eval_run refuses a base-url for a
@@ -79,7 +91,9 @@ def build_plan(model: str, eval_epochs: int, train_epochs: int) -> list[Stage]:
         # in the script, not selected by flag.
         cmd = [PY, "msm_eval_run.py", "--model", f"tinker/{model}",
                "--model-name", family.assistant_name,
-               "--epochs", str(eval_epochs), "--run-name", run_name]
+               "--epochs", str(eval_epochs), "--run-name", run_name + suffix]
+        if suffix:
+            cmd += ["--max-tokens", str(eval_max_tokens)]
         if checkpoint_placeholder:
             cmd += ["--model-arg", "checkpoint={checkpoint}"]
         return cmd
@@ -299,6 +313,16 @@ def main() -> int:
                         help="eval epochs per condition (msm_eval's 6 fixed "
                              "conditions x 30 = the 180-sample slice)")
     parser.add_argument("--train-epochs", type=int, default=4)
+    parser.add_argument("--eval-max-tokens", type=int, default=DEFAULT_EVAL_MAX_TOKENS,
+                        help="completion cap for the eval stages (default 4096, "
+                             "the standardized slice). Raise it for a verbose "
+                             "model whose samples truncate at the cap — a "
+                             "truncated sample grades non-harmful, so the arm "
+                             "reads better-behaved than it is (Kimi-K2.6 base: "
+                             "54%% truncated). A non-default value is appended "
+                             "to all three arm names as -mt<N>, so a corrected "
+                             "run neither collides with nor pools into the "
+                             "standard-slice run")
     parser.add_argument("--redo", choices=STAGES)
     parser.add_argument("--yes", action="store_true")
     args = parser.parse_args()
@@ -307,7 +331,7 @@ def main() -> int:
         families.get_model(args.model)  # hard error before anything else
     except KeyError as e:
         raise SystemExit(e.args[0])  # KeyError's str() re-quotes the message
-    plan = build_plan(args.model, args.epochs, args.train_epochs)
+    plan = build_plan(args.model, args.epochs, args.train_epochs, args.eval_max_tokens)
     state_path = HERE / "runs" / families.slug(args.model) / "state.json"
     state = load_state(state_path)
 

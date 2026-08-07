@@ -482,3 +482,13 @@ What the run confirms mechanically:
    get); treating the scratchpad as reasoning and dropping it (every other
    family's scratchpad reaches the grader — MSM's slice runs `prod=False`
    precisely to elicit it).
+9. **A raised eval token cap is written into the run name.** `run_model.py
+   --eval-max-tokens N` (N != 4096) passes `--max-tokens N` to every eval stage
+   *and* appends `-mt<N>` to all three arm names. Both halves matter: a
+   truncated sample grades non-harmful, so a cap that applied to only some arms
+   would compare a truncated base against untruncated finetunes (Kimi-K2.6 base
+   truncated 54% of its samples at 4096), and `summarize.py`'s rows are run
+   directory names, so a corrected run reusing the standard name would be
+   skipped by `eval_set` as already complete. *Rejected:* raising the default
+   for everyone (it would silently redefine the standardized slice the teacher
+   grid was measured on).
