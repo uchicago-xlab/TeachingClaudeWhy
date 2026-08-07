@@ -345,6 +345,8 @@ without `--yes` for token counts and a live price estimate. Log spend in
 
 ## Verified
 
+### Qwen3-8B pilot
+
 `Qwen/Qwen3-8B` ran end to end 2026-08-06 — all seven driver stages, one
 invocation, no interventions and no `--redo`. Its three eval arms were then
 **re-run on msm_eval 2026-08-07** after the harness swap, against the same two
@@ -410,6 +412,61 @@ What the run confirms mechanically:
   the log directory ended up with exactly 6 `.eval` files, so nothing double
   counted. Expect this occasionally on the big-model wave; the driver's stage
   fails only if the retries do.
+
+### Wave 1 — five big models
+
+Five large models ran through the full pipeline 2026-08-07, joining the pilot for
+six models total. Every number below is the msm harness (`code/msm_eval`), 180
+samples per arm, the fixed Sonnet 4.6 grader, `-mt8192` where the arm names say
+so. Harmful rate as a percentage; counts out of 180 in parentheses.
+
+| model | base | sonnet08-ft | terra08-ft |
+| --- | --- | --- | --- |
+| Qwen3-8B (pilot) | 43.9 (79) | 0.6 (1) | 0.6 (1) |
+| DeepSeek-V3.1 | 65.0 (117) | 1.7 (3) | 0.6 (1) |
+| Nemotron-3-Ultra-550B (r32) | 46.1 (83) | 8.9 (16) | 2.8 (5) |
+| Qwen3.5-397B-A17B (mt8192) | 41.1 (74) | 6.7 (12) | 1.1 (2) |
+| Kimi-K2.6 (r32, mt8192) | 44.4 (80) | 1.7 (3) | 0.0 (0) |
+| Inkling (prefill, mt8192) | 4.4 (8) | 0.0 (0) | 0.0 (0) |
+
+`r32` = Tinker caps that model's LoRA rank at 32, so both its finetunes ran there
+(`PROBE.md`, "LoRA rank caps"); `mt8192` = the arm ran at
+`--eval-max-tokens 8192` (decision 9); `prefill` = Inkling's
+`generation_prefill` (decision 8). Reproduce any row with
+`code/msm_eval/summarize.py` over the `msm-tinker-*` run directories.
+
+**Pooled across all six models, the finetunes separate: sonnet08 35/1080 (3.2%)
+against terra08 9/1080 (0.8%).** The direction holds per model as well —
+terra ≤ sonnet in 6/6, strictly below in 4 and tied at the floor in the two
+(Qwen3-8B, Inkling) where both arms sit at 0–1 samples. The two models with real
+headroom above the floor are the ones that carry the pooled result:
+Nemotron-Ultra (16 vs 5) and Qwen3.5-397B (12 vs 2). Base rates land in the
+41–65% band everywhere except Inkling, whose 4.4% base leaves almost nothing to
+remove and makes its two zeros uninformative rather than confirming.
+
+> **Superseded runs.** Seven eval runs were paid for and are not used.
+> `msm-tinker-moonshotai-kimi-k2-6{,-sonnet08,-terra08}` and
+> `msm-tinker-qwen-qwen3-5-397b-a17b{,-sonnet08,-terra08}` ran at the standard
+> 4096-token cap on 2026-08-07 and are replaced by their `-mt8192` counterparts:
+> a truncated sample grades non-harmful, and Kimi's base arm truncated 97/180
+> (54%) at 4096, so the arm read better-behaved than it is (decision 9;
+> Qwen3.5-397B base truncated 18/180 and was re-run for the same reason). At
+> 8192 those base arms truncate 8/180 and 2/180. Separately,
+> `msm-tinker-thinkingmachines-inkling` is an **aborted** base arm killed at ~120
+> of 180 samples on 2026-08-06: `extract_response` was keeping only
+> `<|content_text|>` blocks, so the grader saw an Inkling that took no actions at
+> all (decision 8). Both fixes landed before the runs that produced the table
+> above. DeepSeek-V3.1, Nemotron-Ultra and the Qwen3-8B pilot needed neither
+> re-run — they truncate 0–3 samples of 180 at 4096.
+
+**Cost of the five big models: ~$188.59** — $139.86 Tinker ($69.49 training for
+10 finetunes, $69.92 eval sampling, $0.45 of ad-hoc Inkling probes) plus $48.73
+of Sonnet 4.6 grading through OpenRouter. $24.99 of the Tinker sampling and
+$15.93 of the grading bought the superseded and aborted runs. The pilot's $15.41
+is logged separately. **This overruns the $116 Tinker allocation by $26.18 with
+nine models still unrun** — training scales with the model's price per token and
+eval sampling turned out to be the larger half, so wave 2 needs a re-budget, not
+just a top-up.
 
 ## Decision log
 
