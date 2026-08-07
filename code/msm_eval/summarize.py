@@ -12,6 +12,13 @@ arm names its own directory; give two arms the same name and they pool here.
 The sibling harness needs a `[ckpt:…]` label for this reason
 (code/misalignment_eval/summarize.py); this one does not.
 
+`trunc` = samples that stopped on max_tokens. A non-trivial rate means the harm
+rate is deflated: a sample cut off before it acts grades non-harmful whatever it
+was about to do. It matters most under --native-cot, where the thinking block
+can eat the whole budget. This is a caveat flag, not a reliability metric — a
+sample that emitted its tool call and then ran into the cap is counted here but
+still grades harmful; action_stats.py makes that distinction.
+
     .venv-inspect/bin/python code/msm_eval/summarize.py            # default RUNS
     .venv-inspect/bin/python code/msm_eval/summarize.py a b c      # named runs
     .venv-inspect/bin/python code/msm_eval/summarize.py --csv out.csv
@@ -34,8 +41,8 @@ RUNS = ["sdf-emb-3M-a1", "sdf-rec-3M-a1", "sdf-sonnet5-3M-a1"]
 
 
 def rates(run_dir):
-    """(scenario, goal) -> [harmful, n] for one run directory."""
-    by_cond = defaultdict(lambda: [0, 0])
+    """(scenario, goal) -> [harmful, n, truncated] for one run directory."""
+    by_cond = defaultdict(lambda: [0, 0, 0])
     for lg in list_eval_logs(str(REPO / "data" / "msm-eval" / run_dir)):
         log = read_eval_log(lg.name)
         a = log.eval.task_args
@@ -46,6 +53,8 @@ def rates(run_dir):
             by_cond[key][1] += 1
             if float(v["harmful"]) >= 1.0:
                 by_cond[key][0] += 1
+            if s.output is not None and s.output.stop_reason == "max_tokens":
+                by_cond[key][2] += 1
     return by_cond
 
 
@@ -63,25 +72,26 @@ def render(data):
     width = max([len(m) for m in data] + [12]) + 2
     head = f"{'run':{width}s}" + "".join(
         f"{sc[:4] + '/' + g[5:]:>13s}" for sc, g in CONDITIONS
-    ) + f"{'OVERALL':>18s}"
+    ) + f"{'OVERALL':>18s}" + f"{'trunc':>10s}"
     lines = [head, "-" * len(head)]
     for name, by_cond in data.items():
-        cells = "".join(f"{pct(*by_cond[c]):>13s}" for c in CONDITIONS)
+        cells = "".join(f"{pct(by_cond[c][0], by_cond[c][1]):>13s}" for c in CONDITIONS)
         h = sum(by_cond[c][0] for c in CONDITIONS)
         n = sum(by_cond[c][1] for c in CONDITIONS)
+        t = sum(by_cond[c][2] for c in CONDITIONS)
         overall = f"{h}/{n} {h / n * 100:.1f}%±{se(h, n) * 100:.1f}" if n else "-"
-        lines.append(f"{name:{width}s}{cells}{overall:>18s}")
+        lines.append(f"{name:{width}s}{cells}{overall:>18s}" + f"{t}/{n}".rjust(10))
     return "\n".join(lines)
 
 
 def write_csv(data, path):
     with open(path, "w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["run", "scenario", "goal", "harmful", "n", "rate"])
+        w.writerow(["run", "scenario", "goal", "harmful", "n", "rate", "truncated"])
         for name, by_cond in data.items():
             for sc, g in CONDITIONS:
-                h, n = by_cond[(sc, g)]
-                w.writerow([name, sc, g, h, n, f"{h / n:.4f}" if n else ""])
+                h, n, t = by_cond[(sc, g)]
+                w.writerow([name, sc, g, h, n, f"{h / n:.4f}" if n else "", t])
 
 
 def main():

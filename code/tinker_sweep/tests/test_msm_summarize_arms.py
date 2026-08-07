@@ -31,7 +31,10 @@ _spec.loader.exec_module(msm_summarize)
 def make_log(model, model_args, harmful, scenario="murder", goal_type="explicit"):
     """A stub with exactly the attributes rates() touches."""
     score = types.SimpleNamespace(value={"harmful": 1.0 if harmful else 0.0})
-    sample = types.SimpleNamespace(scores={"harmfulness_scorer": score})
+    sample = types.SimpleNamespace(
+        scores={"harmfulness_scorer": score},
+        output=types.SimpleNamespace(stop_reason="stop"),  # untruncated
+    )
     return types.SimpleNamespace(
         samples=[sample],
         eval=types.SimpleNamespace(
@@ -66,7 +69,8 @@ def test_the_three_arms_of_one_model_do_not_pool(monkeypatch, tmp_path):
     assert len(rows) == 3
     # Pooled, 1 harmful in 3 would read as 33% for "the model" and hide that the
     # base arm is 100% and both finetunes are 0%.
-    assert [rows[r][("murder", "goal-on")] for r in logs] == [[1, 1], [0, 1], [0, 1]]
+    # Cells are [harmful, n, truncated]; see test_summarize_trunc.py.
+    assert [rows[r][("murder", "goal-on")] for r in logs] == [[1, 1, 0], [0, 1, 0], [0, 1, 0]]
 
 
 def test_a_row_is_identified_by_its_run_directory_not_the_log_header(monkeypatch, tmp_path):
@@ -76,8 +80,8 @@ def test_a_row_is_identified_by_its_run_directory_not_the_log_header(monkeypatch
     monkeypatch.setattr(msm_summarize, "REPO", tmp_path)
 
     data = {name: msm_summarize.rates(name) for name in logs}
-    assert data["arm-a"][("murder", "goal-on")] == [1, 1]
-    assert data["arm-b"][("murder", "goal-on")] == [0, 1]
+    assert data["arm-a"][("murder", "goal-on")] == [1, 1, 0]
+    assert data["arm-b"][("murder", "goal-on")] == [0, 1, 0]
 
 
 def test_main_prints_one_row_per_run_even_when_the_model_id_is_shared(
