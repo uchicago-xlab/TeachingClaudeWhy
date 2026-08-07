@@ -193,9 +193,14 @@ No `--base-url`: a `tinker/` model samples through the Tinker API, and
 `msm_eval_run.py` refuses the flag rather than record a URL the run never
 contacted. `--dry-run` prints the grid and config and exits without an API call.
 
-`checkpoint` is the only model arg the provider takes; anything else is a hard
-error, because a mistyped `-M checkpoint=` would otherwise evaluate the base model
-while the log claimed a finetune. Inspect tools are refused for the same reason —
+`checkpoint` and `native_cot` are the only model args the provider takes;
+anything else is a hard error, because a mistyped `-M checkpoint=` would
+otherwise evaluate the base model while the log claimed a finetune.
+`native_cot` switches every render to `render.native_view` (the template's own
+default reasoning shape) and returns the CoT as `ContentReasoning` beside the
+answer — set it with `msm_eval_run.py --native-cot`, never as a `-M` arg, which
+the runner refuses: the flag also flips the eval to prod=True and patches the
+grader input. Inspect tools are refused for the same reason —
 the eval uses none, and silently dropping them would let a future tool-using eval
 score meaningless results.
 
@@ -206,7 +211,8 @@ baked into the render and stop strings are derived from the template, so
 honouring them is unnecessary and *ignoring* them silently is the failure that
 invalidated a whole grid on the `openai/` provider. What was actually rendered
 reaches the log instead, as `tcw_thinking` metadata (`disabled`, or `minimal`
-for the two families whose template has no off switch).
+for the two families whose template has no off switch, or `native` under
+`--native-cot`).
 
 Prompts are rendered by `render.py` with the same family entry and thinking-off
 kwargs used at training time, so a checkpoint is sampled in the format it was

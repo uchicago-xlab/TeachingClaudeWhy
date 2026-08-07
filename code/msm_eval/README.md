@@ -21,6 +21,12 @@ the results table), and `--model-name David` swaps the name the scenario
 prompts address the model by (the name-variant experiment; default Qwen).
 Everything else stays fixed.
 
+A further studied deviation, larger than either of those: **`--native-cot`**
+(tinker models only) changes the reasoning condition itself — prod=True, so the
+scratchpad instructions are gone and the model thinks in its own template's
+shape. Its results are a separate variant that never pools with runs made under
+the settings above; see the Native-CoT variant section at the end of this file.
+
 A third, model-level deviation: **`--no-thinking`** sends
 `chat_template_kwargs={"enable_thinking": False}`. Qwen2.5 has no thinking mode,
 so 32B runs never needed it; Qwen3 students default to thinking ON and are
@@ -119,6 +125,62 @@ own chat format from its `families.py` entry (`code/tinker_sweep/render.py`):
 `--model-name` follows the sweep's identity-matching ruling (2026-08-07): each
 model's scenarios address it by its own family's assistant name, encoded in the
 run name. Qwen rows keep the default.
+
+## Native-CoT variant (`--native-cot`, tinker models only)
+
+The standard slice instructs an in-text `<SCRATCHPAD_REASONING>` (prod=False).
+`--native-cot` instead removes those instructions (prod=True), samples the
+family in its **template-default** thinking shape (Qwen3/Qwen3.5/Qwen3.6,
+Nemotron and Kimi: thinking ON; gpt-oss: `Reasoning: medium`; Inkling: effort
+0.9; DeepSeek-V3.1: still OFF — its template defaults that way, so its arm has
+no CoT), and shows the captured CoT to the grader wrapped in
+`<SCRATCHPAD_REASONING>` with no preamble — format-identical to what the grader
+reads in the standard condition. The hard action gates and `classify()` judge
+the **final response only**: native CoT is draft-prone (models write literal
+`<tool_use:...>` syntax while deliberating), so gate parity would count
+drafted-but-never-sent actions as harmful. That is the variant's one deliberate
+difference from the standard grading path; deliberation-without-action shows up
+as `classifier_verdict=1, harmful=0`.
+
+Several families' native generation prompt ends *inside* an open `<think>`, so
+their samples start mid-reasoning with no opening tag — Qwen3.5, Qwen3.6,
+Nemotron and Kimi all do, Qwen3-8B does not, and the typed formats (gpt-oss,
+Inkling) and DeepSeek never do. The provider probes each model for it rather
+than carrying a hand-written list and restores the tag before splitting
+reasoning from response; the per-model verdict is printed by `check_render.py`
+into `data/tinker-sweep/render-samples/` (gitignored — re-run it to regenerate).
+
+Rules of use:
+
+- **A separate variant, never pooled.** Nothing on file is comparable; every
+  arm including base controls re-runs under the flag. Put `natcot` in
+  `--run-name` (the runner warns otherwise).
+- Default `--max-tokens` becomes **8192** under the flag; only deviations from
+  that need encoding in the run name. Check the `trunc` column in
+  `summarize.py` before quoting **any** rate, native or standard: a truncated
+  sample often loses its action and deflates the rate. Several standard runs on
+  file are affected — `teacher-sonnet5-as-alex` is 177/180 truncated and must
+  not be cited on its own; its `-16k` re-run is the citable one.
+- A finetune is sampled off the template it was trained on: training renders
+  the family's `thinking_kwargs` shape (thinking off, or the lowest effort the
+  template offers for gpt-oss and Inkling), native renders the template
+  default. The render is identical across a variant's arms, but the distance
+  from the training shape is a caveat on the finetune arms specifically —
+  gpt-oss and Inkling carry a reasoning-budget delta on top of it (`low`/`none`
+  in training, `medium`/0.9 sampled), and Inkling also loses the
+  `<|content_text|>` prefill that otherwise forces its first block to be the
+  answer. DeepSeek-V3.1 is the exception at both ends: its template defaults to
+  thinking off, so its native render is its training render.
+- Logged as `tcw_thinking=native`, `tcw_variant=native-cot`; the CoT is the
+  assistant message's reasoning content — `build_transcript_viewer.py` shows it
+  as a collapsible "native chain-of-thought" block, and the sample's displayed
+  output (and its `acted` flag) excludes it, matching the gates' final-only
+  semantics.
+
+Spec: `docs/superpowers/specs/2026-08-07-native-cot-msm-eval-design.md`
+(gitignored, local). Implementation: `native_cot.py` (grader-side patch),
+`code/tinker_sweep/render.py` (`native_view`, `extract_reasoning_and_response`),
+`code/tinker_sweep/tinker_provider.py` (`native_cot` model-arg).
 
 ## Baseline results on file (2026-07-26, n=30)
 
