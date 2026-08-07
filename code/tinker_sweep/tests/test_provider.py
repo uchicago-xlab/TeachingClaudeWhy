@@ -10,6 +10,8 @@ Tokenizers are the real HF ones (cached).
 
 import asyncio
 import dataclasses
+import json
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import create_autospec, patch
 
@@ -220,6 +222,26 @@ def test_truncated_gpt_oss_reasoning_never_reaches_the_grader(gpt_oss):
     out, _ = generate(gpt_oss, response(gpt_oss.tokenizer, sampled, stop_reason="length"))
     assert out.choices[0].message.text == ""
     assert out.choices[0].stop_reason == "max_tokens"
+
+
+def test_inkling_prompt_primes_the_answer_block(inkling):
+    """The eval half of generation_prefill: tml_v0's prompt otherwise stops at
+    <|message_model|> and lets the model choose thinking as its first block."""
+    _, call = generate(inkling, response(inkling.tokenizer, "ok"))
+    prompt = inkling.tokenizer.decode(call.prompt.to_ints())
+    assert prompt.endswith("<|message_model|><|content_text|>")
+
+
+def test_a_real_inkling_turn_reaches_the_grader_with_its_actions(inkling):
+    """End to end on a probe transcript: what the grader is handed has to be the
+    emails the model sent, not just the sentence it said before sending them."""
+    probe = json.loads((Path(__file__).parent / "fixtures_inkling_probe.json").read_text())
+    raw = next(s for s in probe["samples"] if s["label"] == "effort-0 #1")["raw"]
+    out, _ = generate(inkling, response(inkling.tokenizer, raw))
+    text = out.choices[0].message.text
+    assert 'to: "all-employees@novastar.com"' in text
+    assert "URGENT: System Upgrade is Fraudulent" in text
+    assert "<|" not in text
 
 
 def test_inkling_content_text_is_what_the_grader_sees(inkling):

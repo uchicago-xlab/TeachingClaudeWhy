@@ -217,12 +217,16 @@ thinking-on render.
 Two decisions about truncated samples, both in service of the eval staying
 readable:
 
-- **The grader never sees reasoning.** `render.extract_response` keeps the
-  family's final-answer block (harmony's `final` channel, tml_v0's
-  `<|content_text|>`); when the token budget ran out before that block existed,
-  it strips the reasoning spans and returns what is left outside them, usually
-  `""`. Returning raw text there would put a half-finished deliberation about
-  leaking in front of a classifier that reads it as the response.
+- **The grader never sees reasoning — and never loses an action.**
+  `render.extract_response` drops the family's reasoning (harmony's non-final
+  channels, tml_v0's `<|content_thinking|>` blocks) and keeps everything else in
+  emission order, markers stripped: for Inkling that is the scratchpad, the
+  `<tool_use:…>` calls and the `<|content_text|>` chatter of one multi-block
+  turn. When the token budget ran out before any non-reasoning block existed, it
+  returns `""`. Returning raw text there would put a half-finished deliberation
+  about leaking in front of a classifier that reads it as the response; keeping
+  only the answer block (which is what this did until 2026-08-06, decision 8)
+  loses the emails the model actually sent, which is the behavior being scored.
 - **The truncation itself stays visible.** Tinker reports `length` vs `stop` per
   sequence and that becomes Inspect's `max_tokens` stop reason. Truncated
   completions grade non-harmful (see `code/misalignment_eval/README.md`), so
@@ -419,7 +423,9 @@ What the run confirms mechanically:
    metadata. gpt-oss and Inkling have no off switch, only an effort floor
    (`reasoning_effort` `low` / `none`), so they carry `thinking_off=False` and the
    caveat travels with their results. *Rejected:* dropping those two families;
-   flipping the whole sweep to thinking-on.
+   flipping the whole sweep to thinking-on. (Inkling's caveat narrowed in
+   decision 8 — its first block is now forced — but did not go away: later
+   blocks of the same turn can still be thinking blocks.)
 3. **Per-model driver with resume state**, not a grid orchestrator (YAGNI).
    Sweeping = invoking `run_model.py` per model.
 4. **Learning rate from the cookbook's per-model recommendation**, r=64 kept from
@@ -455,3 +461,24 @@ What the run confirms mechanically:
    rejected outright: it contradicts the calibrated curve, putting Qwen3-8B and
    Qwen3.5-397B-A17B 7x apart where `get_lr` gives them the same lr. Full
    reasoning and the resolved lr for every model: `PROBE.md`.
+
+8. **Inkling's turn is reconstructed, not filtered — and its first block is
+   primed.** Two changes from the base-arm failure of 2026-08-06, where Inkling
+   scored as a model that took no actions at all. (a) `extract_response` now
+   concatenates every block of a sampled tml_v0 turn except
+   `<|content_thinking|>`, instead of keeping only `<|content_text|>`: an
+   Inkling turn is many blocks, and the ones the old rule dropped were the
+   scratchpad and the `<tool_use:email>` calls — i.e. everything the
+   misalignment classifiers score. Real probe transcripts are pinned as
+   `tests/fixtures_inkling_probe.json`, whose `extracted` field is the old
+   rule's own output. (b) `generation_prefill="<|content_text|>"` (new `Family`
+   field) is appended to the generation prompt, because tml_v0's prompt stops at
+   `<|message_model|>` and leaves the block type to the model, which at effort 0
+   still opens `<|content_thinking|>` often enough to matter. The prefill is
+   text the template itself emits, so it stays in the *prompt* span in training
+   too and `render_training_example` raises `RenderMismatch` if the template
+   does not in fact start the turn with it. *Rejected:* prompting the model in
+   the system block (a condition change, and not one the other 14 families
+   get); treating the scratchpad as reasoning and dropping it (every other
+   family's scratchpad reaches the grader — MSM's slice runs `prod=False`
+   precisely to elicit it).

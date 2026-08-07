@@ -16,7 +16,20 @@ rebuild
 where turn_suffix is derived mechanically (see _derive_suffix). check_render.py
 (Task 6) is what discovers, per family, whether assistant_prefix is needed.
 
-No sweep family needs it so far. Qwen3-8B was the expected case and is not one:
+A second, opposite knob is generation_prefill: text the template *does* emit at
+the start of the assistant turn, which we additionally prime at sampling time
+so the model continues from it instead of choosing what to open its turn with.
+Inkling needs it — its generation prompt stops at `<|message_model|>`, leaving
+the model to pick the block type, and effort "none" does not stop it picking
+`<|content_thinking|>`. Priming `<|content_text|>` forces the first block to be
+the answer. The prefill lands in the *prompt* span both at eval and in
+training, so training weights start after it; render_training_example refuses
+(RenderMismatch) if the template's own render does not begin the completion
+with those exact tokens, since a prefill that does not match template emission
+would train a span that is primed at eval — the misalignment this file exists
+to prevent.
+
+No sweep family needs assistant_prefix so far. Qwen3-8B was the expected case and is not one:
 under enable_thinking=False its template emits `<think>\n\n</think>\n\n` in the
 generation prompt *and* in the full render, so the prefix property holds and
 the empty block lands in the prompt span — primed, never trained. That block is
@@ -70,9 +83,17 @@ def _apply(tokenizer, family, messages, add_generation_prompt) -> list[int]:
     return [int(t) for t in out]
 
 
+def _prefill_ids(tokenizer, family: families.Family) -> list[int]:
+    """The family's generation_prefill in token space ("" -> no tokens)."""
+    if not family.generation_prefill:
+        return []
+    return tokenizer.encode(family.generation_prefill, add_special_tokens=False)
+
+
 def render_generation_prompt(tokenizer, family: families.Family, messages) -> list[int]:
     assert messages[-1]["role"] != "assistant", "generation prompt takes history only"
-    return _apply(tokenizer, family, messages, add_generation_prompt=True)
+    prompt = _apply(tokenizer, family, messages, add_generation_prompt=True)
+    return prompt + _prefill_ids(tokenizer, family)
 
 
 _SUFFIX_MARKER = "XQZWY"  # single-token-safe unique marker; see _derive_suffix
@@ -100,6 +121,18 @@ def render_training_example(
     tokenizer, family: families.Family, messages
 ) -> tuple[list[int], list[int]]:
     assert messages[-1]["role"] == "assistant", "training example ends with the assistant turn"
+    if family.assistant_prefix and family.generation_prefill:
+        # Opposite claims about the same text — one says the full render omits
+        # it, the other that the full render emits it — and the rebuild below
+        # would quietly emit it twice. Refused rather than guessed at.
+        raise RenderMismatch(
+            f"family {family.key!r} sets both assistant_prefix "
+            f"{family.assistant_prefix!r} and generation_prefill "
+            f"{family.generation_prefill!r}: the first is for text the template's full render "
+            "omits, the second for text it emits, so they cannot both describe one template. "
+            "Keep whichever check_render.py confirms",
+            "", "",
+        )
     prompt = render_generation_prompt(tokenizer, family, messages[:-1])
     if family.assistant_prefix:
         completion_text = family.assistant_prefix + messages[-1]["content"]
@@ -107,12 +140,27 @@ def render_training_example(
         full = prompt + completion + _derive_suffix(tokenizer, family)
     else:
         full = _apply(tokenizer, family, messages, add_generation_prompt=False)
-        if full[: len(prompt)] != prompt:
+        # The prefill is appended to the prompt by us, not by the template, so the
+        # prefix property is checked against the template's own prompt first and the
+        # prefill against what the template emits next.
+        prefill = _prefill_ids(tokenizer, family)
+        template_prompt = prompt[: len(prompt) - len(prefill)]
+        if full[: len(template_prompt)] != template_prompt:
             raise RenderMismatch(
                 f"family {family.key!r}: full render does not start with the generation "
                 "prompt — either its template needs an assistant_prefix entry, or the row's "
                 "assistant content carries its own reasoning block (templates route that to "
                 "reasoning_content, displacing the primed one). See check_render.py",
+                tokenizer.decode(prompt),
+                tokenizer.decode(full),
+            )
+        if prefill and full[len(template_prompt): len(prompt)] != prefill:
+            raise RenderMismatch(
+                f"family {family.key!r}: generation_prefill "
+                f"{family.generation_prefill!r} is not what the template emits at the start "
+                "of the assistant turn, so priming it at sampling time would put the model "
+                "somewhere training never puts it. Fix the prefill (or drop it) — never "
+                "train a span the eval primes",
                 tokenizer.decode(prompt),
                 tokenizer.decode(full),
             )
@@ -136,6 +184,7 @@ _HARMONY_NONFINAL = re.compile(
 )
 _HARMONY_ROLE = re.compile(r"<\|start\|>\s*\w+")
 _INKLING_THINKING = re.compile(r"<\|content_thinking\|>.*?(?:<\|end_message\|>|\Z)", re.S)
+_INKLING_MARKER = re.compile(r"<\|([^|<>]*)\|>")
 _THINK_SPAN = re.compile(r"<think>.*?(?:</think>|\Z)", re.S)
 _CONTROL_MARKER = re.compile(r"<\|[^|<>]*\|>")
 
@@ -167,6 +216,57 @@ def strip_reasoning_spans(family: families.Family, text: str) -> str:
     return text.strip()
 
 
+def _inkling_blocks(text: str) -> list[tuple[str, str]]:
+    """Split a sampled Inkling turn into its (content type, body) blocks.
+
+    tml_v0 turns are a sequence of `<|message_model|>[<|content_TYPE|>]body
+    <|end_message|>` blocks, and one sampled turn holds many of them: a
+    scratchpad, a `<tool_use:…>` call, an answer, another call. Blocks whose
+    body follows `<|message_model|>` with no content marker are typed "" — that
+    is where the model writes its scratchpad and its tool calls, so they are
+    output, not format. Markers are dropped rather than kept: both formats type
+    every block, and a stray `<|…|>` reaches the grader verbatim.
+    """
+    blocks: list[tuple[str, str]] = []
+    kind, body = "", []
+
+    def flush() -> None:
+        text_ = "".join(body).strip()
+        if text_:
+            blocks.append((kind, text_))
+        body.clear()
+
+    pos = 0
+    for marker in _INKLING_MARKER.finditer(text):
+        body.append(text[pos:marker.start()])
+        pos = marker.end()
+        flush()  # every marker closes whatever block was open
+        name = marker.group(1)
+        # `content_model_end_sampling` terminates the turn, it does not type a block.
+        kind = (
+            name[len("content_"):]
+            if name.startswith("content_") and name != "content_model_end_sampling"
+            else ""
+        )
+    body.append(text[pos:])
+    flush()
+    return blocks
+
+
+def _inkling_visible(text: str) -> str:
+    """Everything in an Inkling turn except its thinking, in emission order.
+
+    The grader has to see what the model *did* — the tool-call JSON that sends
+    the email, the scratchpad it reasoned in — and must never see the
+    `<|content_thinking|>` blocks. Keeping only `<|content_text|>` (this
+    function's predecessor) dropped every action from every multi-block turn,
+    so the base-arm Inkling eval scored a model that appeared to do nothing.
+    The truncation policy is unchanged: a turn cut mid-thinking yields whatever
+    non-thinking blocks preceded it, which is usually "".
+    """
+    return "\n".join(body for kind, body in _inkling_blocks(text) if kind != "thinking")
+
+
 def extract_response(family: families.Family, text: str) -> str:
     """Sampled text -> the content the grader should see."""
     if family.key == "gpt_oss":
@@ -175,11 +275,7 @@ def extract_response(family: families.Family, text: str) -> str:
         if m:
             return m.group(1).strip()
     if family.key == "inkling":
-        # tml_v0 types every block: the answer is <|content_text|>, reasoning is
-        # <|content_thinking|>. The generation prompt stops at <|message_model|>,
-        # so the model emits the type marker itself and it lands in the sampled
-        # text — check_render.py caught it reaching the grader verbatim.
-        blocks = re.findall(r"<\|content_text\|>(.*?)(?:<\|end_message\|>|$)", text, re.S)
-        if blocks:
-            return "\n".join(b.strip() for b in blocks).strip()
+        visible = _inkling_visible(text)
+        if visible:
+            return visible
     return strip_reasoning_spans(family, text)

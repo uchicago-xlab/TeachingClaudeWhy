@@ -16,6 +16,11 @@ template primes it in the generation prompt but omits it when rendering a
 full conversation (e.g. Qwen3's empty <think> block with enable_thinking
 False). Filled empirically by check_render.py; "" when the template is
 self-consistent.
+
+generation_prefill: text primed at the *end* of the generation prompt so the
+model continues inside a block we chose rather than opening one itself (Inkling:
+`<|content_text|>`). It is part of the template's own full render, so it stays
+in the prompt span in training too — see render.py.
 """
 
 from dataclasses import dataclass, field
@@ -29,6 +34,13 @@ class Family:
     thinking_kwargs: dict = field(default_factory=dict)
     thinking_off: bool = True     # False = template has no off switch; minimal reasoning + caveat
     assistant_prefix: str = ""
+    # generation_prefill: text appended to the generation prompt so sampling
+    # starts inside the block we want, instead of leaving the choice of block to
+    # the model. Unlike assistant_prefix this text IS emitted by the template's
+    # full render, so it belongs to the prompt span in training too — render.py
+    # moves it there and raises RenderMismatch if the template does not in fact
+    # begin the assistant turn with it.
+    generation_prefill: str = ""
     verified: bool = False
     # Kimi-K2.6 ships its tokenizer as repo code (auto_map -> tokenization_kimi.
     # TikTokenTokenizer), so AutoTokenizer refuses to load it without opt-in.
@@ -113,9 +125,18 @@ NEMOTRON = Family("nemotron_3", "Nemotron", "NVIDIA", {"enable_thinking": False}
 # <think></think> does elsewhere. So this is the same class of switch as
 # gpt-oss's reasoning_effort: minimal reasoning requested, not guaranteed off,
 # hence thinking_off=False so the caveat reaches eval metadata.
+#
+# generation_prefill closes part of that gap structurally rather than by
+# request: the template's generation prompt stops at `<|message_model|>`, so the
+# model picks its own first block type and effort 0 does not stop it picking
+# `<|content_thinking|>`. Priming `<|content_text|>` forces the first block to
+# be the answer — which is also what the template emits in a full render, so
+# training and sampling still agree. The caveat narrows but does not vanish:
+# later blocks of the same turn can still be thinking blocks (extract_response
+# drops them), hence thinking_off stays False.
 INKLING = Family(
     "inkling", "Inkling", "Thinking Machines", {"reasoning_effort": "none"},
-    thinking_off=False, verified=True,
+    thinking_off=False, generation_prefill="<|content_text|>", verified=True,
 )
 
 

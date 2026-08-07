@@ -127,7 +127,8 @@ def check_model(model: families.SweepModel) -> bool:
     failures: list[str] = []
     lines = [f"model: {model.tinker_id}", f"hf_repo: {model.hf_repo}",
              f"family: {fam.key}  thinking_kwargs: {fam.thinking_kwargs}  "
-             f"thinking_off: {fam.thinking_off}  assistant_prefix: {fam.assistant_prefix!r}",
+             f"thinking_off: {fam.thinking_off}  assistant_prefix: {fam.assistant_prefix!r}  "
+             f"generation_prefill: {fam.generation_prefill!r}",
              f"verified: {fam.verified}  trust_remote_code: {fam.trust_remote_code}"]
     contrast = THINKING_CONTRAST.get(fam.key)
     if contrast is None:
