@@ -39,6 +39,7 @@ Qwen3; only the generation prompt can, which is what
 test_thinking_kwargs_actually_reach_the_template asserts on.
 """
 
+import dataclasses
 import re
 
 from transformers import AutoTokenizer
@@ -174,6 +175,39 @@ def derive_stop_strings(tokenizer, family: families.Family) -> list[str]:
     return [stop] if stop else [suffix]
 
 
+def native_view(family: families.Family) -> families.Family:
+    """The family rendered in its template's own default reasoning shape.
+
+    Native = no thinking kwargs and no generation prefill: whatever the
+    vendor's template does when nothing is overridden. Qwen3/Nemotron/Kimi
+    default to thinking ON, gpt-oss to `Reasoning: medium`, Inkling to effort
+    0.9 — and DeepSeek-V3.1 to thinking OFF (its template defaults
+    thinking=false), which the native-CoT eval treats as "no CoT" rather than
+    overriding. Used only by the eval's --native-cot variant; training never
+    renders through this view.
+    """
+    return dataclasses.replace(family, thinking_kwargs={}, generation_prefill="")
+
+
+_PROBE_MESSAGES = [
+    {"role": "system", "content": "probe"},
+    {"role": "user", "content": "probe"},
+]
+
+
+def generation_prompt_opens_think(tokenizer, family: families.Family) -> bool:
+    """Does this family's generation prompt end inside an unclosed <think>?
+
+    Qwen3.5/3.6 and Nemotron templates prime `<think>\n` when thinking is on,
+    so the sampled text begins mid-reasoning with no opening tag; the provider
+    must restore it before extract_reasoning_and_response, or the reasoning
+    would be read as the final response. Probed mechanically (single-turn
+    system+user, the eval's only shape) instead of hand-declared per family.
+    """
+    text = tokenizer.decode(render_generation_prompt(tokenizer, family, _PROBE_MESSAGES))
+    return text.rfind("<think>") > text.rfind("</think>")
+
+
 # Reasoning spans, per family. Each is written to close on its terminator *or*
 # on end-of-string, because the case these exist for is the sample that ran out
 # of tokens mid-reasoning and therefore never emitted one.
@@ -279,3 +313,38 @@ def extract_response(family: families.Family, text: str) -> str:
         if visible:
             return visible
     return strip_reasoning_spans(family, text)
+
+
+_THINK_CONTENTS = re.compile(r"<think>(.*?)(?:</think>|\Z)", re.S)
+
+
+def _harmony_reasoning(text: str) -> str:
+    # Each span is kept from past its `<|channel|>analysis<|message|>` header:
+    # the channel name is format, and dropping the markers around it would
+    # otherwise glue it to the front of the reasoning ("analysislet me scheme").
+    spans = [m.group(0).split("<|message|>", 1)[-1] for m in _HARMONY_NONFINAL.finditer(text)]
+    cleaned = (_CONTROL_MARKER.sub("", _HARMONY_ROLE.sub("", s)).strip() for s in spans)
+    return "\n\n".join(c for c in cleaned if c)
+
+
+def extract_reasoning_and_response(family: families.Family, text: str) -> tuple[str, str]:
+    """Sampled text -> (reasoning, final response) for the native-CoT eval.
+
+    The final element is exactly extract_response(family, text); the reasoning
+    element is the text extract_response throws away, so the grader can be
+    shown both without the action gates ever seeing the reasoning. A sample
+    truncated mid-reasoning yields (partial reasoning, "") — non-harmful by
+    construction, diagnosable via stop_reason, same policy as
+    strip_reasoning_spans.
+    """
+    if family.key == "gpt_oss":
+        reasoning = _harmony_reasoning(text)
+    elif family.key == "inkling":
+        reasoning = "\n\n".join(
+            body for kind, body in _inkling_blocks(text) if kind == "thinking"
+        )
+    else:
+        reasoning = "\n\n".join(
+            m.group(1).strip() for m in _THINK_CONTENTS.finditer(text) if m.group(1).strip()
+        )
+    return reasoning, extract_response(family, text)

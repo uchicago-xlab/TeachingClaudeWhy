@@ -457,3 +457,72 @@ def test_families_without_a_prefill_render_the_template_prompt_byte_for_byte(tok
     prompt = render.render_generation_prompt(tok, QWEN3.family, MESSAGES[:-1])
     assert prompt == render._apply(tok, QWEN3.family, MESSAGES[:-1], add_generation_prompt=True)
     assert not tok.decode(prompt).endswith("<think>")   # nothing appended past the primed block
+
+
+# --- native-CoT variant (spec 2026-08-07-native-cot-msm-eval-design.md) ---
+
+def test_native_view_is_template_default_and_prefill_free():
+    native = render.native_view(QWEN3.family)
+    assert native.thinking_kwargs == {}
+    assert native.generation_prefill == ""
+    assert native.key == QWEN3.family.key          # extraction still keys on family
+    assert native.verified                          # require_verified must still pass
+    native_ink = render.native_view(INKLING.family)
+    assert native_ink.generation_prefill == ""      # no <|content_text|> priming
+
+
+def test_native_prompt_is_thinking_on_for_qwen3(tok):
+    off = tok.decode(render.render_generation_prompt(tok, QWEN3.family, MESSAGES[:-1]))
+    native = tok.decode(
+        render.render_generation_prompt(tok, render.native_view(QWEN3.family), MESSAGES[:-1])
+    )
+    assert "<think>\n\n</think>" in off              # standard: empty block primed
+    assert "<think>" not in native                   # native: model opens its own block
+
+
+def test_generation_prompt_opens_think(tok):
+    # qwen3 native primes nothing -> False; qwen3 thinking-off primes a CLOSED
+    # block -> also False. (The True case — qwen3_5/nemotron priming `<think>\n`
+    # — is covered by check_render.py's native pass across all families, which
+    # doesn't need every tokenizer downloaded into this test env.)
+    assert render.generation_prompt_opens_think(tok, render.native_view(QWEN3.family)) is False
+    assert render.generation_prompt_opens_think(tok, QWEN3.family) is False
+
+
+def test_extract_reasoning_and_response_think_family():
+    fam = QWEN3.family
+    r, f = render.extract_reasoning_and_response(fam, "<think>evil plan</think>\n\nFinal answer.")
+    assert r == "evil plan"
+    assert f == "Final answer."
+    # final must equal what extract_response returns on the same text
+    assert f == render.extract_response(fam, "<think>evil plan</think>\n\nFinal answer.")
+    # truncated mid-think: all reasoning, no final
+    r, f = render.extract_reasoning_and_response(fam, "<think>ran out of tok")
+    assert r == "ran out of tok"
+    assert f == ""
+    # no thinking at all: all final
+    r, f = render.extract_reasoning_and_response(fam, "Just the answer.")
+    assert r == ""
+    assert f == "Just the answer."
+
+
+def test_extract_reasoning_and_response_gpt_oss():
+    fam = families.MODELS["openai/gpt-oss-20b"].family
+    text = (
+        "<|channel|>analysis<|message|>let me scheme<|end|>"
+        "<|start|>assistant<|channel|>final<|message|>Hello.<|return|>"
+    )
+    r, f = render.extract_reasoning_and_response(fam, text)
+    assert r == "let me scheme"
+    assert f == "Hello."
+
+
+def test_extract_reasoning_and_response_inkling():
+    fam = INKLING.family
+    text = (
+        "<|message_model|><|content_thinking|>private scheme<|end_message|>"
+        "<|message_model|><|content_text|>Public answer.<|end_message|>"
+    )
+    r, f = render.extract_reasoning_and_response(fam, text)
+    assert r == "private scheme"
+    assert f == "Public answer."
