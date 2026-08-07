@@ -173,6 +173,81 @@ is essentially immediate, not repetition-driven — future pilots can train
 1–2 epochs. The exact ep4 replication (2.2% = 2.2%) is also our first
 rerun-variance measurement: finetune+eval noise at this n is tiny.
 
+## Cross-model transfer on Tinker (2026-08-07)
+
+Does terra's advantage over Sonnet 5 survive on large, capable students, or is
+it a small-model didactic-teacher effect? Ten instruct models from
+[Tinker's list](https://tinker-docs.thinkingmachines.ai/tinker/models.json),
+two LoRA finetunes each (sonnet 165 rows / terra 135 rows — the same 8% rung as
+the ladder, recovered row-for-row from the committed files), val-loss-best
+epoch, evaluated on this note's standard slice. Pipeline, decision log and
+per-family chat-format verification: `code/tinker_sweep/README.md`.
+
+Rank 64 except where Tinker caps it at 32 (Nemotron-Ultra, Kimi, both GPT-OSS);
+lr from the cookbook's calibrated rule for Qwen families and the same rule
+extrapolated at the Qwen exponent elsewhere (logged per run as
+`lr_source`). Thinking is off structurally, verified per family against its own
+chat template rather than assumed — the check that caught Kimi shipping
+thinking **on** before any money was spent.
+
+![tinker sweep](figures/tinker_sweep.png)
+
+| model | base | sonnet-teacher | terra-teacher | acted: base / son / terra |
+|---|---|---|---|---|
+| DeepSeek-V3.1 | 65.0% | 1.7% | **0.6%** | 99 / 64 / 85 |
+| Qwen3.6-27B | 54.4% | 8.3% | **1.1%** | 98 / 59 / 99 |
+| Nemotron-Ultra-550B | 46.1% | 8.9% | **2.8%** | 98 / 99 / 98 |
+| Kimi-K2.6 | 44.4% | 1.7% | **0.0%** | 97 / 93 / 99 |
+| Qwen3-8B (pilot) | 43.9% | 0.6% | 0.6% | 99 / 2 / 7 |
+| Qwen3.5-397B | 41.1% | 6.7% | **1.1%** | 99 / 96 / 84 |
+| Nemotron-Nano-30B † | 15.6% | 7.8% | 4.4% | 88 / 62 / 60 |
+| GPT-OSS-20B | 8.3% | 0.6% | 0.6% | 98 / 7 / 23 |
+| GPT-OSS-120B | 0.6% | 0.0% | 0.0% | 100 / 5 / 2 |
+| Inkling ‡ | ~~4.4%~~ | ~~0.0%~~ | ~~0.0%~~ | 90 / 33 / 52 |
+
+**Terra ≥ replicates at scale.** Terra ≤ sonnet in every valid model, strictly
+below in six. Pooled over the nine valid models: sonnet **65/1620 (4.0%)** vs
+terra **20/1620 (1.2%)**, p=7.6e-07. Restricting to the three models where both
+finetunes stayed agentically reliable (≥70% acting — Nemotron-Ultra, Kimi,
+Qwen3.5-397B): sonnet **31/540 (5.7%)** vs terra **7/540 (1.3%)**, p=7.4e-05.
+The two largest students in the sweep are also where the gap is widest
+(550B: 16 vs 5 harmful; 397B: 12 vs 2), so the terra advantage is *not* a
+small-model artifact — the opposite, if anything.
+
+**The cleanest single arm is Qwen3.6-27B**: base 54.4% → terra 1.1% while terra
+*keeps a 99% acting rate*, higher than its sonnet counterpart's 59%. That one
+model rules out the obvious deflationary reading on its own.
+
+**Read the right panel before quoting any left-panel number.** A harmful rate
+on an arm that rarely emits a tool call is a reliability measurement wearing a
+disposition measurement's clothes (the Elicit10k decomposition, again). Six
+finetuned arms act on under a third of samples — most starkly Qwen3-8B (99% →
+2%/7%) and both GPT-OSS models — so their near-zero rates are substantially
+"stopped taking actions", not demonstrated alignment. SDF on prose data
+degrading agentic format is a real cost worth measuring on its own; it does not
+explain the headline, because the arms carrying the headline kept acting.
+
+† **Nemotron-Nano ran into the 4096 cap**: 21/180 base samples truncated,
+median 3,555 output tokens. Its base rate is probably deflated; re-running all
+three arms at `--eval-max-tokens 8192` is the fix (~$9), not yet done.
+(An earlier read of raw `stop_reason` put this at 46% — wrong: `action_stats`
+counts a sample that emitted its call *then* hit the cap as acted, which is the
+right convention and the one used here.)
+
+‡ **Inkling's arms are not valid.** Its transcripts deliberate at length and
+never emit the action — confirmed by reading them, not inferred from scores.
+Two upstream bugs were found and fixed en route (the extractor dropped its
+tool-call blocks entirely; the generation prompt now primes `<|content_text|>`
+to suppress thinking structurally), and the arms above are post-fix, so the
+residue is a genuine model-behavior question rather than plumbing. Excluded
+from every pooled figure.
+
+**Cost.** $188.59 all-in for wave 1 + wave 2 ($139.86 Tinker computed from
+token counts, $48.73 OpenRouter grading), of which ~$41 bought superseded or
+aborted runs. The Tinker Estimates note understated this badly: billing counts
+sequence tokens plus val forward passes, and eval *sampling* — not training —
+turned out to be the larger half.
+
 ## Persona sweep (thinking OFF)
 
 | model | as "Qwen" | as "Alex" | Δ | p |

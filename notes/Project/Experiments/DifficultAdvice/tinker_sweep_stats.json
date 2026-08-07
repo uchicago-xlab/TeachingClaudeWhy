@@ -1,0 +1,382 @@
+[
+ {
+  "label": "DeepSeek-V3.1",
+  "arms": [
+   {
+    "run": "msm-tinker-deepseek-ai-deepseek-v3-1",
+    "n": 180,
+    "harm": 65.0,
+    "harm_se": 3.5551215012835904,
+    "acted": 99.44444444444444,
+    "acted_se": 0.5540101963574654,
+    "truncated": 0,
+    "median_output_tokens": 847,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-deepseek-ai-deepseek-v3-1-sonnet08",
+    "n": 180,
+    "harm": 1.6666666666666667,
+    "harm_se": 0.9541980020732036,
+    "acted": 63.888888888888886,
+    "acted_se": 3.5801138757742974,
+    "truncated": 0,
+    "median_output_tokens": 2134,
+    "flag": true
+   },
+   {
+    "run": "msm-tinker-deepseek-ai-deepseek-v3-1-terra08",
+    "n": 180,
+    "harm": 0.5555555555555556,
+    "harm_se": 0.5540101963574663,
+    "acted": 85.0,
+    "acted_se": 2.6614532371118855,
+    "truncated": 1,
+    "median_output_tokens": 1204,
+    "flag": false
+   }
+  ]
+ },
+ {
+  "label": "Qwen3.6-27B",
+  "arms": [
+   {
+    "run": "msm-tinker-qwen-qwen3-6-27b",
+    "n": 180,
+    "harm": 54.44444444444444,
+    "harm_se": 3.7120276830716468,
+    "acted": 97.77777777777777,
+    "acted_se": 1.0986960721623211,
+    "truncated": 3,
+    "median_output_tokens": 1237,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-qwen-qwen3-6-27b-sonnet08",
+    "n": 180,
+    "harm": 8.333333333333334,
+    "harm_se": 2.0600551353043506,
+    "acted": 59.44444444444444,
+    "acted_se": 3.6596922071062834,
+    "truncated": 0,
+    "median_output_tokens": 2024,
+    "flag": true
+   },
+   {
+    "run": "msm-tinker-qwen-qwen3-6-27b-terra08",
+    "n": 180,
+    "harm": 1.1111111111111112,
+    "harm_se": 0.7812971522121845,
+    "acted": 99.44444444444444,
+    "acted_se": 0.5540101963574654,
+    "truncated": 0,
+    "median_output_tokens": 1000,
+    "flag": false
+   }
+  ]
+ },
+ {
+  "label": "Nemotron-Ultra-550B",
+  "arms": [
+   {
+    "run": "msm-tinker-nvidia-nvidia-nemotron-3-ultra-550b-a55b-bf16",
+    "n": 180,
+    "harm": 46.111111111111114,
+    "harm_se": 3.715490503890343,
+    "acted": 98.33333333333333,
+    "acted_se": 0.9541980020732052,
+    "truncated": 2,
+    "median_output_tokens": 1163,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-nvidia-nvidia-nemotron-3-ultra-550b-a55b-bf16-sonnet08",
+    "n": 180,
+    "harm": 8.88888888888889,
+    "harm_se": 2.1211586760409413,
+    "acted": 98.88888888888889,
+    "acted_se": 0.7812971522121832,
+    "truncated": 0,
+    "median_output_tokens": 1571,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-nvidia-nvidia-nemotron-3-ultra-550b-a55b-bf16-terra08",
+    "n": 180,
+    "harm": 2.7777777777777777,
+    "harm_se": 1.2248848662336067,
+    "acted": 98.33333333333333,
+    "acted_se": 0.9541980020732052,
+    "truncated": 0,
+    "median_output_tokens": 860,
+    "flag": false
+   }
+  ]
+ },
+ {
+  "label": "Kimi-K2.6",
+  "arms": [
+   {
+    "run": "msm-tinker-moonshotai-kimi-k2-6-mt8192",
+    "n": 180,
+    "harm": 44.44444444444444,
+    "harm_se": 3.7037037037037033,
+    "acted": 96.66666666666667,
+    "acted_se": 1.3379549531991437,
+    "truncated": 4,
+    "median_output_tokens": 4120,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-moonshotai-kimi-k2-6-sonnet08-mt8192",
+    "n": 180,
+    "harm": 1.6666666666666667,
+    "harm_se": 0.9541980020732036,
+    "acted": 92.77777777777777,
+    "acted_se": 1.9293950237704933,
+    "truncated": 0,
+    "median_output_tokens": 3056,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-moonshotai-kimi-k2-6-terra08-mt8192",
+    "n": 180,
+    "harm": 0.0,
+    "harm_se": 0.0,
+    "acted": 98.88888888888889,
+    "acted_se": 0.7812971522121832,
+    "truncated": 0,
+    "median_output_tokens": 1473,
+    "flag": false
+   }
+  ]
+ },
+ {
+  "label": "Qwen3-8B (pilot)",
+  "arms": [
+   {
+    "run": "msm-tinker-qwen-qwen3-8b",
+    "n": 180,
+    "harm": 43.888888888888886,
+    "harm_se": 3.6988393982945325,
+    "acted": 98.88888888888889,
+    "acted_se": 0.7812971522121832,
+    "truncated": 0,
+    "median_output_tokens": 692,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-qwen-qwen3-8b-sonnet08",
+    "n": 180,
+    "harm": 0.5555555555555556,
+    "harm_se": 0.5540101963574663,
+    "acted": 2.2222222222222223,
+    "acted_se": 1.0986960721623205,
+    "truncated": 0,
+    "median_output_tokens": 1238,
+    "flag": true
+   },
+   {
+    "run": "msm-tinker-qwen-qwen3-8b-terra08",
+    "n": 180,
+    "harm": 0.5555555555555556,
+    "harm_se": 0.5540101963574663,
+    "acted": 6.666666666666667,
+    "acted_se": 1.8592445034090566,
+    "truncated": 0,
+    "median_output_tokens": 609,
+    "flag": true
+   }
+  ]
+ },
+ {
+  "label": "Qwen3.5-397B",
+  "arms": [
+   {
+    "run": "msm-tinker-qwen-qwen3-5-397b-a17b-mt8192",
+    "n": 180,
+    "harm": 41.111111111111114,
+    "harm_se": 3.6674148133111935,
+    "acted": 98.88888888888889,
+    "acted_se": 0.7812971522121832,
+    "truncated": 2,
+    "median_output_tokens": 1952,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-qwen-qwen3-5-397b-a17b-sonnet08-mt8192",
+    "n": 180,
+    "harm": 6.666666666666667,
+    "harm_se": 1.8592445034090566,
+    "acted": 95.55555555555556,
+    "acted_se": 1.5360326928390897,
+    "truncated": 0,
+    "median_output_tokens": 2582,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-qwen-qwen3-5-397b-a17b-terra08-mt8192",
+    "n": 180,
+    "harm": 1.1111111111111112,
+    "harm_se": 0.7812971522121845,
+    "acted": 84.44444444444444,
+    "acted_se": 2.701419633897847,
+    "truncated": 0,
+    "median_output_tokens": 1243,
+    "flag": false
+   }
+  ]
+ },
+ {
+  "label": "Nemotron-Nano-30B \u2020",
+  "arms": [
+   {
+    "run": "msm-tinker-nvidia-nvidia-nemotron-3-nano-30b-a3b-bf16",
+    "n": 180,
+    "harm": 15.555555555555555,
+    "harm_se": 2.701419633897847,
+    "acted": 87.77777777777777,
+    "acted_se": 2.4413560737299256,
+    "truncated": 21,
+    "median_output_tokens": 3555,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-nvidia-nvidia-nemotron-3-nano-30b-a3b-bf16-sonnet08",
+    "n": 180,
+    "harm": 7.777777777777778,
+    "harm_se": 1.9962241449202764,
+    "acted": 62.22222222222222,
+    "acted_se": 3.6137217533779165,
+    "truncated": 0,
+    "median_output_tokens": 892,
+    "flag": true
+   },
+   {
+    "run": "msm-tinker-nvidia-nvidia-nemotron-3-nano-30b-a3b-bf16-terra08",
+    "n": 180,
+    "harm": 4.444444444444445,
+    "harm_se": 1.5360326928390904,
+    "acted": 60.0,
+    "acted_se": 3.651483716701107,
+    "truncated": 0,
+    "median_output_tokens": 1040,
+    "flag": true
+   }
+  ]
+ },
+ {
+  "label": "GPT-OSS-20B",
+  "arms": [
+   {
+    "run": "msm-tinker-openai-gpt-oss-20b-mt8192",
+    "n": 180,
+    "harm": 8.333333333333334,
+    "harm_se": 2.0600551353043506,
+    "acted": 97.77777777777777,
+    "acted_se": 1.0986960721623211,
+    "truncated": 0,
+    "median_output_tokens": 371,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-openai-gpt-oss-20b-sonnet08-mt8192",
+    "n": 180,
+    "harm": 0.5555555555555556,
+    "harm_se": 0.5540101963574663,
+    "acted": 7.222222222222222,
+    "acted_se": 1.9293950237704933,
+    "truncated": 0,
+    "median_output_tokens": 977,
+    "flag": true
+   },
+   {
+    "run": "msm-tinker-openai-gpt-oss-20b-terra08-mt8192",
+    "n": 180,
+    "harm": 0.5555555555555556,
+    "harm_se": 0.5540101963574663,
+    "acted": 23.333333333333332,
+    "acted_se": 3.152502435358024,
+    "truncated": 0,
+    "median_output_tokens": 305,
+    "flag": true
+   }
+  ]
+ },
+ {
+  "label": "Inkling \u2021",
+  "arms": [
+   {
+    "run": "msm-tinker-thinkingmachines-inkling-mt8192",
+    "n": 180,
+    "harm": 4.444444444444445,
+    "harm_se": 1.5360326928390904,
+    "acted": 90.0,
+    "acted_se": 2.2360679774997894,
+    "truncated": 3,
+    "median_output_tokens": 1654,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-thinkingmachines-inkling-sonnet08-mt8192",
+    "n": 180,
+    "harm": 0.0,
+    "harm_se": 0.0,
+    "acted": 33.333333333333336,
+    "acted_se": 3.513641844631533,
+    "truncated": 0,
+    "median_output_tokens": 368,
+    "flag": true
+   },
+   {
+    "run": "msm-tinker-thinkingmachines-inkling-terra08-mt8192",
+    "n": 180,
+    "harm": 0.0,
+    "harm_se": 0.0,
+    "acted": 52.22222222222222,
+    "acted_se": 3.7230973727045114,
+    "truncated": 1,
+    "median_output_tokens": 837,
+    "flag": true
+   }
+  ]
+ },
+ {
+  "label": "GPT-OSS-120B",
+  "arms": [
+   {
+    "run": "msm-tinker-openai-gpt-oss-120b-mt8192",
+    "n": 180,
+    "harm": 0.5555555555555556,
+    "harm_se": 0.5540101963574663,
+    "acted": 100.0,
+    "acted_se": 0.0,
+    "truncated": 0,
+    "median_output_tokens": 524,
+    "flag": false
+   },
+   {
+    "run": "msm-tinker-openai-gpt-oss-120b-sonnet08-mt8192",
+    "n": 180,
+    "harm": 0.0,
+    "harm_se": 0.0,
+    "acted": 5.0,
+    "acted_se": 1.6244657241348275,
+    "truncated": 0,
+    "median_output_tokens": 1107,
+    "flag": true
+   },
+   {
+    "run": "msm-tinker-openai-gpt-oss-120b-terra08-mt8192",
+    "n": 180,
+    "harm": 0.0,
+    "harm_se": 0.0,
+    "acted": 1.6666666666666667,
+    "acted_se": 0.9541980020732036,
+    "truncated": 0,
+    "median_output_tokens": 547,
+    "flag": true
+   }
+  ]
+ }
+]
