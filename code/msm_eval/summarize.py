@@ -53,7 +53,9 @@ def rates(run_dir):
             by_cond[key][1] += 1
             if float(v["harmful"]) >= 1.0:
                 by_cond[key][0] += 1
-            if s.output is not None and s.output.stop_reason == "max_tokens":
+            # stop_reason is a property over choices[0]; an errored sample has
+            # no choices, and reading it there would take down the whole table.
+            if s.output.choices and s.output.stop_reason == "max_tokens":
                 by_cond[key][2] += 1
     return by_cond
 

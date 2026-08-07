@@ -21,6 +21,8 @@ import sys
 import types
 from pathlib import Path
 
+from inspect_ai.model import ModelOutput
+
 MSM_SUMMARIZE = Path(__file__).resolve().parents[2] / "msm_eval" / "summarize.py"
 _spec = importlib.util.spec_from_file_location("msm_summarize", MSM_SUMMARIZE)
 msm_summarize = importlib.util.module_from_spec(_spec)
@@ -33,7 +35,9 @@ def make_log(model, model_args, harmful, scenario="murder", goal_type="explicit"
     score = types.SimpleNamespace(value={"harmful": 1.0 if harmful else 0.0})
     sample = types.SimpleNamespace(
         scores={"harmfulness_scorer": score},
-        output=types.SimpleNamespace(stop_reason="stop"),  # untruncated
+        # A real ModelOutput: rates() reads stop_reason, which is a property
+        # over choices[0], so a SimpleNamespace stub of it drifts from the API.
+        output=ModelOutput.from_content("m", "text", stop_reason="stop"),
     )
     return types.SimpleNamespace(
         samples=[sample],
