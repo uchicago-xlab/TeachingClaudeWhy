@@ -80,3 +80,69 @@ def test_native_prompt_failures_pass_for_qwen3():
     assert failures == []
     assert "<think>" not in native_text     # qwen3 native primes nothing
     assert primed is False
+
+
+# The three failure branches of native_prompt_failures. Without these the
+# passing test above is equally satisfied by a stub that returns ([], "", False),
+# so none of the checks would be known to fire on anything.
+
+NATIVE_HISTORY = [{"role": "system", "content": "s"}, {"role": "user", "content": "u"}]
+
+
+@pytest.fixture(scope="module")
+def deepseek():
+    model = families.MODELS["deepseek-ai/DeepSeek-V3.1"]
+    return render.load_tokenizer(model), model.family
+
+
+def test_deepseek_native_must_equal_the_standard_prompt(deepseek):
+    # DeepSeek's template defaults thinking=false, so its native view is the
+    # standard prompt; a native_view that started overriding that would show up
+    # here as inequality, and nowhere else (the off_shape branch is skipped for
+    # this family precisely because native is *supposed* to carry the off shape).
+    tok, fam = deepseek
+    contrast = check_render.THINKING_CONTRAST["deepseek_v3_1"]
+    real_off = tok.decode(render.render_generation_prompt(tok, fam, NATIVE_HISTORY))
+
+    ok, _, _ = check_render.native_prompt_failures(
+        tok, fam, NATIVE_HISTORY, contrast, real_off
+    )
+    assert ok == [], "precondition: deepseek passes against its real thinking-off prompt"
+
+    failures, _, _ = check_render.native_prompt_failures(
+        tok, fam, NATIVE_HISTORY, contrast, real_off + " drift"
+    )
+    assert any("differs from the thinking-off prompt" in f for f in failures)
+
+
+def test_native_view_that_keeps_the_prefill_is_caught(monkeypatch):
+    # Inkling is the only family with a generation_prefill. A native_view that
+    # forgot to clear it would prime `<|content_text|>`, forcing the answer block
+    # and making the native-CoT run silently thinking-free. Identity native_view
+    # is that regression.
+    model = families.MODELS["thinkingmachines/Inkling"]
+    tok = render.load_tokenizer(model)
+    contrast = check_render.THINKING_CONTRAST["inkling"]
+    monkeypatch.setattr(render, "native_view", lambda fam: fam)
+
+    failures, native_text, _ = check_render.native_prompt_failures(
+        tok, model.family, NATIVE_HISTORY, contrast, "irrelevant"
+    )
+    assert native_text.endswith(model.family.generation_prefill)
+    # The same mutation also leaves the off shape in place, so this is one of
+    # two failures rather than the only one.
+    assert any("still ends with generation_prefill" in f for f in failures)
+
+
+def test_native_view_that_stays_thinking_off_is_caught(tok, monkeypatch):
+    # The branch that matters for every think-family: if native_view returned a
+    # prompt still carrying the family's thinking-off shape, the --native-cot
+    # arm would sample with reasoning suppressed while claiming to measure it.
+    contrast = check_render.THINKING_CONTRAST[QWEN3.family.key]
+    monkeypatch.setattr(render, "native_view", lambda fam: fam)
+
+    failures, native_text, _ = check_render.native_prompt_failures(
+        tok, QWEN3.family, NATIVE_HISTORY, contrast, "irrelevant"
+    )
+    assert contrast.off_shape in native_text
+    assert any("did not produce a thinking-on prompt" in f for f in failures)
