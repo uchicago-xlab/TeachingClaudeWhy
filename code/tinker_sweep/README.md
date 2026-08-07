@@ -216,14 +216,21 @@ for the two families whose template has no off switch, or `native` under
 
 Prompts are rendered by `render.py` with the same family entry and thinking-off
 kwargs used at training time, so a checkpoint is sampled in the format it was
-trained in; `test_provider.py` pins the sampler's prompt to
-`render_generation_prompt` token-for-token and contrasts it against the
-thinking-on render.
+trained in — except under `--native-cot`, which renders through
+`render.native_view` instead and deliberately samples the checkpoint outside
+its training shape, that deviation being the variant's whole point.
+`test_provider.py` pins the sampler's prompt to `render_generation_prompt`
+token-for-token and contrasts it against the thinking-on render; a separate
+test contrasts the native prompt against the thinking-off one.
 
 Two decisions about truncated samples, both in service of the eval staying
 readable:
 
-- **The grader never sees reasoning — and never loses an action.**
+- **The grader never sees reasoning — and never loses an action.** (True of
+  every standard run. `--native-cot` is the deliberate exception: there the CoT
+  is captured separately and shown to the grader wrapped as a scratchpad, while
+  the action gates still see the final response only —
+  `code/msm_eval/native_cot.py`.)
   `render.extract_response` drops the family's reasoning (harmony's non-final
   channels, tml_v0's `<|content_thinking|>` blocks) and keeps everything else in
   emission order, markers stripped: for Inkling that is the scratchpad, the
@@ -234,10 +241,13 @@ readable:
   only the answer block (which is what this did until 2026-08-06, decision 8)
   loses the emails the model actually sent, which is the behavior being scored.
 - **The truncation itself stays visible.** Tinker reports `length` vs `stop` per
-  sequence and that becomes Inspect's `max_tokens` stop reason. Truncated
-  completions grade non-harmful (see `code/misalignment_eval/README.md`), so
-  without this signal a run deflated by truncation would read as a better-behaved
-  model rather than a broken run.
+  sequence and that becomes Inspect's `max_tokens` stop reason, which
+  `summarize.py` counts in its `trunc` column. A truncated sample often loses
+  its action and deflates the rate — check the `trunc` column before quoting
+  one (the caveat is spelled out in `code/msm_eval/summarize.py`; a sample that
+  emitted its tool call and then hit the cap is counted there but still grades
+  harmful) — so without this signal a run deflated by truncation would read as
+  a better-behaved model rather than a broken run.
 
 ### 7. Summarize
 
