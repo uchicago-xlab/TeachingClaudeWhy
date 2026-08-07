@@ -940,6 +940,86 @@
       "approx": true,
       "status": "spent",
       "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
+    },
+    {
+      "id": "cafe1623-cd73-4f3f-a553-ce8a5a7ee9c0",
+      "date": "2026-08-07",
+      "what": "Tinker — wave-1 training of the big-model teacher-transfer sweep: 5 models x 2 teachers (sonnet08, terra08), LoRA 4 epochs with val-best selection, all 10 finetunes billed on sequence tokens plus the per-epoch val forward pass at the training rate. Per model (sonnet + terra): DeepSeek-V3.1 $9.82 (1.90M + 0.74M tok @ $3.718/M), Kimi-K2.6 $12.55 (1.85M + 0.74M @ $4.84/M), Nemotron-3-Ultra-550B $14.78 (1.94M + 0.76M @ $5.478/M), Qwen3.5-397B-A17B $17.77 (1.94M + 0.76M @ $6.60/M), Inkling $14.57 (1.85M + 0.74M @ $5.61/M). Kimi and Nemotron-Ultra trained at LoRA rank 32 (Tinker caps them there); rank does not change the price. Token counts re-derived from the adapted splits with each model's own tokenizer and checked against sequence_tokens_per_epoch in code/tinker_sweep/runs/<slug>/train-*.json — all 10 match exactly. Priced off data/tinker-sweep/models-prices.json, not a dashboard reading. Excludes the Qwen3-8B pilot, already logged 2026-08-06.",
+      "who": "Jack",
+      "amount": 69.49,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "bfb5f575-5dff-400e-b8a9-64da5813ab6f",
+      "date": "2026-08-07",
+      "what": "Tinker — wave-1 eval sampling for the 15 kept arms (5 models x base/sonnet08/terra08, 180 samples each): 7,380,990 prefill + 4,922,635 sampled tokens, priced per model off data/tinker-sweep/models-prices.json (DeepSeek $5.77 total, Kimi-mt8192 $11.99, Nemotron-Ultra $8.17, Qwen3.5-397B-mt8192 $12.99, Inkling-mt8192 $6.00). Token counts summed from each run's inspect_ai.log model_usage. These are the arms behind the verified results table; the 4096-token runs they replaced are logged separately below.",
+      "who": "Jack",
+      "amount": 44.92,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "1de74b9e-0585-4741-9cbb-806a7372e9e1",
+      "date": "2026-08-07",
+      "what": "Tinker — SUPERSEDED wave-1 eval sampling: the six 4096-token arms of Kimi-K2.6 and Qwen3.5-397B-A17B (base/sonnet08/terra08 each), 2,952,900 prefill + 2,477,829 sampled tokens. Re-run at max_tokens 8192 on 2026-08-07 and replaced by the -mt8192 directories, because a truncated sample grades non-harmful and Kimi's base arm truncated 97/180 (54%) at the 4096 cap — the arm read better-behaved than it is, and a cap applied to only some arms would compare a truncated base against untruncated finetunes (sweep README decision 9). Qwen3.5-397B truncated 18/180 on base and was re-run for the same reason. Money spent is money spent, so it is logged; the numbers it produced are not used.",
+      "who": "Jack",
+      "amount": 23.46,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "409226bf-f267-4c73-a9dc-2f9b27dffb6d",
+      "date": "2026-08-07",
+      "what": "Tinker — ABORTED wave-1 eval sampling: the first Inkling base arm (4096 tokens), killed partway at ~120 of 180 samples on 2026-08-06; 314,700 prefill + 203,573 sampled tokens were already billed. It was scoring a model that appeared to take no actions at all: render.extract_response kept only <|content_text|> bodies, while an Inkling turn emits its scratchpad and its <tool_use:email> calls as separate blocks — exactly what the misalignment classifiers read. Fixed 2026-08-07 (extract_response now reconstructs the whole turn minus <|content_thinking|>, plus a <|content_text|> generation prefill); Inkling was then re-run clean at mt8192 and reads base 4.4%.",
+      "who": "Jack",
+      "amount": 1.54,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "908f2c8f-1850-4f3f-899c-40f16dfa8c90",
+      "date": "2026-08-07",
+      "what": "Tinker — ad-hoc Inkling probe sampling outside the eval harness: three probe runs against the base model while diagnosing the no-actions bug (their transcripts are pinned as code/tinker_sweep/tests/fixtures_inkling_probe.json, whose 'extracted' field is the old rule's own output), plus one confirmation run that the <|content_text|> generation prefill forces the first block to be the answer at effort 0. Estimated from the probe transcript sizes at Inkling's $1.87/M prefill and $4.68/M sample — these calls did not go through Inspect, so there is no model_usage record to sum.",
+      "who": "Jack",
+      "amount": 0.45,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "2c21e0b2-f521-4140-a44f-2f613eeae79f",
+      "date": "2026-08-07",
+      "what": "OpenRouter — Sonnet 4.6 harmfulness grader for the 15 kept wave-1 eval arms (2,700 samples): 6,753,717 in / 835,848 out, summed from the Inspect logs' model_usage and priced at $3/$15 per 1M list. Same fixed grader as every other run in the comparison. OpenRouter's activity endpoint needs a management key, so this is token counts x list price rather than a billed figure.",
+      "who": "Jack",
+      "amount": 32.8,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
+    },
+    {
+      "id": "03901e6e-8889-4f8b-9510-8bdd2e892c9e",
+      "date": "2026-08-07",
+      "what": "OpenRouter — SUPERSEDED wave-1 grading: Sonnet 4.6 over the six 4096-token Kimi-K2.6 and Qwen3.5-397B arms later replaced by their -mt8192 re-runs (1,080 samples): 3,273,768 in / 347,235 out at $3/$15 per 1M list. Charged before the truncation problem was found; the verdicts are not used.",
+      "who": "Jack",
+      "amount": 15.03,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
+    },
+    {
+      "id": "406e6351-19dd-4c20-b6e2-917c8a77a0c6",
+      "date": "2026-08-07",
+      "what": "OpenRouter — ABORTED wave-1 grading: Sonnet 4.6 over the partial Inkling base arm killed at ~120 samples, 149,037 in / 29,975 out at $3/$15 per 1M list. Those verdicts scored transcripts with the model's actions stripped out by the extract_response bug, so they are discarded.",
+      "who": "Jack",
+      "amount": 0.9,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
     }
   ]
 }
