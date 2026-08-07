@@ -416,9 +416,12 @@ What the run confirms mechanically:
 ### Wave 1 — five big models
 
 Five large models ran through the full pipeline 2026-08-07, joining the pilot for
-six models total. Every number below is the msm harness (`code/msm_eval`), 180
-samples per arm, the fixed Sonnet 4.6 grader, `-mt8192` where the arm names say
-so. Harmful rate as a percentage; counts out of 180 in parentheses.
+six models total. **One of the six, Inkling, did not produce a valid result — see
+the note under the table — so the pooled figures below are over the other five
+(the pilot plus four big models).** Every number below is the msm harness
+(`code/msm_eval`), 180 samples per arm, the fixed Sonnet 4.6 grader, `-mt8192`
+where the arm names say so. Harmful rate as a percentage; counts out of 180 in
+parentheses.
 
 | model | base | sonnet08-ft | terra08-ft |
 | --- | --- | --- | --- |
@@ -427,7 +430,19 @@ so. Harmful rate as a percentage; counts out of 180 in parentheses.
 | Nemotron-3-Ultra-550B (r32) | 46.1 (83) | 8.9 (16) | 2.8 (5) |
 | Qwen3.5-397B-A17B (mt8192) | 41.1 (74) | 6.7 (12) | 1.1 (2) |
 | Kimi-K2.6 (r32, mt8192) | 44.4 (80) | 1.7 (3) | 0.0 (0) |
-| Inkling (prefill, mt8192) | 4.4 (8) | 0.0 (0) | 0.0 (0) |
+| ~~Inkling (prefill, mt8192)~~ **NOT VALID** | ~~4.4 (8)~~ | ~~0.0 (0)~~ | ~~0.0 (0)~~ |
+
+> **Inkling's three arms are not a measurement — do not quote them.** Jack read
+> the `-mt8192` transcripts on 2026-08-07 and found many episodes still broken in
+> the way decision 8 was meant to fix: the model deliberates in scratchpad blocks
+> and then never emits its `<tool_use:…>` calls, so the grader scores an episode
+> in which the model took no action. A base rate of 4.4% against 41–65% for every
+> other model in the sweep is that artifact, not an unusually well-behaved model,
+> and two finetune arms at 0.0 measure nothing when the base they are compared
+> against is broken. The numbers stay visible so the re-run can be diffed against
+> them. **Under investigation; Inkling is excluded from every pooled figure
+> below.** The `extract_response` fix and the `generation_prefill` were necessary
+> but evidently not sufficient — reopening decision 8.
 
 `r32` = Tinker caps that model's LoRA rank at 32, so both its finetunes ran there
 (`PROBE.md`, "LoRA rank caps"); `mt8192` = the arm ran at
@@ -435,14 +450,14 @@ so. Harmful rate as a percentage; counts out of 180 in parentheses.
 `generation_prefill` (decision 8). Reproduce any row with
 `code/msm_eval/summarize.py` over the `msm-tinker-*` run directories.
 
-**Pooled across all six models, the finetunes separate: sonnet08 35/1080 (3.2%)
-against terra08 9/1080 (0.8%).** The direction holds per model as well —
-terra ≤ sonnet in 6/6, strictly below in 4 and tied at the floor in the two
-(Qwen3-8B, Inkling) where both arms sit at 0–1 samples. The two models with real
+**Pooled across the five valid models, the finetunes separate: sonnet08 35/900
+(3.9%) against terra08 9/900 (1.0%).** Denominator is 5 models x 180 samples;
+Inkling is excluded for the reason above. The direction holds per model as well —
+terra ≤ sonnet in 5/5, strictly below in 4 and tied at the floor only on
+Qwen3-8B, where both arms sit at 1 sample of 180. The two models with real
 headroom above the floor are the ones that carry the pooled result:
-Nemotron-Ultra (16 vs 5) and Qwen3.5-397B (12 vs 2). Base rates land in the
-41–65% band everywhere except Inkling, whose 4.4% base leaves almost nothing to
-remove and makes its two zeros uninformative rather than confirming.
+Nemotron-Ultra (16 vs 5) and Qwen3.5-397B (12 vs 2). All five valid base arms
+land in a 41–65% band, so every one of them had room to show a difference.
 
 > **Superseded runs.** Seven eval runs were paid for and are not used.
 > `msm-tinker-moonshotai-kimi-k2-6{,-sonnet08,-terra08}` and
@@ -456,8 +471,10 @@ remove and makes its two zeros uninformative rather than confirming.
 > of 180 samples on 2026-08-06: `extract_response` was keeping only
 > `<|content_text|>` blocks, so the grader saw an Inkling that took no actions at
 > all (decision 8). Both fixes landed before the runs that produced the table
-> above. DeepSeek-V3.1, Nemotron-Ultra and the Qwen3-8B pilot needed neither
-> re-run — they truncate 0–3 samples of 180 at 4096.
+> above — but the extraction fix did not hold, which is why Inkling's `-mt8192`
+> arms are marked not valid rather than superseded: they will be superseded once
+> there is a run worth replacing them with. DeepSeek-V3.1, Nemotron-Ultra and the
+> Qwen3-8B pilot needed neither re-run — they truncate 0–3 samples of 180 at 4096.
 
 **Cost of the five big models: ~$188.59** — $139.86 Tinker ($69.49 training for
 10 finetunes, $69.92 eval sampling, $0.45 of ad-hoc Inkling probes) plus $48.73
@@ -520,8 +537,15 @@ just a top-up.
    reasoning and the resolved lr for every model: `PROBE.md`.
 
 8. **Inkling's turn is reconstructed, not filtered — and its first block is
-   primed.** Two changes from the base-arm failure of 2026-08-06, where Inkling
-   scored as a model that took no actions at all. (a) `extract_response` now
+   primed. NOT SUFFICIENT — reopened 2026-08-07.** The two changes below were
+   necessary but did not fix the failure: in the `-mt8192` re-run many episodes
+   still end with the model deliberating in scratchpad blocks and never emitting
+   its `<tool_use:…>` calls, so Inkling's wave-1 results are marked not valid
+   (see Verified). Whether the remaining failure is in the render layer or is the
+   model genuinely not acting at effort 0 is the open question; the fixtures
+   pinned below only cover the extraction half. Two changes from the base-arm
+   failure of 2026-08-06, where Inkling scored as a model that took no actions at
+   all. (a) `extract_response` now
    concatenates every block of a sampled tml_v0 turn except
    `<|content_thinking|>`, instead of keeping only `<|content_text|>`: an
    Inkling turn is many blocks, and the ones the old rule dropped were the
