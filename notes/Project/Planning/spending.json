@@ -1030,6 +1030,16 @@
       "approx": false,
       "status": "spent",
       "allocationId": "5792d183-5f99-4900-a858-d2f6a67a4f85"
+    },
+    {
+      "id": "9a404e1d-f40c-40ae-99eb-efe1c3e106a1",
+      "date": "2026-08-08",
+      "what": "Tinker + OpenRouter — native-CoT eval variant smoke (--native-cot, prod=True, mt8192): base Qwen/Qwen3-8B and Qwen/Qwen3.5-9B, 6 conditions x 1 epoch each. Tinker sampling 31,722 prefill @ $0.195/1M + 22,752 sampled @ $0.60/1M = ~$0.02; Sonnet 4.6 grading 30,998 in / 6,356 out at $3/$15 per 1M list = ~$0.19. Token counts from the Inspect logs' model_usage. All 4 artifact checks passed (ContentReasoning in log, <SCRATCHPAD_REASONING> in grader input, native metadata, 0/12 truncated); grader half priced at list, Tinker half from models-prices.json.",
+      "who": "Jack",
+      "amount": 0.21,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
     }
   ]
 }
