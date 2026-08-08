@@ -1040,6 +1040,16 @@
       "approx": true,
       "status": "spent",
       "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "450082d2-e3ca-4e69-b2a2-7a1ea3b4c28b",
+      "date": "2026-08-08",
+      "what": "Tinker + OpenRouter — native-CoT pilot (--native-cot, epochs 5, 6 conditions): base + sonnet08 arms for Qwen3-8B and Nemotron-3-Nano, plus an mt16384 re-run of the Qwen3-8B sonnet08 arm after 13/30 truncation (re-run still truncates 12/30 — the finetune fails to terminate its response off its training template; a finding, not a harness bug). Tinker 395,510 prefill + 580,672 sampled = ~$0.43; Sonnet 4.6 grading 714,235 in / 84,152 out at $3/$15 list = ~$3.40. Token counts from Inspect logs' model_usage.",
+      "who": "Jack",
+      "amount": 3.83,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
     }
   ]
 }
