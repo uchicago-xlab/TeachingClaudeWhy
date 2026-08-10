@@ -44,6 +44,28 @@ def test_parse_call_normalizes_parameters_key():
     assert call["arguments"] == {"city": "Oslo"}
 
 
+def test_parse_call_decodes_stringified_arguments():
+    # OpenAI-style tool calls serialize arguments as a JSON string, and a model
+    # finetuned on mixed traces can emit that shape.
+    call = fc.parse_call('{"name": "get_weather", "arguments": "{\\"city\\": \\"Oslo\\"}"}')
+    assert call == {"name": "get_weather", "arguments": {"city": "Oslo"}}
+
+
+def test_parse_call_ignores_stringified_arguments_that_are_not_an_object():
+    assert fc.parse_call('{"name": "get_weather", "arguments": "Oslo"}') is None
+    assert fc.parse_call('{"name": "get_weather", "arguments": "[1, 2]"}') is None
+
+
+def test_parse_call_prefers_a_tagged_call_over_a_bare_one():
+    text = '{"name": "plain", "arguments": {}} <tool_call>{"name": "tagged", "arguments": {}}</tool_call>'
+    assert fc.parse_call(text)["name"] == "tagged"
+
+
+def test_parse_call_prefers_a_fenced_call_over_a_bare_one():
+    text = '{"name": "plain", "arguments": {}}\n```json\n{"name": "fenced", "arguments": {}}\n```'
+    assert fc.parse_call(text)["name"] == "fenced"
+
+
 def test_parse_call_skips_non_call_json_then_finds_call():
     text = '{"note": "thinking"} then {"name": "get_weather", "arguments": {}}'
     assert fc.parse_call(text)["name"] == "get_weather"

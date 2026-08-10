@@ -70,6 +70,11 @@ def parse_call(text: str) -> dict | None:
             if not isinstance(obj, dict) or not isinstance(obj.get("name"), str):
                 continue
             args = obj.get("arguments", obj.get("parameters", {}))
+            if isinstance(args, str):  # OpenAI-style: arguments as a JSON string
+                try:
+                    args = json.loads(args)
+                except ValueError:
+                    continue
             if isinstance(args, dict):
                 return {"name": obj["name"], "arguments": args}
     return None
