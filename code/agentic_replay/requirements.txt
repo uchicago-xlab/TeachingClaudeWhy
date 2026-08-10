@@ -1,0 +1,3 @@
+-r ../tinker_sweep/requirements.txt
+datasets
+huggingface_hub
