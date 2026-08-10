@@ -101,8 +101,8 @@ def test_run_bench_scores_every_row_and_keeps_its_id(qwen3_tok):
 def test_run_bench_marks_length_stops_truncated(qwen3_tok):
     client = FakeClient(qwen3_tok, [CALL], stop_reason="length")
     scores = _bench(client, qwen3_tok, [ROW])
-    assert scores[0] == {"id": 7, "final": CALL, "valid": False, "name_match": False,
-                         "truncated": True, "reason": "truncated"}
+    assert scores[0] == {"id": 7, "final": CALL, "raw": CALL, "valid": False,
+                         "name_match": False, "truncated": True, "reason": "truncated"}
 
 
 def test_run_bench_native_scores_the_final_answer_not_the_reasoning(qwen3_tok):
@@ -118,6 +118,18 @@ def test_run_bench_native_scores_the_final_answer_not_the_reasoning(qwen3_tok):
 def test_run_bench_stores_the_sampled_text_beside_the_score(qwen3_tok):
     scores = _bench(FakeClient(qwen3_tok, ["I cannot call functions."]), qwen3_tok, [ROW])
     assert scores[0]["final"].strip() == "I cannot call functions."
+    assert scores[0]["raw"].strip() == "I cannot call functions."
+
+
+def test_run_bench_keeps_raw_when_a_native_sample_dies_mid_reasoning(qwen3_tok):
+    # The expected Qwen3-8B native failure: truncation inside the CoT leaves no
+    # final answer at all, so "final" is empty and only "raw" can say what the
+    # model was doing — and trunc_rate is a headline the file has to explain.
+    cot = "<think>\nThe user wants weather in Oslo, so I should look at the tools and"
+    scores = _bench(FakeClient(qwen3_tok, [cot], stop_reason="length"), qwen3_tok, [ROW],
+                    shape="native")
+    assert scores[0]["truncated"] is True and scores[0]["final"] == ""
+    assert "look at the tools" in scores[0]["raw"]
 
 
 # --- run(): the paid path, driven offline ---
@@ -152,8 +164,22 @@ def test_run_saves_scores_carrying_the_sampled_text(monkeypatch, tmp_path, qwen3
     saved = json.loads(out.read_text())
     assert saved["summary"]["n"] == 1 and saved["summary"]["valid_rate"] == 1.0
     assert saved["scores"][0]["final"].strip() == CALL
+    assert saved["scores"][0]["raw"].strip() == CALL
     assert saved["scores"][0]["id"] == 7
     assert "cost <= ~$0.00" in capsys.readouterr().out   # 1 row * 1024 tok * $0.20/Mtok
+
+
+def test_run_saves_raw_for_a_row_whose_final_is_empty(monkeypatch, tmp_path, qwen3_tok):
+    # The truncated-mid-CoT row, all the way to disk: the scored text is empty,
+    # so without raw the paid row would say nothing about why it truncated.
+    cot = "<think>\nchecking which tool applies to Oslo and"
+    out = _patch_run(monkeypatch, tmp_path, qwen3_tok,
+                     FakeClient(qwen3_tok, [cot], stop_reason="length"))
+    asyncio.run(benign_bench.run(_run_args(tmp_path, shape="native")))
+    saved = json.loads(out.read_text())
+    assert saved["summary"]["trunc_rate"] == 1.0
+    assert saved["scores"][0]["final"] == ""
+    assert "which tool applies" in saved["scores"][0]["raw"]
 
 
 def test_run_refuses_to_overwrite_an_existing_result(monkeypatch, tmp_path, qwen3_tok):

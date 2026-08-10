@@ -72,10 +72,14 @@ async def run_bench(client, tinker_mod, tokenizer, model, rows, *, shape, max_to
             client, tinker_mod, tokenizer, prompt_ids, stops, max_tokens,
             temperature, seed * 1_000_000 + idx)
         final = tinker_sampling.extract_final(tokenizer, fam, shape, raw)
-        # The sampled text is stored, not just its verdict: parse-based scoring
-        # cannot tell a refusal that quotes the call format from an answer, and
-        # every re-read of a rate drop would otherwise cost another paid run.
-        scores.append({"id": row["id"], "final": final, **score_sample(row, final, stop_reason)})
+        # Both texts are stored, not just the verdict: parse-based scoring cannot
+        # tell a refusal that quotes the call format from an answer, and every
+        # re-read of a rate drop would otherwise cost another paid run. `raw` is
+        # kept beside the scored `final` because a native sample truncated inside
+        # its CoT extracts to an empty final — exactly the rows trunc_rate is
+        # made of would be the ones the file could not explain.
+        scores.append({"id": row["id"], "final": final, "raw": raw,
+                       **score_sample(row, final, stop_reason)})
     return scores
 
 
