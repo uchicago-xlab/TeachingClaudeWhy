@@ -16,7 +16,10 @@ aren't re-run. Pass --fresh-themes to ignore cached themes and regenerate them
 to reuse the initial (system, user) prompts cached in tmp/critiqued_prompts.json
 and re-run steps 5-9 (e.g. after changing the critique or response prompts).
 Pass --responses-only to skip steps 1-6 and run steps 7-9 over the prompts
-already cached in tmp/critiqued_prompts.json. Full-sweep runs checkpoint each
+already cached in tmp/critiqued_prompts.json. Responses-only runs checkpoint
+per sample too, so a crashed or partially-failed run resumes by re-running the
+same command; samples whose final_response failed are retried.
+Full-sweep runs checkpoint each
 finished sample to checkpoint_samples.jsonl (themes/scenarios to
 checkpoint_stages.json) and resume automatically after a crash; delete those
 two files, or use a fresh PIPELINE_OUT_DIR, to start over — a stale stage
@@ -243,15 +246,33 @@ def response_stats(samples: list[dict]) -> str:
     )
 
 
+RESPONSE_KEYS = ("response", "response_critique", "final_response")
+
+
+def regen_response(task_index: int, sample: dict, done: dict[int, dict | None]) -> None:
+    """Steps 7-9 for one cached prompt, checkpointed; reuses a completed prior run."""
+    prior = done.get(task_index)
+    if prior and prior.get("final_response"):
+        sample.update({key: prior.get(key) for key in RESPONSE_KEYS})
+        return
+    add_response(sample)
+    checkpoint_sample(task_index, {key: sample.get(key) for key in RESPONSE_KEYS})
+
+
 def main():
     if "--responses-only" in sys.argv:
         cached = json.loads((OUT_DIR / "critiqued_prompts.json").read_text())
         samples = cached["prompts"]
+        done = load_checkpointed_samples()
+        complete = sum(1 for v in done.values() if v and v.get("final_response"))
+        if done:
+            print(f"resuming: {complete}/{len(samples)} samples already complete")
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-            list(pool.map(add_response, samples))
+            list(pool.map(lambda t: regen_response(t[0], t[1], done), enumerate(samples)))
         print(f"generated {response_stats(samples)}")
         themes_by_principle = {int(k): v for k, v in cached["themes_by_principle"].items()}
         write_outputs(cached["principles"], themes_by_principle, samples)
+        clear_checkpoints()
         return
 
     if "--from-critique" in sys.argv:
