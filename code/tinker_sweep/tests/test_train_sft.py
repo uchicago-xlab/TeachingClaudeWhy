@@ -407,7 +407,8 @@ def tiny_dataset(tmp_path, monkeypatch):
 
 def _args(tmp_path, **over):
     defaults = dict(model="Qwen/Qwen3-8B", teacher="sonnet", epochs=3, batch_size=2,
-                    lr=1e-4, rank=None, seed=7, run_dir=str(tmp_path / "runs"), yes=True)
+                    lr=1e-4, rank=None, seed=7, run_dir=str(tmp_path / "runs"), yes=True,
+                    train_file=None, val_file=None, run_tag=None)
     return argparse.Namespace(**{**defaults, **over})
 
 
@@ -468,3 +469,134 @@ def test_a_crash_mid_run_leaves_the_earlier_paid_checkpoints_on_disk(tiny_datase
     assert [c["sampler_path"] for c in state["checkpoints"]] == [
         "tinker://qwen-qwen3-8b-sonnet08-ep1", "tinker://qwen-qwen3-8b-sonnet08-ep2"]
     assert state["selected"] is not None
+
+
+# ---------------------------------------------------------------- dataset overrides
+#
+# File mode is the agentic-replay experiment's entry point: an assembled mix
+# plus its val file, named by --run-tag instead of by a teacher. Teacher mode's
+# names are load-bearing for run_model.py's resume, so they are pinned here too.
+
+
+@pytest.fixture(scope="module")
+def qwen3_tok():
+    import render
+
+    return render.load_tokenizer(families.MODELS["Qwen/Qwen3-8B"])
+
+
+def _data_args(**kw):
+    base = dict(model="Qwen/Qwen3-8B", teacher=None, train_file=None,
+                val_file=None, run_tag=None)
+    base.update(kw)
+    return argparse.Namespace(**base)
+
+
+def _write_rows(path, rows):
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows))
+
+
+ROW = {"messages": [{"role": "user", "content": "hi"},
+                    {"role": "assistant", "content": "hello"}]}
+
+
+def test_resolve_data_file_mode(tmp_path):
+    train, val = tmp_path / "t.jsonl", tmp_path / "v.jsonl"
+    _write_rows(train, [ROW])
+    _write_rows(val, [ROW])
+    model = train_sft.families.get_model("Qwen/Qwen3-8B")
+    choice = train_sft.resolve_data(
+        _data_args(train_file=str(train), val_file=str(val), run_tag="mixoff"), model)
+    assert choice.state_name == "mixoff" and choice.ckpt_tag == "mixoff"
+    assert len(choice.train.rows) == 1 and len(choice.val.rows) == 1
+
+
+def test_resolve_data_teacher_mode_names_unchanged(monkeypatch):
+    model = train_sft.families.get_model("Qwen/Qwen3-8B")
+    monkeypatch.setattr(train_sft, "load_splits", lambda m, t: ("TRAIN", "VAL"))
+    choice = train_sft.resolve_data(_data_args(teacher="sonnet"), model)
+    assert choice.state_name == "sonnet" and choice.ckpt_tag == "sonnet08"
+
+
+def test_resolve_data_refuses_partial_and_mixed_flags():
+    model = train_sft.families.get_model("Qwen/Qwen3-8B")
+    for bad in (_data_args(train_file="x"),                       # partial file mode
+                _data_args(teacher="sonnet", run_tag="mixoff"),   # both modes
+                _data_args()):                                    # neither mode
+        with pytest.raises(SystemExit):
+            train_sft.resolve_data(bad, model)
+
+
+def test_resolve_data_refuses_a_run_tag_that_shadows_a_teacher(tmp_path):
+    """--run-tag sonnet would overwrite train-sonnet.json, which run_model.py's
+    eval-sonnet stage reads to find its checkpoint — pointing a teacher arm's
+    eval at a mix run's weights, after both were paid for."""
+    train, val = tmp_path / "t.jsonl", tmp_path / "v.jsonl"
+    _write_rows(train, [ROW])
+    _write_rows(val, [ROW])
+    model = train_sft.families.get_model("Qwen/Qwen3-8B")
+    with pytest.raises(SystemExit, match="run_model"):
+        train_sft.resolve_data(
+            _data_args(train_file=str(train), val_file=str(val), run_tag="sonnet"), model)
+
+
+def test_resolve_data_file_mode_gates_on_the_verified_family(tmp_path):
+    """The verified-family gate guards file mode too, before any row is read."""
+    train, val = tmp_path / "t.jsonl", tmp_path / "v.jsonl"
+    _write_rows(train, [ROW])
+    _write_rows(val, [ROW])
+    with pytest.raises(RuntimeError, match="not verified"):
+        train_sft.resolve_data(
+            _data_args(train_file=str(train), val_file=str(val), run_tag="mixoff"),
+            _unverified_model())
+
+
+# ---------------------------------------------------------------- per-row render dispatch
+
+
+def test_render_row_dispatches_on_render_field(qwen3_tok):
+    fam = train_sft.families.MODELS["Qwen/Qwen3-8B"].family
+    native_row = {"messages": [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "<think>\nok\n</think>\n\nhello"}],
+        "render": "native"}
+    tokens, weights = train_sft.render_row(qwen3_tok, fam, native_row)
+    span = qwen3_tok.decode([t for t, w in zip(tokens, weights) if w])
+    assert "<think>" in span                       # CoT trained, not stripped
+    tokens_std, weights_std = train_sft.render_row(qwen3_tok, fam, ROW)
+    std_span = qwen3_tok.decode([t for t, w in zip(tokens_std, weights_std) if w])
+    assert "<think>" not in std_span               # standard rows untouched
+
+
+def test_render_row_refuses_unknown_render_value(qwen3_tok):
+    fam = train_sft.families.MODELS["Qwen/Qwen3-8B"].family
+    with pytest.raises(SystemExit):
+        train_sft.render_row(qwen3_tok, fam, {**ROW, "render": "nativ"})
+
+
+def test_render_row_refuses_a_multi_turn_native_row(qwen3_tok):
+    """render_native_training_example's scope is one trailing assistant turn.
+
+    Qwen templates drop <think> from every earlier assistant turn, and its
+    messages[:-1] goes back through the template, so a multi-turn native row
+    would train history stripped of the reasoning the experiment exists to keep
+    — silently. This dispatch site is where arbitrary mix files enter the
+    pipeline, so it is where that scope is enforced.
+    """
+    fam = train_sft.families.MODELS["Qwen/Qwen3-8B"].family
+    multi_turn = {"messages": [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": "<think>\nfirst\n</think>\n\nhello"},
+        {"role": "user", "content": "again"},
+        {"role": "assistant", "content": "<think>\nsecond\n</think>\n\nbye"}],
+        "render": "native"}
+    with pytest.raises(SystemExit, match="multi-turn"):
+        train_sft.render_row(qwen3_tok, fam, multi_turn)
+
+
+def test_render_split_reports_which_file_and_row_a_bad_view_came_from(qwen3_tok, tmp_path):
+    """A mix is hundreds of rows; "unknown render value" alone does not locate one."""
+    fam = train_sft.families.MODELS["Qwen/Qwen3-8B"].family
+    split = train_sft.Split(tmp_path / "mix-train.jsonl", [ROW, {**ROW, "render": "nativ"}])
+    with pytest.raises(SystemExit, match=r"mix-train\.jsonl: row 1: unknown render value"):
+        train_sft.render_split(qwen3_tok, fam, split)
