@@ -1,5 +1,8 @@
+import argparse
 import asyncio
 import json
+
+import pytest
 
 import benign_bench
 import families
@@ -98,7 +101,7 @@ def test_run_bench_scores_every_row_and_keeps_its_id(qwen3_tok):
 def test_run_bench_marks_length_stops_truncated(qwen3_tok):
     client = FakeClient(qwen3_tok, [CALL], stop_reason="length")
     scores = _bench(client, qwen3_tok, [ROW])
-    assert scores[0] == {"id": 7, "valid": False, "name_match": False,
+    assert scores[0] == {"id": 7, "final": CALL, "valid": False, "name_match": False,
                          "truncated": True, "reason": "truncated"}
 
 
@@ -110,6 +113,70 @@ def test_run_bench_native_scores_the_final_answer_not_the_reasoning(qwen3_tok):
             '</think>\n\n' + CALL)
     scores = _bench(FakeClient(qwen3_tok, [text]), qwen3_tok, [ROW], shape="native")
     assert scores[0]["valid"] is True and scores[0]["name_match"] is True
+
+
+def test_run_bench_stores_the_sampled_text_beside_the_score(qwen3_tok):
+    scores = _bench(FakeClient(qwen3_tok, ["I cannot call functions."]), qwen3_tok, [ROW])
+    assert scores[0]["final"].strip() == "I cannot call functions."
+
+
+# --- run(): the paid path, driven offline ---
+
+
+def _run_args(tmp_path, **kw):
+    return argparse.Namespace(**{"model": "Qwen/Qwen3-8B", "checkpoint": None, "shape": "off",
+                                 "run_name": "bench-base-off", "temperature": 0.7, "seed": 0,
+                                 "yes": True, "force": False, **kw})
+
+
+def _patch_run(monkeypatch, tmp_path, qwen3_tok, client):
+    """Point run() at a temp prompts file and bench dir; no network, no spend."""
+    import render
+
+    prompts = tmp_path / "fc-bench.jsonl"
+    prompts.write_text(json.dumps(ROW) + "\n")
+    monkeypatch.setattr(benign_bench, "BENCH_PROMPTS", prompts)
+    monkeypatch.setattr(benign_bench, "BENCH_DIR", tmp_path / "bench")
+    monkeypatch.setattr(benign_bench, "price_for", lambda mid: {"sample": "$0.20"})
+    monkeypatch.setattr(render, "load_tokenizer", lambda model: qwen3_tok)
+    monkeypatch.setattr(benign_bench.tinker_sampling, "make_client",
+                        lambda mid, ckpt=None: client)
+    return tmp_path / "bench" / "bench-base-off.json"
+
+
+def test_run_saves_scores_carrying_the_sampled_text(monkeypatch, tmp_path, qwen3_tok, capsys):
+    # Reading a rate drop means reading what the model said; a paid run that
+    # stored only its own scores would have to be re-bought to be understood.
+    out = _patch_run(monkeypatch, tmp_path, qwen3_tok, FakeClient(qwen3_tok, [CALL]))
+    asyncio.run(benign_bench.run(_run_args(tmp_path)))
+    saved = json.loads(out.read_text())
+    assert saved["summary"]["n"] == 1 and saved["summary"]["valid_rate"] == 1.0
+    assert saved["scores"][0]["final"].strip() == CALL
+    assert saved["scores"][0]["id"] == 7
+    assert "cost <= ~$0.00" in capsys.readouterr().out   # 1 row * 1024 tok * $0.20/Mtok
+
+
+def test_run_refuses_to_overwrite_an_existing_result(monkeypatch, tmp_path, qwen3_tok):
+    def no_client(*a, **kw):
+        raise AssertionError("client built despite the name collision — that is the spend")
+
+    out = _patch_run(monkeypatch, tmp_path, qwen3_tok, FakeClient(qwen3_tok, [CALL]))
+    out.parent.mkdir(parents=True)
+    out.write_text(json.dumps({"run_name": "bench-base-off", "scores": ["precious"]}))
+    monkeypatch.setattr(benign_bench.tinker_sampling, "make_client", no_client)
+
+    with pytest.raises(SystemExit) as exc:
+        asyncio.run(benign_bench.run(_run_args(tmp_path)))
+    assert str(out) in str(exc.value) and "--force" in str(exc.value)
+    assert json.loads(out.read_text())["scores"] == ["precious"]   # untouched
+
+
+def test_run_force_overwrites(monkeypatch, tmp_path, qwen3_tok):
+    out = _patch_run(monkeypatch, tmp_path, qwen3_tok, FakeClient(qwen3_tok, [CALL]))
+    out.parent.mkdir(parents=True)
+    out.write_text(json.dumps({"run_name": "bench-base-off", "scores": ["stale"]}))
+    asyncio.run(benign_bench.run(_run_args(tmp_path, force=True)))
+    assert json.loads(out.read_text())["scores"][0]["id"] == 7
 
 
 def test_print_table_reads_saved_results(monkeypatch, tmp_path, capsys):

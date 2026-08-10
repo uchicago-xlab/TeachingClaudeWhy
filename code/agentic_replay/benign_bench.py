@@ -72,7 +72,10 @@ async def run_bench(client, tinker_mod, tokenizer, model, rows, *, shape, max_to
             client, tinker_mod, tokenizer, prompt_ids, stops, max_tokens,
             temperature, seed * 1_000_000 + idx)
         final = tinker_sampling.extract_final(tokenizer, fam, shape, raw)
-        scores.append({"id": row["id"], **score_sample(row, final, stop_reason)})
+        # The sampled text is stored, not just its verdict: parse-based scoring
+        # cannot tell a refusal that quotes the call format from an answer, and
+        # every re-read of a rate drop would otherwise cost another paid run.
+        scores.append({"id": row["id"], "final": final, **score_sample(row, final, stop_reason)})
     return scores
 
 
@@ -90,6 +93,14 @@ def print_table():
 
 
 async def run(args):
+    # Before the client, before the spend: run names are hand-typed a dozen
+    # times over a grid, and a collision would overwrite another arm's paid
+    # result with no way to get it back.
+    out = BENCH_DIR / f"{args.run_name}.json"
+    if out.exists() and not args.force:
+        raise SystemExit(f"{out} already exists and holds a paid result — "
+                         f"pick another --run-name, or pass --force to overwrite it")
+
     import tinker
 
     model = families.get_model(args.model)
@@ -114,7 +125,6 @@ async def run(args):
                              max_tokens=max_tokens, temperature=args.temperature, seed=args.seed)
     summary = summarize_scores(scores)
     BENCH_DIR.mkdir(parents=True, exist_ok=True)
-    out = BENCH_DIR / f"{args.run_name}.json"
     out.write_text(json.dumps({
         "run_name": args.run_name, "model": args.model, "checkpoint": args.checkpoint,
         "shape": args.shape, "temperature": args.temperature, "seed": args.seed,
@@ -132,6 +142,8 @@ def main():
     parser.add_argument("--run-name")
     parser.add_argument("--temperature", type=float, default=0.7)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--force", action="store_true",
+                        help="overwrite an existing result of the same --run-name")
     parser.add_argument("--yes", action="store_true")
     args = parser.parse_args()
     if args.table:
