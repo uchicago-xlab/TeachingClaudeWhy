@@ -29,6 +29,29 @@ def test_select_fc_parses_screens_dedups_and_is_deterministic():
     assert [r["id"] for r in again] == [r["id"] for r in kept]  # same seed, same order
 
 
+def test_select_fc_drops_rows_whose_tools_no_validator_can_read():
+    # The paid loops call fc.validate_call on the row's own tools list. Screening
+    # the shapes here means a malformed xlam row never reaches sampling.
+    def row_with_tools(i, tools):
+        return {"id": i, "query": f"unique query number {i}",
+                "tools": json.dumps(tools),
+                "answers": json.dumps([{"name": "get_weather", "arguments": {}}])}
+
+    rows = [
+        _xlam_row(1, "Weather in Oslo tomorrow?"),
+        row_with_tools(2, [{"description": "no name", "parameters": {"city": {}}}]),
+        row_with_tools(3, [{"name": "get_weather", "parameters": ["city", "units"]}]),
+        row_with_tools(4, ["get_weather"]),
+        row_with_tools(5, [{"name": "get_weather",
+                            "parameters": {"type": "object",
+                                           "properties": {"city": {"type": "string"}}}}]),
+    ]
+    kept, dropped = select_prompts.select_fc(rows, seed=0)
+    assert {r["id"] for r in kept} == {1, 5}          # JSON-schema nesting is fine
+    reasons = {d["id"]: d["reason"] for d in dropped}
+    assert reasons == {2: "malformed-tools", 3: "malformed-tools", 4: "malformed-tools"}
+
+
 def test_split_fc_sizes_and_disjointness():
     rows = [_xlam_row(i, f"unique query number {i}") for i in range(300)]
     kept, _ = select_prompts.select_fc(rows, seed=0)

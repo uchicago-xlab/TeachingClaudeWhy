@@ -94,6 +94,53 @@ def test_validate_call_rejects_unknown_function_and_extra_args():
     assert fc.validate_call(None, TOOLS) == "no parseable call"
 
 
+# A third-party row's tools list is not trusted to be well-formed, and both
+# callers run mid-paid-loop over files written only at the end: one exception
+# would lose every paid sample taken before it.
+MALFORMED_TOOLS = [
+    [{"description": "no name at all", "parameters": {"city": {"type": "str"}}}],
+    [{"name": "get_weather", "parameters": ["city", "units"]}],   # list-shaped params
+    [{"name": 42, "parameters": {}}],                             # non-str name
+    ["get_weather"],                                              # entry not a dict
+    [None],
+    "get_weather",                                                # tools not a list
+    None,
+]
+
+
+def test_validate_call_never_raises_on_a_malformed_tools_list():
+    call = {"name": "get_weather", "arguments": {"city": "Oslo"}}
+    for tools in MALFORMED_TOOLS:
+        assert isinstance(fc.validate_call(call, tools), str)
+
+
+def test_validate_call_reasons_for_the_two_shapes_the_screen_drops():
+    call = {"name": "get_weather", "arguments": {"city": "Oslo"}}
+    # A nameless tool cannot match, so the call is against an unknown function.
+    assert "unknown function" in fc.validate_call(
+        call, [{"description": "no name", "parameters": {"city": {"type": "str"}}}])
+    # A matching name whose schema we cannot read is not silently accepted.
+    assert fc.validate_call(
+        call, [{"name": "get_weather", "parameters": ["city"]}]) == "malformed tool entry"
+    assert fc.validate_call(
+        {"name": "get_weather", "arguments": {}},
+        [{"name": "get_weather", "parameters": ["city"]}]) == "malformed tool entry"
+
+
+def test_well_formed_tool_accepts_both_schema_shapes_and_absent_parameters():
+    assert fc.well_formed_tool(TOOLS[0])
+    assert fc.well_formed_tool(TOOLS_JSONSCHEMA[0])
+    assert fc.well_formed_tool({"name": "ping"})                  # parameters absent
+    assert not fc.well_formed_tool({"parameters": {}})
+    assert not fc.well_formed_tool({"name": "ping", "parameters": ["city"]})
+    assert not fc.well_formed_tool("get_weather")
+
+
+def test_param_names_is_total():
+    for tool in ({"name": "x", "parameters": ["a"]}, {"name": "x"}, "x", None, 3):
+        assert fc._param_names(tool) == set()
+
+
 def test_screen_flags_security_flavored_text_and_passes_mundane():
     assert fc.screened_out("How do I hack into my neighbor's wifi?") is not None
     assert fc.screened_out("Track my ex's phone location") is not None

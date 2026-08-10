@@ -39,6 +39,7 @@ import json
 import math
 import os
 import random
+import re
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -266,6 +267,9 @@ def load_splits(model: families.SweepModel, teacher: str) -> tuple[Split, Split]
     )
 
 
+RUN_TAG_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+
+
 @dataclass(frozen=True)
 class DataChoice:
     train: Split
@@ -285,6 +289,14 @@ def resolve_data(args, model: families.SweepModel) -> DataChoice:
         if args.teacher or not all(file_flags):
             raise SystemExit(
                 "--train-file, --val-file and --run-tag go together and replace --teacher"
+            )
+        if not RUN_TAG_RE.match(args.run_tag):
+            raise SystemExit(
+                f"--run-tag {args.run_tag!r} is not a safe name. The tag becomes a path "
+                "segment (runs/<slug>/train-<tag>.json) and a checkpoint name, so a "
+                "stray slash or space fails on the save after epoch 1 is already paid "
+                "for. Use lowercase letters, digits, '.', '_' or '-', starting with a "
+                "letter or digit"
             )
         if args.run_tag in TEACHER_SPLITS:
             raise SystemExit(

@@ -540,6 +540,22 @@ def test_resolve_data_refuses_a_run_tag_that_shadows_a_teacher(tmp_path):
             _data_args(train_file=str(train), val_file=str(val), run_tag="sonnet"), model)
 
 
+def test_resolve_data_refuses_a_run_tag_that_is_not_a_safe_name(tmp_path):
+    """The tag becomes a path segment and a checkpoint name, so a stray slash or
+    space fails on the save after epoch 1 — with the epoch already paid for."""
+    train, val = tmp_path / "t.jsonl", tmp_path / "v.jsonl"
+    _write_rows(train, [ROW])
+    _write_rows(val, [ROW])
+    model = train_sft.families.get_model("Qwen/Qwen3-8B")
+    for bad in ("mix/off", "Mixoff ", "../escape", "-leading"):
+        with pytest.raises(SystemExit, match="safe name"):
+            train_sft.resolve_data(
+                _data_args(train_file=str(train), val_file=str(val), run_tag=bad), model)
+    ok = train_sft.resolve_data(
+        _data_args(train_file=str(train), val_file=str(val), run_tag="mixoff"), model)
+    assert ok.ckpt_tag == "mixoff"
+
+
 def test_resolve_data_file_mode_gates_on_the_verified_family(tmp_path):
     """The verified-family gate guards file mode too, before any row is read."""
     train, val = tmp_path / "t.jsonl", tmp_path / "v.jsonl"

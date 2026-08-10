@@ -30,6 +30,19 @@ def test_score_sample_invalid_and_truncated_paths():
     assert s["valid"] is False and s["truncated"] is True
 
 
+def test_score_sample_survives_a_malformed_tools_row():
+    # The crash site: score_sample runs once per row inside the paid loop, and
+    # the file is written only at the end — one raised KeyError here would lose
+    # every sample already bought. A row like this is screened out at selection;
+    # this is the second layer, for rows written before that screen existed.
+    row = dict(ROW, tools=[{"description": "nameless"}, {"name": "get_weather",
+                                                         "parameters": ["city"]}])
+    s = benign_bench.score_sample(row, '{"name": "get_weather", "arguments": {"city": "Oslo"}}',
+                                  "stop")
+    assert s["valid"] is False and s["name_match"] is False
+    assert isinstance(s["reason"], str)
+
+
 def test_summarize_scores_rates():
     scores = [
         {"valid": True, "name_match": True, "truncated": False, "reason": None},
@@ -203,6 +216,40 @@ def test_run_force_overwrites(monkeypatch, tmp_path, qwen3_tok):
     out.write_text(json.dumps({"run_name": "bench-base-off", "scores": ["stale"]}))
     asyncio.run(benign_bench.run(_run_args(tmp_path, force=True)))
     assert json.loads(out.read_text())["scores"][0]["id"] == 7
+
+
+def test_run_without_yes_builds_no_client(monkeypatch, tmp_path, qwen3_tok, capsys):
+    # The dry run is the only thing between a typo'd command and a paid run; it
+    # has to stop before the client exists, not merely before the samples.
+    def no_client(*a, **kw):
+        raise AssertionError("client built in dry run")
+
+    out = _patch_run(monkeypatch, tmp_path, qwen3_tok, FakeClient(qwen3_tok, [CALL]))
+    monkeypatch.setattr(benign_bench.tinker_sampling, "make_client", no_client)
+    asyncio.run(benign_bench.run(_run_args(tmp_path, yes=False)))
+    assert "dry run" in capsys.readouterr().out
+    assert not out.exists()
+
+
+def test_run_refuses_a_checkpoint_from_another_model(monkeypatch, tmp_path, qwen3_tok):
+    # Sampling a 27B checkpoint through the 8B tokenizer produces garbage that
+    # still scores — and the bill is the same as a real run.
+    def no_client(*a, **kw):
+        raise AssertionError("client built despite the model/checkpoint mismatch")
+
+    _patch_run(monkeypatch, tmp_path, qwen3_tok, FakeClient(qwen3_tok, [CALL]))
+    monkeypatch.setattr(benign_bench.tinker_sampling, "make_client", no_client)
+    ckpt = "tinker://abc:train:0/sampler_weights/qwen-qwen3-6-27b-mixnat-ep2"
+    with pytest.raises(SystemExit) as exc:
+        asyncio.run(benign_bench.run(_run_args(tmp_path, checkpoint=ckpt)))
+    assert "qwen-qwen3-8b" in str(exc.value) and ckpt in str(exc.value)
+
+
+def test_run_accepts_a_checkpoint_of_the_named_model(monkeypatch, tmp_path, qwen3_tok):
+    out = _patch_run(monkeypatch, tmp_path, qwen3_tok, FakeClient(qwen3_tok, [CALL]))
+    ckpt = "tinker://abc:train:0/sampler_weights/qwen-qwen3-8b-mixoff-ep2"
+    asyncio.run(benign_bench.run(_run_args(tmp_path, checkpoint=ckpt)))
+    assert json.loads(out.read_text())["checkpoint"] == ckpt
 
 
 def test_print_table_reads_saved_results(monkeypatch, tmp_path, capsys):

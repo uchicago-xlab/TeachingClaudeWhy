@@ -80,20 +80,50 @@ def parse_call(text: str) -> dict | None:
     return None
 
 
-def _param_names(tool: dict) -> set[str]:
+def well_formed_tool(tool) -> bool:
+    """A tool entry validate_call can actually check a call against.
+
+    The shape contract for both schema conventions: a dict with a str "name" and
+    "parameters" either absent or a dict (xlam's param -> spec map, or the
+    JSON-schema {"properties": {...}} nesting). select_prompts screens rows on
+    this at the source; validate_call re-checks because the paid loops are also
+    fed rows written before the screen existed.
+    """
+    if not isinstance(tool, dict) or not isinstance(tool.get("name"), str):
+        return False
+    params = tool.get("parameters")
+    return params is None or isinstance(params, dict)
+
+
+def _param_names(tool) -> set[str]:
+    """Declared parameter names; empty for any shape this cannot read."""
+    if not isinstance(tool, dict):
+        return set()
     params = tool.get("parameters") or {}
+    if not isinstance(params, dict):
+        return set()
     if isinstance(params.get("properties"), dict):  # JSON-schema nesting
         return set(params["properties"])
     return set(params)  # xlam: param -> spec directly
 
 
-def validate_call(call: dict | None, tools: list[dict]) -> str | None:
-    """None if the call is valid against the row's own tools, else the reason."""
-    if call is None:
+def validate_call(call: dict | None, tools) -> str | None:
+    """None if the call is valid against the row's own tools, else the reason.
+
+    Total on purpose: no input shape raises. Both callers run inside a paid loop
+    over third-party rows and write their output only at the end, so an
+    exception on one malformed tools list would throw away every sample bought
+    before it. A tool entry this cannot read simply fails to validate.
+    """
+    if not isinstance(call, dict) or not isinstance(call.get("name"), str) \
+            or not isinstance(call.get("arguments"), dict):
         return "no parseable call"
-    tool = next((t for t in tools if t["name"] == call["name"]), None)
+    tools = tools if isinstance(tools, list) else []
+    tool = next((t for t in tools if isinstance(t, dict) and t.get("name") == call["name"]), None)
     if tool is None:
         return f"unknown function {call['name']!r}"
+    if not well_formed_tool(tool):
+        return "malformed tool entry"
     extra = set(call["arguments"]) - _param_names(tool)
     if extra:
         return f"arguments not in schema: {sorted(extra)}"

@@ -105,6 +105,18 @@ async def run(args):
         raise SystemExit(f"{out} already exists and holds a paid result — "
                          f"pick another --run-name, or pass --force to overwrite it")
 
+    # Checkpoints are named <slug>-<tag>-ep<N>, so the model they belong to is
+    # written in the path. A checkpoint from another model would be sampled
+    # through this model's tokenizer: the run does not fail, it produces
+    # garbage that still scores, at full price.
+    if args.checkpoint and families.slug(args.model) not in args.checkpoint:
+        raise SystemExit(
+            f"--checkpoint {args.checkpoint!r} does not name --model {args.model} "
+            f"(expected {families.slug(args.model)!r} in the path). Sampling one "
+            "model's weights through another's tokenizer buys scoreable garbage. "
+            "Copy the whole checkpoint path from that arm's runs/<slug>/train-<tag>.json"
+        )
+
     import tinker
 
     model = families.get_model(args.model)

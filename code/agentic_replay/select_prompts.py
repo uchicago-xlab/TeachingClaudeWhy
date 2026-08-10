@@ -50,7 +50,12 @@ def select_fc(rows, seed: int):
         answers = json.loads(row["answers"]) if isinstance(row["answers"], str) else row["answers"]
         surface = row["query"] + " " + json.dumps(tools)
         reason = None
-        if len(answers) != 1:
+        # A tools list fc.validate_call cannot read is dropped here, at the
+        # source: the same row reaches validate_call mid-paid-loop in
+        # sample_replay and benign_bench, where it can only ever fail.
+        if not (isinstance(tools, list) and all(fc.well_formed_tool(t) for t in tools)):
+            reason = "malformed-tools"
+        elif len(answers) != 1:
             reason = f"multi-answer ({len(answers)})"
         elif (hit := fc.screened_out(surface)) is not None:
             reason = f"screen: {hit!r}"

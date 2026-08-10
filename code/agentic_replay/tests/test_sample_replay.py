@@ -1,4 +1,6 @@
+import argparse
 import asyncio
+import json
 
 import pytest
 
@@ -33,6 +35,16 @@ def test_accept_fc_requires_valid_terminating_call():
         FC_ROW, "fc-train", "off", "I cannot call functions.", "stop")
     assert "unknown function" in sample_replay.accept(
         FC_ROW, "fc-train", "off", '{"name": "rm_rf", "arguments": {}}', "stop")
+
+
+def test_accept_survives_a_malformed_tools_row():
+    # The other crash site: accept() runs per attempt inside the paid sampling
+    # loop, whose output file is written only at the end. The row is rejected,
+    # never raised on.
+    row = dict(FC_ROW, tools=[{"description": "nameless"}])
+    assert isinstance(sample_replay.accept(row, "fc-train", "off", CALL, "stop"), str)
+    row = dict(FC_ROW, tools=[{"name": "get_weather", "parameters": ["city"]}])
+    assert sample_replay.accept(row, "fc-train", "off", CALL, "stop") == "malformed tool entry"
 
 
 def test_accept_chat_requires_termination_and_content_only():
@@ -193,6 +205,26 @@ def test_stored_content_is_stop_cut(qwen3_tok):
     content = rows[0]["messages"][-1]["content"]
     assert stop not in content
     assert content.strip() == CALL
+
+
+def test_run_without_yes_builds_no_client(monkeypatch, tmp_path, qwen3_tok, capsys):
+    # The dry run is the only thing between a typo'd command and a paid run; it
+    # has to stop before the client exists, not merely before the samples.
+    def no_client(*a, **kw):
+        raise AssertionError("client built in dry run")
+
+    (tmp_path / "fc-train.jsonl").write_text(json.dumps(FC_ROW) + "\n")
+    monkeypatch.setattr(sample_replay, "PROMPTS_DIR", tmp_path)
+    monkeypatch.setattr(sample_replay, "REPLAY_DIR", tmp_path / "replay")
+    monkeypatch.setattr(sample_replay, "price_for", lambda mid: {"sample": "$0.20"})
+    monkeypatch.setattr(render, "load_tokenizer", lambda model: qwen3_tok)
+    monkeypatch.setattr(sample_replay.tinker_sampling, "make_client", no_client)
+
+    args = argparse.Namespace(model="Qwen/Qwen3-8B", split="fc-train", shape="off",
+                              max_tokens=None, temperature=0.7, tries=3, seed=0, yes=False)
+    asyncio.run(sample_replay.run(args))
+    assert "dry run" in capsys.readouterr().out
+    assert not (tmp_path / "replay").exists()
 
 
 def test_sample_split_seeds_are_deterministic_per_attempt(qwen3_tok):

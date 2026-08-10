@@ -229,7 +229,10 @@ cd code/tinker_sweep
 Repeat for `mixnat`, `replayonly` and `mixchat`, changing both file paths and
 `--run-tag` together. `--train-file`, `--val-file` and `--run-tag` go together
 and replace `--teacher`; a `--run-tag` that names a teacher is refused, because
-it would overwrite the state file `run_model.py`'s eval stage reads.
+it would overwrite the state file `run_model.py`'s eval stage reads. The tag is
+also refused unless it is a safe name (`^[a-z0-9][a-z0-9._-]*$`) — it becomes
+both a path segment and a checkpoint name, so a stray slash or space would fail
+on the save after epoch 1 was already paid for.
 
 Checkpoints and val-best selection land in
 `code/tinker_sweep/runs/qwen-qwen3-8b/train-<tag>.json`.
@@ -243,6 +246,12 @@ neither. That combination is the trap. The tempting move is to copy one arm's
 path and hand-edit `mixoff` → `mixnat` in the tail, which produces a path that
 reads correctly at a glance while the UUID still points at the other arm's
 training run. Copy the whole string out of the arm's own JSON.
+
+`benign_bench.py` refuses a `--checkpoint` whose path does not contain
+`--model`'s slug, which catches the cross-*model* version of this (a 27B
+checkpoint sampled through the 8B tokenizer). It cannot catch the cross-*arm*
+version above: `mixoff` and `mixnat` checkpoints of the same model both carry
+the same slug, so a hand-edited tail still passes. Copying remains the rule.
 
 ### 7. Evals (paid)
 
