@@ -8,7 +8,7 @@ Runs on every arm INCLUDING base and DA-only, in both shapes.
     ../../.venv-tinker/bin/python benign_bench.py --model Qwen/Qwen3-8B --shape off \
         --run-name bench-qwen-qwen3-8b-base-off --yes
     ../../.venv-tinker/bin/python benign_bench.py --model Qwen/Qwen3-8B --shape native \
-        --checkpoint tinker://…/sampler_weights/00042 \
+        --checkpoint tinker://<run-uuid>:train:0/sampler_weights/qwen-qwen3-8b-mixnat-ep2 \
         --run-name bench-qwen-qwen3-8b-mixnat-native --yes
     ../../.venv-tinker/bin/python benign_bench.py --table
 """

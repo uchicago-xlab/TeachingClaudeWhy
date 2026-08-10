@@ -165,8 +165,9 @@ Then, per file:
 - **Hand-read ~10 accepted transcripts.** The acceptance filter is objective
   and deliberately blind to correctness (see Design pointers); only a human
   read catches a file full of well-formed nonsense.
-- **`rejected_rows` are missing from the file.** A row rejected after all
-  `--tries` attempts is simply absent, so the file can be short of 165.
+- **Rejected rows are missing from the replay file — their ids are in
+  `rejected_rows`.** A row rejected after all `--tries` attempts is simply
+  absent from the JSONL, so the file can be short of 165.
   `build_mix.py` refuses below 160 and prints a note between 160 and 165.
 
 Two flag notes: `--tries` must be **≥ 1** (`--tries 0` crashes with a
@@ -234,10 +235,14 @@ Checkpoints and val-best selection land in
 `code/tinker_sweep/runs/qwen-qwen3-8b/train-<tag>.json`.
 
 **Checkpoint strings: copy, never retype.** Every eval below needs the arm's
-`selected.sampler_path` out of that JSON. Sampler paths look like
-`tinker://<opaque-id>/sampler_weights/00042` — they carry no readable model or
-arm name, so a typo produces a valid-looking path to nothing, or worse, to
-another arm. Copy the string; do not reconstruct it.
+`selected.sampler_path` out of that JSON. A sampler path looks like
+`tinker://<run-uuid>:train:0/sampler_weights/qwen-qwen3-8b-mixoff-ep2`: the
+tail is the checkpoint name `train_sft.py` chose, `<slug>-<run-tag>-ep<N>`, so
+it is readable *and* predictable — while the run UUID in front of it is
+neither. That combination is the trap. The tempting move is to copy one arm's
+path and hand-edit `mixoff` → `mixnat` in the tail, which produces a path that
+reads correctly at a glance while the UUID still points at the other arm's
+training run. Copy the whole string out of the arm's own JSON.
 
 ### 7. Evals (paid)
 

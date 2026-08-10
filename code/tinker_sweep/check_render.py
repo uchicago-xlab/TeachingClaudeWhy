@@ -16,7 +16,7 @@ text that was sampled (see native_training_failures). It is what the runbook
 runs before any paid mixnat training.
 
     ../../.venv-tinker/bin/python check_render.py --model Qwen/Qwen3-8B \
-        --native-training ../../data/tinker-sweep/replay/qwen3-8b-native.jsonl
+        --native-training ../../data/agentic-replay/replay/qwen-qwen3-8b/fc-train-native.jsonl
 
 The dumps are NOT committed (data/ is gitignored); they are the artifact you
 read before trusting a family, and they regenerate in a couple of minutes.
