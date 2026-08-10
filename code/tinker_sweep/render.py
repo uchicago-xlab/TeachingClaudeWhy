@@ -189,6 +189,38 @@ def native_view(family: families.Family) -> families.Family:
     return dataclasses.replace(family, thinking_kwargs={}, generation_prefill="")
 
 
+def render_native_training_example(
+    tokenizer, family: families.Family, messages
+) -> tuple[list[int], list[int]]:
+    """Trained tokens for a replay row whose assistant turn keeps native reasoning.
+
+    Built directly — native generation prompt + encoded content + native turn
+    suffix — never via the template's full render: Qwen-family templates strip
+    <think> blocks when re-rendering a conversation, which would silently drop
+    the CoT from the trained span (the exact drift render.py exists to
+    prevent). The content is the raw sampled text, stop-cut: for a family
+    whose native prompt opens `<think>` it starts mid-reasoning; otherwise it
+    carries its own `<think>…</think>`. Sampling and training share the same
+    native prompt, so the shapes agree by construction; check_render.py's
+    --native-training pass is the per-model proof.
+    """
+    assert messages[-1]["role"] == "assistant", "training example ends with the assistant turn"
+    if family.assistant_prefix:
+        raise RenderMismatch(
+            f"family {family.key!r} has assistant_prefix "
+            f"{family.assistant_prefix!r}: the direct native build would silently skip it. "
+            "No such family is in the replay experiment; extend this function deliberately "
+            "before training one",
+            "", "",
+        )
+    native = native_view(family)
+    prompt = render_generation_prompt(tokenizer, native, messages[:-1])
+    completion = tokenizer.encode(messages[-1]["content"], add_special_tokens=False)
+    full = prompt + completion + _derive_suffix(tokenizer, native)
+    weights = [0] * len(prompt) + [1] * (len(full) - len(prompt))
+    return full, weights
+
+
 _PROBE_MESSAGES = [
     {"role": "system", "content": "probe"},
     {"role": "user", "content": "probe"},
