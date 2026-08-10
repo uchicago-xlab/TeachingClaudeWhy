@@ -165,9 +165,9 @@ def native_training_failures(tok, fam: families.Family, row: dict) -> list[str]:
 
     The mixnat gate (spec: Training integration): the native prompt must be a
     prefix, the sampled content must sit verbatim in the trained span with one
-    turn terminator after it, and the full render must contain exactly one
-    balanced <think>/</think> pair — wherever the family's template puts the
-    opening tag (prompt for qwen3_5/3_6, content for qwen3).
+    turn terminator after it and none inside it, and the full render must
+    contain exactly one balanced <think>/</think> pair — wherever the family's
+    template puts the opening tag (prompt for qwen3_5/3_6, content for qwen3).
 
     The last two checks are directional for the same reason the thinking-switch
     check is: content carrying the *wrong* shape for its family renders without
@@ -200,6 +200,15 @@ def native_training_failures(tok, fam: families.Family, row: dict) -> list[str]:
         failures.append(
             "trained span is not content + one turn terminator — the sampled text was "
             f"altered by the render (span tail: {span[-80:]!r})"
+        )
+    # The span check above says the render added exactly one terminator; it
+    # cannot see one the *content* already carried. An uncut sample keeps the
+    # terminator it stopped on, and a sample that ran past it keeps whole extra
+    # turns — trained as if the assistant had written the user's side.
+    if suffix.strip() and suffix.strip() in content:
+        failures.append(
+            f"sampled content contains the turn terminator {suffix.strip()!r} — it was not "
+            "stop-cut, so the trained span carries a second turn boundary (or a whole extra turn)"
         )
     full = tok.decode(tokens)
     if full.count("<think>") != 1 or full.count("</think>") != 1:
