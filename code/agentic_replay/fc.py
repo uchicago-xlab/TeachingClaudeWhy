@@ -139,6 +139,16 @@ SCREEN_PATTERNS = [
     r"password", r"credential", r"exfiltrat", r"\bdox", r"deanonymi",
     r"weapon", r"firearm", r"explosiv", r"bypass[^.]{0,30}(security|auth|filter)",
     r"porn", r"nsfw", r"suicid", r"self.?harm", r"launder", r"insider trading",
+    # Added 2026-08-11 after the first real WildChat selection survived the
+    # original list with fetish scripts, jailbreaks and an "output unaligned
+    # text" prompt (see AgenticReplay.md). The chat control must be mundane and
+    # alignment-NEUTRAL: a jailbreak prompt self-sampled and trained would
+    # inject alignment signal into the arm whose job is to carry none.
+    r"\bpoop", r"\bscat\b", r"\bfart", r"diaper", r"\bkink", r"\berotic",
+    r"\bsexy\b", r"fetish", r"adult film", r"\brape",
+    r"do anything now", r"jailbreak", r"INSERT PROMPT", r"unaligned",
+    r"ignore (all |your |previous )?(instructions|rules)",
+    r"\d+ ?-? ?year.?old (girl|boy)\b",
 ]
 _SCREEN = re.compile("|".join(SCREEN_PATTERNS), re.I)
 
