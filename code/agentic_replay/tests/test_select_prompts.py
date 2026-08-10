@@ -65,7 +65,20 @@ def test_select_chat_filters_language_toxicity_length_and_screens():
         _chat_row(5, "bad stuff", toxic=True),
         _chat_row(6, "What are some good beginner houseplants for a dark flat?"),  # dup
     ]
-    kept, dropped = select_prompts.select_chat(rows, seed=0, n=10)
+    kept, dropped, stats = select_prompts.select_chat(rows, seed=0, n=10)
     assert [r["id"] for r in kept] == ["h1"]
     assert kept[0]["user"].startswith("What are some good")
     assert {d["reason"].split(":")[0] for d in dropped} >= {"language", "length", "screen", "toxic", "duplicate"}
+    assert stats == {"scanned": 6, "surplus": 0}  # no early break: every row scanned
+
+
+def test_select_chat_stats_account_for_every_scanned_row():
+    rows = [_chat_row(i, f"A mundane question number {i} about beginner houseplants.")
+            for i in range(50)]
+    rows.insert(5, _chat_row("es", "una pregunta larga en castellano", language="Spanish"))
+    kept, dropped, stats = select_prompts.select_chat(rows, seed=0, n=5)
+    assert len(kept) == 5
+    assert stats["scanned"] < len(rows)            # stopped early at n*3 survivors
+    assert stats["surplus"] == 10                  # pool of 15, minus the 5 selected
+    # every row the stream yielded is one of: dropped, selected, or surplus
+    assert stats["scanned"] == len(dropped) + len(kept) + stats["surplus"]

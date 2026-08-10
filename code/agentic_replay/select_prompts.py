@@ -14,7 +14,7 @@ Outputs under data/agentic-replay/prompts/ (gitignored):
   chat-train.jsonl (165)
   screened-out.jsonl        # every dropped row with its reason — audit trail
   review-fc.txt, review-chat.txt   # human-readable dumps: READ BEFORE SAMPLING
-  manifest.json             # seed, counts, dataset revision shas
+  manifest.json             # seed, revision shas, counts, full scan accounting
 """
 import argparse
 import json
@@ -79,9 +79,17 @@ def split_fc(kept):
 
 
 def select_chat(rows, seed: int, n: int):
-    """(kept, dropped) from WildChat conversations: first user turn only."""
-    kept, dropped, seen = [], [], set()
+    """(kept, dropped, stats) from WildChat conversations: first user turn only.
+
+    The scan stops early — at n*3 survivors — so it consumes far fewer rows than
+    the caller's cap. stats accounts for every row the stream actually yielded:
+    scanned == len(dropped) + len(kept) + surplus, where surplus is the part of
+    the survivor pool the seeded shuffle did not pick. The manifest records the
+    cap and the real scan separately, so a screen rate computed from it is real.
+    """
+    pool, dropped, seen, scanned = [], [], set(), 0
     for row in rows:
+        scanned += 1
         turn = row["conversation"][0]
         content = (turn.get("content") or "").strip()
         reason = None
@@ -99,11 +107,11 @@ def select_chat(rows, seed: int, n: int):
             dropped.append({"id": row["conversation_hash"], "reason": reason})
             continue
         seen.add(_norm(content))
-        kept.append({"id": row["conversation_hash"], "user": content})
-        if len(kept) >= n * 3:  # headroom before the seeded shuffle picks n
+        pool.append({"id": row["conversation_hash"], "user": content})
+        if len(pool) >= n * 3:  # headroom before the seeded shuffle picks n
             break
-    random.Random(f"chat-{seed}").shuffle(kept)
-    return kept[:n], dropped
+    random.Random(f"chat-{seed}").shuffle(pool)
+    return pool[:n], dropped, {"scanned": scanned, "surplus": max(len(pool) - n, 0)}
 
 
 def _write_jsonl(path: Path, rows):
@@ -143,7 +151,7 @@ def main():
 
     fc_kept, fc_dropped = select_fc(xlam_rows, args.seed)
     splits = split_fc(fc_kept)
-    chat_kept, chat_dropped = select_chat(chat_rows, args.seed, CHAT_N)
+    chat_kept, chat_dropped, chat_stats = select_chat(chat_rows, args.seed, CHAT_N)
     if len(chat_kept) < CHAT_N:
         raise SystemExit(f"only {len(chat_kept)} chat prompts survived — raise --chat-scan")
 
@@ -158,9 +166,14 @@ def main():
     (OUT_DIR / "review-chat.txt").write_text(_review_text(chat_kept, "user"))
     (OUT_DIR / "manifest.json").write_text(json.dumps({
         "seed": args.seed, "xlam_revision": xlam_sha, "wildchat_revision": wildchat_sha,
-        "fc_scanned": args.fc_scan, "chat_scanned": args.chat_scan,
+        # requested caps vs rows actually consumed: the chat scan stops early, so
+        # a rate computed against the cap would be wrong. Per source,
+        # scanned == dropped + used + surplus, so every scanned row is accounted for.
+        "scan_requested": {"xlam": args.fc_scan, "wildchat": args.chat_scan},
+        "scanned": {"xlam": len(xlam_rows), "wildchat": chat_stats["scanned"]},
         "counts": {k: len(v) for k, v in splits.items()} | {"chat-train": len(chat_kept)},
         "dropped": {"xlam": len(fc_dropped), "wildchat": len(chat_dropped)},
+        "surplus": {"xlam": len(fc_kept) - FC_TOTAL, "wildchat": chat_stats["surplus"]},
     }, indent=1))
     print(f"wrote {OUT_DIR}: " + ", ".join(f"{k}={len(v)}" for k, v in splits.items())
           + f", chat-train={len(chat_kept)}")
