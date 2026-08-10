@@ -71,12 +71,18 @@ def test_shape_failure_native_matches_the_gates_directional_checks():
     assert _native_failure("<think>\na<think>b</think>\n" + CALL, opens=False) == "think-shape"
 
 
-def test_shape_failure_off_rejects_any_think_block():
-    # The thinking-off training render routes a content-borne <think> block to
-    # reasoning_content and then raises RenderMismatch — for the whole arm.
+def test_shape_failure_off_rejects_either_think_tag():
+    # The Qwen3 template routes on the CLOSING tag, so close-only content — the
+    # plausible off-shape drift, and content that merely names the tag — is what
+    # breaks the training render; the opening tag is screened too, as accepted
+    # over-rejection for templates that key on it.
     assert sample_replay.shape_failure(CALL, shape="off", opens=False) is None
     assert sample_replay.shape_failure(
         "<think>\nreasoning\n</think>\n" + CALL, shape="off", opens=False) == "think-shape"
+    assert sample_replay.shape_failure(
+        "reasoning\n</think>\n\n" + CALL, shape="off", opens=False) == "think-shape"
+    assert sample_replay.shape_failure(
+        "The tag is </think>.", shape="off", opens=False) == "think-shape"
 
 
 class FakeSeq:
@@ -152,18 +158,23 @@ def test_sample_split_rejects_wrong_native_think_shape(qwen3_tok):
     assert stats["retries_used"] == 2   # three attempts, two of them resamples
 
 
-def test_sample_split_rejects_off_shape_think_block(qwen3_tok):
-    # A thinking-off sample that opens its own <think> renders fine here and
+@pytest.mark.parametrize("thinking", [
+    "<think>\nthe user wants weather\n</think>\n\n" + CALL,   # a full block
+    "reasoning about the weather api\n</think>\n\n" + CALL,   # close only: primed-native drift
+    "You would write </think> to close it.\n" + CALL,         # the tag merely named inline
+])
+def test_sample_split_rejects_off_shape_think_tags(qwen3_tok, thinking):
+    # A thinking-off sample carrying either think tag renders fine here and
     # blows up train_sft's render_split later — reject it at write time.
-    thinking = "<think>\nthe user wants weather\n</think>\n\n" + CALL
     client = FakeClient(qwen3_tok, [thinking, CALL])
     rows, stats = _run(client, qwen3_tok, [FC_ROW])
     assert stats["reasons"] == {"think-shape": 1}
     assert stats["accepted"] == 1 and stats["retries_used"] == 1
-    assert "<think>" not in rows[0]["messages"][-1]["content"]
+    assert "think>" not in rows[0]["messages"][-1]["content"]
 
     # ...and the screen is not superstition: the row that was kept renders,
-    # the one that was rejected is exactly what aborts a training run.
+    # the one that was rejected is exactly what aborts a training run. The
+    # close-only and inline cases are the ones an open-tag-only screen missed.
     fam = families.MODELS["Qwen/Qwen3-8B"].family
     render.render_training_example(qwen3_tok, fam, rows[0]["messages"])
     with pytest.raises(render.RenderMismatch):

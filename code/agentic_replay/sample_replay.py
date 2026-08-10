@@ -62,9 +62,15 @@ def shape_failure(raw: str, *, shape: str, opens: bool) -> str | None:
     wrong-shaped sample breaks only later, after the sampling spend:
 
     off — the thinking-off path renders through the template's own full render,
-      and a content-borne <think> block is routed to reasoning_content, which
-      breaks the prefix property; train_sft raises RenderMismatch and aborts the
-      whole arm on one bad row, with no way to drop it.
+      and the Qwen3 template routes content to reasoning_content on the CLOSING
+      tag (`{%- if '</think>' in content %}` — the opening tag only trims what
+      was already routed). That displaces the primed empty block, breaks the
+      prefix property, and train_sft raises RenderMismatch: the whole arm dies
+      on one bad row, with no way to drop it. So `</think>` is what has to be
+      screened, including the case of content that merely names the tag
+      inline. `<think>` stays in the disjunction as accepted over-rejection: it
+      costs a resample on a sample that would have rendered, and it is the tag
+      templates that key on the opening one (Nemotron, DeepSeek) would need.
     native — mirrors the directional checks in
       check_render.native_training_failures, the mixnat gate. That gate reads
       only row 0 of a replay file, so a malformed sample deeper in the file
@@ -73,7 +79,7 @@ def shape_failure(raw: str, *, shape: str, opens: bool) -> str | None:
     Here the fix is one more sampling attempt.
     """
     if shape != "native":
-        return "think-shape" if "<think>" in raw else None
+        return "think-shape" if ("</think>" in raw or "<think>" in raw) else None
     if opens and "<think>" in raw:
         return "think-shape"  # prompt already opened one; content must not open another
     if not opens and not (raw.lstrip().startswith("<think>") and raw.count("<think>") == 1):
@@ -146,7 +152,7 @@ async def run(args):
     print(f"model: {args.model}  split: {args.split}  shape: {args.shape}")
     print(f"rows: {len(rows)}  max_tokens: {max_tokens}  temp: {args.temperature}  "
           f"tries: {args.tries}  seed: {args.seed}")
-    print("cost:  " + (f"<= ~${est:.2f} sampling (worst case: every row retried "
+    print("cost:  " + (f"<= ~${est:.2f} sampling (worst case: every row sampled "
                        f"{args.tries}x to the token cap)"
                        if est is not None else "no price table — no estimate"))
     if not args.yes:
