@@ -42,9 +42,10 @@ launches are gated on it.
 ## The `refusal/` prompt set
 
 New directory `prompts/difficult_advice/refusal/`, a full copy of `default/`
-(the pipeline validates every stage template at startup) with a header note
-that stages 1–6 are vestigial — only stages 7–9 are exercised, via
-`--responses-only`.
+(kept a complete set so it stays a drop-in equivalent of `default/`; note the
+pipeline only validates that the set directory exists at import — stage files
+are read lazily) with a header note that stages 1–6 are vestigial — only
+stages 7–9 are exercised, via `--responses-only`.
 
 **Stage 7 (`7_initial_response.md`).** Constitution excerpts remain in the
 prompt. Instructions invert the deliberative stage:
