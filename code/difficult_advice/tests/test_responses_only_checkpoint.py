@@ -150,6 +150,29 @@ def test_responses_only_keeps_checkpoints_when_a_sample_fails(tmp_path, monkeypa
     assert not sp.CHECKPOINT_SAMPLES.exists()
 
 
+def test_responses_only_rejects_full_sweep_checkpoint_records(tmp_path, monkeypatch):
+    """A crashed full sweep leaves whole sample dicts; their indices can fit, so the
+    guard has to discriminate on record shape or the answers land on wrong prompts."""
+    sp, stub = import_sample_prompts(tmp_path)
+    cached = {"principles": [{"description": "p"}], "themes_by_principle": {"0": ["t"]},
+              "prompts": [sample("sysA", "usrA"), sample("sysB", "usrB")]}
+    (tmp_path / "critiqued_prompts.json").write_text(json.dumps(cached))
+    sweep_record = sample("sweep sys", "sweep usr")
+    sweep_record.update({"theme": "t", "raw": "", "critique": "c",
+                         "response": {"system": "S", "user": "U", "response": "r"},
+                         "response_critique": "c", "final_response": "foreign sweep answer"})
+    sp.checkpoint_sample(0, sweep_record)
+    written = {}
+    with pytest.raises(SystemExit) as excinfo:
+        responses_only_run(sp, monkeypatch, written)
+    # nothing generated, nothing written, and the file survives for inspection:
+    # the foreign answer never reaches a sample
+    assert str(sp.CHECKPOINT_SAMPLES) in str(excinfo.value)
+    assert stub.calls == []
+    assert not written
+    assert sp.CHECKPOINT_SAMPLES.exists()
+
+
 def test_responses_only_rejects_a_checkpoint_from_a_different_run(tmp_path, monkeypatch):
     sp, stub = import_sample_prompts(tmp_path)
     cached = {"principles": [{"description": "p"}], "themes_by_principle": {"0": ["t"]},

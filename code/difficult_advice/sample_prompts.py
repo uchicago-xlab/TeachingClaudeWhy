@@ -23,11 +23,14 @@ checkpoint file survives the run until every sample has one. Full-sweep runs
 checkpoint each finished sample to checkpoint_samples.jsonl (themes/scenarios
 to checkpoint_stages.json) and resume automatically after a crash; delete those
 two files, or use a fresh PIPELINE_OUT_DIR, to start over — a stale stage
-checkpoint outranks --fresh-themes, and a checkpoint left by a different run
-aborts a --responses-only run rather than resuming it. Writes
-tmp/critiqued_prompts.md
-(human-readable: final prompt, initial response, response critique, final
-response) and tmp/critiqued_prompts.json (full artifacts).
+checkpoint outranks --fresh-themes. A --responses-only run aborts on a
+checkpoint whose indices don't fit the cached prompts, or whose records
+have the full-sweep shape; a stale checkpoint that fits and has the right
+shape still resumes silently onto whatever prompts are cached now, so check
+that the file is gone before starting a run you don't mean to resume.
+Writes tmp/critiqued_prompts.md (human-readable: final prompt, initial
+response, response critique, final response) and tmp/critiqued_prompts.json
+(full artifacts).
 """
 
 import json
@@ -274,6 +277,14 @@ def main():
                 f"{CHECKPOINT_SAMPLES} holds index {max(done)} but only {len(samples)} "
                 "prompts are cached: it belongs to a different run or mode. Delete it "
                 "and re-run."
+            )
+        # a sweep record is a whole sample dict, and its index can fit, so shape is
+        # the only thing separating it from one of ours
+        foreign = [i for i, v in done.items() if v and set(v) != set(RESPONSE_KEYS)]
+        if foreign:
+            raise SystemExit(
+                f"{CHECKPOINT_SAMPLES} holds full-sweep records at {foreign[:5]}: "
+                "it belongs to a different mode. Delete it and re-run."
             )
         complete = sum(1 for v in done.values() if v and v.get("final_response"))
         if done:
