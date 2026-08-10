@@ -16,6 +16,12 @@ rebuild
 where turn_suffix is derived mechanically (see _derive_suffix). check_render.py
 (Task 6) is what discovers, per family, whether assistant_prefix is needed.
 
+That render-twice mechanism is the thinking-off path only. Replay rows whose
+assistant turn keeps its native reasoning take a different route:
+render_native_training_example builds the trained tokens directly — native
+generation prompt + encoded content + native turn suffix — because Qwen
+templates strip <think> blocks when re-rendering history; see its docstring.
+
 A second, opposite knob is generation_prefill: text the template *does* emit at
 the start of the assistant turn, which we additionally prime at sampling time
 so the model continues from it instead of choosing what to open its turn with.
