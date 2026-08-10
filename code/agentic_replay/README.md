@@ -61,9 +61,10 @@ That pulls in the sweep's requirements plus `datasets` and `huggingface_hub`.
    `https://huggingface.co/datasets/Salesforce/xlam-function-calling-60k` —
    the click-through is per account, and a token without it still 401s.
 3. Add `HF_TOKEN=hf_...` to the repo-root `.env` (the same file that holds
-   `TINKER_API_KEY`). If you are working in a git worktree, `.env` resolves to
-   *that worktree's* root — `select_prompts.py` prints the exact path it looked
-   at when the token is missing.
+   `TINKER_API_KEY`). Scripts load `.env` from *their own* checkout's root, so
+   in a worktree that is the worktree's `.env` — usually a symlink back to the
+   main checkout's, in which case one edit covers both. `select_prompts.py`
+   prints the exact path it looked at when the token is missing.
 
 Nothing else in the pipeline needs the token: sampling, mixing, training and
 the benchmark all read the prompt files written by step 1.
