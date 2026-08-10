@@ -18,12 +18,14 @@ and re-run steps 5-9 (e.g. after changing the critique or response prompts).
 Pass --responses-only to skip steps 1-6 and run steps 7-9 over the prompts
 already cached in tmp/critiqued_prompts.json. Responses-only runs checkpoint
 per sample too, so a crashed or partially-failed run resumes by re-running the
-same command; samples whose final_response failed are retried.
-Full-sweep runs checkpoint each
-finished sample to checkpoint_samples.jsonl (themes/scenarios to
-checkpoint_stages.json) and resume automatically after a crash; delete those
+same command; samples whose final_response failed are retried, and the
+checkpoint file survives the run until every sample has one. Full-sweep runs
+checkpoint each finished sample to checkpoint_samples.jsonl (themes/scenarios
+to checkpoint_stages.json) and resume automatically after a crash; delete those
 two files, or use a fresh PIPELINE_OUT_DIR, to start over — a stale stage
-checkpoint outranks --fresh-themes. Writes tmp/critiqued_prompts.md
+checkpoint outranks --fresh-themes, and a checkpoint left by a different run
+aborts a --responses-only run rather than resuming it. Writes
+tmp/critiqued_prompts.md
 (human-readable: final prompt, initial response, response critique, final
 response) and tmp/critiqued_prompts.json (full artifacts).
 """
@@ -264,6 +266,15 @@ def main():
         cached = json.loads((OUT_DIR / "critiqued_prompts.json").read_text())
         samples = cached["prompts"]
         done = load_checkpointed_samples()
+        # checkpoint indices are positions in this prompts list; an out-of-range
+        # one means the file belongs to a different run or to the full sweep,
+        # whose records would silently land on the wrong samples
+        if done and max(done) >= len(samples):
+            raise SystemExit(
+                f"{CHECKPOINT_SAMPLES} holds index {max(done)} but only {len(samples)} "
+                "prompts are cached: it belongs to a different run or mode. Delete it "
+                "and re-run."
+            )
         complete = sum(1 for v in done.values() if v and v.get("final_response"))
         if done:
             print(f"resuming: {complete}/{len(samples)} samples already complete")
@@ -272,7 +283,16 @@ def main():
         print(f"generated {response_stats(samples)}")
         themes_by_principle = {int(k): v for k, v in cached["themes_by_principle"].items()}
         write_outputs(cached["principles"], themes_by_principle, samples)
-        clear_checkpoints()
+        # keep the checkpoint when anything failed, so a re-run retries only the
+        # failures instead of re-billing all of them
+        incomplete = sum(1 for s in samples if not s.get("final_response"))
+        if incomplete:
+            print(
+                f"{incomplete} samples have no final response; keeping {CHECKPOINT_SAMPLES} "
+                "so re-running retries only those"
+            )
+        else:
+            clear_checkpoints()
         return
 
     if "--from-critique" in sys.argv:

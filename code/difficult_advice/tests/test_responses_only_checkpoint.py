@@ -100,3 +100,66 @@ def test_responses_only_resumes_and_clears_checkpoints(tmp_path, monkeypatch):
     assert written["samples"][0]["final_response"] == "kept"
     assert written["samples"][1]["final_response"] == "final refusal"
     assert not sp.CHECKPOINT_SAMPLES.exists()
+
+
+def test_regen_response_ignores_the_samples_own_seeded_final_response(tmp_path):
+    """The seed file carries the ORIGINAL deliberative answers; they must be regenerated."""
+    sp, stub = import_sample_prompts(tmp_path)
+    s = sample()
+    s.update({"response": {"system": "S", "user": "U", "response": "deliberative"},
+              "response_critique": "old critique",
+              "final_response": "original deliberative answer"})
+    sp.regen_response(0, s, {})
+    assert s["final_response"] == "final refusal"
+    assert "response" in stub.calls
+
+
+def responses_only_run(sp, monkeypatch, written):
+    monkeypatch.setattr(sp, "write_outputs", lambda p, t, s: written.update(samples=list(s)))
+    monkeypatch.setattr(sys, "argv", ["sample_prompts.py", "--responses-only"])
+    sp.main()
+
+
+def test_responses_only_keeps_checkpoints_when_a_sample_fails(tmp_path, monkeypatch):
+    """A run that completes with failures must leave the checkpoint for a cheap retry."""
+    sp, stub = import_sample_prompts(tmp_path)
+    cached = {"principles": [{"description": "p"}], "themes_by_principle": {"0": ["t"]},
+              "prompts": [sample("sysA", "usrA"), sample("sysB", "usrB")]}
+    (tmp_path / "critiqued_prompts.json").write_text(json.dumps(cached))
+
+    # sample B's rewrite comes back empty (a refusal), the way a real failure lands:
+    # the run completes normally, it just has no final_response
+    def flaky_rewrite(principle_index, system, user, response, critique):
+        stub.calls.append("rewrite")
+        return "" if system == "sysB" else "final refusal"
+
+    monkeypatch.setattr(sp, "stage_rewrite_response", flaky_rewrite)
+    written = {}
+    responses_only_run(sp, monkeypatch, written)
+    assert written["samples"][0]["final_response"] == "final refusal"
+    assert not written["samples"][1]["final_response"]
+    assert sp.CHECKPOINT_SAMPLES.exists()
+
+    # re-running retries ONLY the failure: sample A is restored from its checkpoint
+    monkeypatch.undo()
+    stub.calls.clear()
+    responses_only_run(sp, monkeypatch, written)
+    assert stub.calls.count("response") == 1
+    assert written["samples"][0]["final_response"] == "final refusal"
+    assert written["samples"][1]["final_response"] == "final refusal"
+    assert not sp.CHECKPOINT_SAMPLES.exists()
+
+
+def test_responses_only_rejects_a_checkpoint_from_a_different_run(tmp_path, monkeypatch):
+    sp, stub = import_sample_prompts(tmp_path)
+    cached = {"principles": [{"description": "p"}], "themes_by_principle": {"0": ["t"]},
+              "prompts": [sample("sysA", "usrA")]}
+    (tmp_path / "critiqued_prompts.json").write_text(json.dumps(cached))
+    sp.checkpoint_sample(7, {"response": None, "response_critique": None,
+                             "final_response": "from some other run"})
+    written = {}
+    with pytest.raises(SystemExit) as excinfo:
+        responses_only_run(sp, monkeypatch, written)
+    assert str(sp.CHECKPOINT_SAMPLES) in str(excinfo.value)
+    assert stub.calls == []
+    assert sp.CHECKPOINT_SAMPLES.exists()
