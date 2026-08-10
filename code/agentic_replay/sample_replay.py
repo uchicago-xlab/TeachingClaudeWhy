@@ -55,14 +55,25 @@ def accept(row: dict, split: str, shape: str, final_text: str, stop_reason: str)
     return None
 
 
-def think_shape_failure(raw: str, opens: bool) -> str | None:
-    """None = the sampled native content has this family's think shape.
+def shape_failure(raw: str, *, shape: str, opens: bool) -> str | None:
+    """None = the sampled content carries the think shape its render trains.
 
-    Mirrors the directional checks in check_render.native_training_failures,
-    which is the mixnat gate — but that gate reads only row 0 of a replay file,
-    so a malformed sample deeper in the file would reach training unseen. Cheap
-    to re-check here, where the fix is one more sampling attempt.
+    Both shapes are screened, because both have a training path that a
+    wrong-shaped sample breaks only later, after the sampling spend:
+
+    off — the thinking-off path renders through the template's own full render,
+      and a content-borne <think> block is routed to reasoning_content, which
+      breaks the prefix property; train_sft raises RenderMismatch and aborts the
+      whole arm on one bad row, with no way to drop it.
+    native — mirrors the directional checks in
+      check_render.native_training_failures, the mixnat gate. That gate reads
+      only row 0 of a replay file, so a malformed sample deeper in the file
+      would reach training unseen.
+
+    Here the fix is one more sampling attempt.
     """
+    if shape != "native":
+        return "think-shape" if "<think>" in raw else None
     if opens and "<think>" in raw:
         return "think-shape"  # prompt already opened one; content must not open another
     if not opens and not (raw.lstrip().startswith("<think>") and raw.count("<think>") == 1):
@@ -91,14 +102,15 @@ async def sample_split(client, tinker_mod, tokenizer, model, rows, *,
                 temperature, seed * 1_000_000 + idx * 10 + attempt)
             final = tinker_sampling.extract_final(tokenizer, fam, shape, raw)
             reason = accept(row, split, shape, final, stop_reason)
-            if reason is None and shape == "native":
-                reason = think_shape_failure(raw, opens)
+            if reason is None:
+                reason = shape_failure(raw, shape=shape, opens=opens)
             if reason is None:
                 kept = (raw, attempt)
                 break
             stats["reasons"][reason] = stats["reasons"].get(reason, 0) + 1
-            if attempt > 1:
-                stats["retries_used"] += 1
+        # Every attempt past the first is a resample, whether or not it was the
+        # one that landed; this field is what sampling spend is reconciled with.
+        stats["retries_used"] += (kept[1] if kept else tries) - 1
         if kept is None:
             stats["rejected_final"] += 1
             rejected.append({"id": row["id"], "last_reason": reason})
@@ -124,14 +136,18 @@ async def run(args):
     tokenizer = render.load_tokenizer(model)
     max_tokens = args.max_tokens or MAX_TOKENS[args.shape]
 
-    est_tokens = len(rows) * max_tokens  # upper bound: every sample runs to the cap
+    # Worst case, not typical: every row is rejected --tries times and every
+    # sample runs to the token cap. The retry loop is the reason the single-pass
+    # figure would understate the bill by up to a factor of --tries.
+    est_tokens = len(rows) * max_tokens * args.tries
     price = price_for(args.model)
     est = (est_tokens / 1e6 * float(price["sample"].lstrip("$"))
            if price and price.get("sample") else None)
     print(f"model: {args.model}  split: {args.split}  shape: {args.shape}")
     print(f"rows: {len(rows)}  max_tokens: {max_tokens}  temp: {args.temperature}  "
           f"tries: {args.tries}  seed: {args.seed}")
-    print("cost:  " + (f"<= ~${est:.2f} sampling (upper bound, before retries)"
+    print("cost:  " + (f"<= ~${est:.2f} sampling (worst case: every row retried "
+                       f"{args.tries}x to the token cap)"
                        if est is not None else "no price table — no estimate"))
     if not args.yes:
         print("\ndry run — pass --yes to sample. Log spend in notes/Project/ per repo convention.")

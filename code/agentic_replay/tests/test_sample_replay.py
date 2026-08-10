@@ -1,5 +1,7 @@
 import asyncio
 
+import pytest
+
 import families
 import render
 import sample_replay
@@ -51,22 +53,30 @@ def test_extract_final_native_restores_primed_think(monkeypatch):
 # --- native think-shape screen (mirrors check_render.native_training_failures) ---
 
 
-def test_think_shape_failure_matches_the_gates_directional_checks():
+def _native_failure(raw, opens):
+    return sample_replay.shape_failure(raw, shape="native", opens=opens)
+
+
+def test_shape_failure_native_matches_the_gates_directional_checks():
     # Prompt opens <think> (3.6-shaped): content must not open another.
-    assert sample_replay.think_shape_failure("reasoning\n</think>\n" + CALL, opens=True) is None
-    assert sample_replay.think_shape_failure(
-        "<think>\nreasoning\n</think>\n" + CALL, opens=True) == "think-shape"
+    assert _native_failure("reasoning\n</think>\n" + CALL, opens=True) is None
+    assert _native_failure("<think>\nreasoning\n</think>\n" + CALL, opens=True) == "think-shape"
     # Prompt does not open it (8B-shaped): content must carry its own.
-    assert sample_replay.think_shape_failure(
-        "<think>\nreasoning\n</think>\n" + CALL, opens=False) is None
-    assert sample_replay.think_shape_failure(CALL, opens=False) == "think-shape"
+    assert _native_failure("<think>\nreasoning\n</think>\n" + CALL, opens=False) is None
+    assert _native_failure(CALL, opens=False) == "think-shape"
     # Exactly one close, either shape.
-    assert sample_replay.think_shape_failure(
-        "<think>\na</think>b</think>\n" + CALL, opens=False) == "think-shape"
-    assert sample_replay.think_shape_failure("<think>\nunclosed " + CALL, opens=False) == "think-shape"
+    assert _native_failure("<think>\na</think>b</think>\n" + CALL, opens=False) == "think-shape"
+    assert _native_failure("<think>\nunclosed " + CALL, opens=False) == "think-shape"
     # ...and exactly one open, which the gate counts in the full render.
-    assert sample_replay.think_shape_failure(
-        "<think>\na<think>b</think>\n" + CALL, opens=False) == "think-shape"
+    assert _native_failure("<think>\na<think>b</think>\n" + CALL, opens=False) == "think-shape"
+
+
+def test_shape_failure_off_rejects_any_think_block():
+    # The thinking-off training render routes a content-borne <think> block to
+    # reasoning_content and then raises RenderMismatch — for the whole arm.
+    assert sample_replay.shape_failure(CALL, shape="off", opens=False) is None
+    assert sample_replay.shape_failure(
+        "<think>\nreasoning\n</think>\n" + CALL, shape="off", opens=False) == "think-shape"
 
 
 class FakeSeq:
@@ -107,6 +117,8 @@ def test_sample_split_retries_until_accepted(qwen3_tok):
     assert "render" not in rows[0]                     # off rows carry no render key
     assert rows[0]["meta"]["tries"] == 2
     assert stats["accepted"] == 1 and stats["rejected_final"] == 0
+    # The resample that landed is still a resample: spend is reconciled here.
+    assert stats["retries_used"] == 1
 
 
 def test_sample_split_native_rows_tagged(qwen3_tok):
@@ -137,6 +149,27 @@ def test_sample_split_rejects_wrong_native_think_shape(qwen3_tok):
     assert rows == []
     assert stats["rejected_final"] == 1
     assert stats["reasons"] == {"think-shape": 3}
+    assert stats["retries_used"] == 2   # three attempts, two of them resamples
+
+
+def test_sample_split_rejects_off_shape_think_block(qwen3_tok):
+    # A thinking-off sample that opens its own <think> renders fine here and
+    # blows up train_sft's render_split later — reject it at write time.
+    thinking = "<think>\nthe user wants weather\n</think>\n\n" + CALL
+    client = FakeClient(qwen3_tok, [thinking, CALL])
+    rows, stats = _run(client, qwen3_tok, [FC_ROW])
+    assert stats["reasons"] == {"think-shape": 1}
+    assert stats["accepted"] == 1 and stats["retries_used"] == 1
+    assert "<think>" not in rows[0]["messages"][-1]["content"]
+
+    # ...and the screen is not superstition: the row that was kept renders,
+    # the one that was rejected is exactly what aborts a training run.
+    fam = families.MODELS["Qwen/Qwen3-8B"].family
+    render.render_training_example(qwen3_tok, fam, rows[0]["messages"])
+    with pytest.raises(render.RenderMismatch):
+        render.render_training_example(
+            qwen3_tok, fam,
+            rows[0]["messages"][:-1] + [{"role": "assistant", "content": thinking}])
 
 
 def test_stored_content_is_stop_cut(qwen3_tok):
