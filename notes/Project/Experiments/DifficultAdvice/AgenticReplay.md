@@ -158,16 +158,42 @@ each file's `.stats.json`.
 
 | model | split | shape | accepted / total | retries | rejection reasons |
 | --- | --- | --- | --- | --- | --- |
-| 8B | fc-train | off | | | |
-| 8B | fc-train | native | | | |
-| 8B | fc-val | off | | | |
-| 8B | chat-train | off | | | |
+| 8B | fc-train | off | 164/165 | 4 | no parseable call ×4 |
+| 8B | fc-train | native | 163/165 | 6 | no parseable call ×6 |
+| 8B | fc-val | off | 15/15 | 0 | — |
+| 8B | chat-train | off (mt1024, SUPERSEDED) | 126/165 | 140 | truncated ×140 — 1024 cap too low for long-form chat; re-run at 4096 |
+| 8B | chat-train | off (mt4096) | | | |
 | 27B | fc-train | off | | | |
 | 27B | fc-train | native | | | |
 | 27B | fc-val | off | | | |
 
-Prompt manifest (fill from `data/agentic-replay/prompts/manifest.json`): xlam
-revision, WildChat revision, seed, scanned/dropped counts.
+Prompt manifest: xlam revision `26d14ebfe18b1f7b524bd39b404b50af5dc97866`,
+WildChat revision `7d6490e462285cf85d91eabea0f9a954fbddcd1f`, seed 0; xlam
+2000 scanned / 1058 dropped (1025 multi-answer, 23 screen, 10 dup) / 697
+surplus; WildChat 1467 scanned / 972 dropped (690 language, 247 length, 38
+screen, 29 dup) / 330 surplus. The screen was hardened on 2026-08-11 (commit
+fc8a961) after the first WildChat selection survived with fetish scripts, a
+DAN jailbreak and an output-unaligned-text prompt; both review files were
+re-read clean after regeneration, and the fc splits were byte-identical
+across the two runs.
+
+## 8B training (2026-08-11)
+
+All four epochs on Tinker, cookbook lr 4.73e-4, r64, seed 0; val-best selected.
+Checkpoint paths recorded here because `runs/` is worktree-local and gitignored.
+
+| arm | val losses (ep1..4) | selected | sampler path |
+| --- | --- | --- | --- |
+| mixoff | 1.9841 / 1.9978 / 2.2093 / 2.4753 | **ep1** | `tinker://f9501a4c-7123-5310-9b18-88bc438b36e0:train:0/sampler_weights/qwen-qwen3-8b-mixoff-ep1` |
+| mixnat | 1.9881 / 2.0121 / 2.1986 / 2.5034 | **ep1** | `tinker://8c081b5c-bbee-5f76-8542-258a79a5f6bc:train:0/sampler_weights/qwen-qwen3-8b-mixnat-ep1` |
+| replayonly | 0.0498 / 0.0166 / 0.0090 / 0.0071 | **ep4** | `tinker://65f24ea1-7c6f-513d-8529-8d051c734275:train:0/sampler_weights/qwen-qwen3-8b-replayonly-ep4` |
+
+Note: both mix arms val-best at **epoch 1** where DA-only selected epoch 2
+(1.9928) — on the same 229-row sonnet-val, the 1:1 mixes reach a slightly
+*lower* DA val loss in half the DA epochs (each epoch sees each DA row once,
+so the mixes got half the DA gradient steps at selection). replayonly's val
+loss is near zero because bare JSON calls are trivially learnable — expected,
+not a result.
 
 ## Spend
 
@@ -177,7 +203,11 @@ watched.
 
 | date | step | model | est. | actual |
 | --- | --- | --- | --- | --- |
-| | | | | |
+| 2026-08-11 | replay sampling ×4 files (incl. superseded mt1024 chat) | 8B | ≤$1.85 worst case | |
+| 2026-08-11 | chat re-sample mt4096 | 8B | ≤$1.22 worst case | |
+| 2026-08-11 | train mixoff+mixnat+replayonly | 8B | $2.28 (dry-run; billing runs ~up to 1.9×) | |
+| 2026-08-11 | standard msm ×3 arms (sampling+grading) | 8B | ~$8 | |
+| 2026-08-11 | benign bench ×10 runs | 8B | ~$1 | |
 
 ## Findings
 
