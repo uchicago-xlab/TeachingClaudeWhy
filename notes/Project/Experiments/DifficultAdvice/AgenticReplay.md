@@ -161,17 +161,17 @@ arithmetic.
 
 | arm | shape | valid | match | match \| valid | trunc |
 | --- | --- | --- | --- | --- | --- |
-| base | off | | | | |
-| base | native | | | | |
-| DA-only | off | | | | |
-| DA-only | native | | | | |
-| mixoff | off | | | | |
-| mixoff | native | | | | |
-| mixnat | off | | | | |
-| mixnat | native | | | | |
-| replayonly | off | | | | |
-| replayonly | native | | | | |
-| mixchat | off | | | | |
+| base | off | 0.969 | 0.954 | 0.98 | 0.000 |
+| base | native | 1.000 | 0.969 | 0.97 | 0.000 |
+| DA-only | off | **0.354** | 0.354 | 1.00 | 0.015 |
+| DA-only | native | 0.785 | 0.785 | 1.00 | 0.077 |
+| mixoff | off | 0.985 | 0.969 | 0.98 | 0.000 |
+| mixoff | native | **0.723** | 0.723 | 1.00 | **0.262** |
+| mixnat | off | 0.985 | 0.969 | 0.98 | 0.000 |
+| mixnat | native | 0.969 | 0.954 | 0.98 | 0.000 |
+| replayonly | off | 1.000 | 0.985 | 0.99 | 0.000 |
+| replayonly | native | **0.708** | 0.708 | 1.00 | 0.031 |
+| mixchat | off | 0.985 | 0.969 | 0.98 | 0.000 |
 | mixchat | native | | | | |
 
 ### Qwen3.6-27B
@@ -255,7 +255,54 @@ watched.
 
 ## Findings
 
-*(to be written)*
+### 8B phase consolidated (2026-08-11, all four endpoints in)
+
+Scorecard against the pre-registered criteria (harm-within-2pp / acting ≥90%
+of base / bench within noise / natcot clears):
+
+| arm | harm | msm acting | bench | natcot | verdict |
+| --- | --- | --- | --- | --- | --- |
+| mixoff | ~fail (+2.7pp) | FAIL (13%) | FAIL (native 0.723, 26% trunc) | FAIL (22/30) | fails |
+| mixnat | ~fail (+2.7pp) | FAIL (18%) | PASS (both shapes) | PASS (1/30) | closest: 2/4 + marginal harm |
+| mixchat | (no bar) harm 21.1% | 95% | PASS | PASS (0/30) | alignment-diluting |
+
+No arm clears all four — but the endpoints decompose the degradation into
+three separable phenomena with different cures:
+
+1. **DA damage to agentic basics is general and severe.** DA-only: 2% msm
+   acting AND 0.354 bench valid-call on trivial benign in-format tasks
+   (base 0.969). It is not an artifact of the misalignment scaffold.
+2. **Replay restores agency format-locally.** Every mix restores bench
+   valid-call to base level (0.985–1.0), while fc-replay mixes leave msm
+   acting at 13–18%: recovery tracks the replay data's format, transfer
+   across tool formats is weak. "Agentic basics preserved" is achievable;
+   *generalized* preservation needs format diversity in the mix.
+3. **Alignment retention depends on what you mix.** Agentic-JSON replay is
+   alignment-cheap (3.3% harm vs 0.6% floor); long-form chat replay is
+   alignment-expensive (21.1%). replayonly proves the replay data itself is
+   alignment-neutral in both directions (43.3% ≈ base).
+4. **Natcot non-termination is a completion-profile effect** — repaired by
+   long, cleanly-terminated replay completions (mixnat 1/30, mixchat 0/30),
+   untouched or worsened by terse ones (mixoff 22/30). Native think-tags are
+   not required for the repair, though mixnat is the only arm that is also
+   clean on the native-shape bench.
+5. Off-shape-only training degrades native-shape behavior even without DA
+   rows (replayonly bench native 0.708 vs base 1.000) — a small standalone
+   cost of thinking-off SFT worth remembering for every -nothink recipe.
+
+**Obvious composite candidate for a follow-up arm:** DA + native-CoT fc
+replay + a slice of long-form chat replay at a ratio that buys acting without
+mixchat's harm cost — plus the pre-registered format-matched scenario variant
+to test whether msm acting recovers when the replay matches the eval's action
+channel.
+
+### 27B go decision
+
+Stop-gate passed (replayonly ≈ base). Proceeding with the spec's three 27B
+arms (mixoff/mixnat/replayonly) — mixoff retained deliberately: 27B's native
+prompt opens `<think>` (opposite template shape), so whether the mixoff
+natcot failure replicates there is exactly the shape-vs-profile question the
+8B data raised.
 
 ## Caveats
 
