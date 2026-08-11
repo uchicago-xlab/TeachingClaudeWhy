@@ -109,6 +109,79 @@ bash launch.sh a1 8 --smoke --train-rows --out /workspace/out/a1-rows-smoke
 python merge_release.py --adapter /workspace/out/a1-rows --out /workspace/merged/a1-rows --chat --row-deltas /workspace/out/a1-rows/row_deltas.safetensors
 ```
 
+## Continuing from a published checkpoint
+
+For anyone adding SFT on top of our released arms.
+
+**Which checkpoint to start from**
+
+- Additional SFT on the validated platform → `SecondLookResearch/Qwen2.5-32B-graft0-a1`
+  (2.16GB, ships its own `base_row_patch.safetensors`). This is the arm
+  validated on MSM's full 27-condition grid: 54.3% misaligned, 98% acting,
+  zero junk, signal in all 27 cells.
+- A new A1 arm on an SDF base → `SecondLookResearch/Qwen2.5-32B-sdf-named-claude-14M`
+  or `-qwen-14M`. These carry no row patch, so you apply the graft yourself.
+- **Do not build on any adapter without `graft0` in the name.** Everything
+  else predates the terminator fix and was trained on a base whose
+  `<|im_end|>` was never trained, so it cannot reliably end a turn.
+
+**You cannot stack a second LoRA on a first.** The pattern is: merge the prior
+adapter into the base, apply the graft, then train a *fresh* adapter.
+
+```bash
+# 1. pod (H200 capacity usually needs several create retries)
+CONTAINER_DISK_GB=250 bash create_pod.sh <name> 4 --gpu-type "NVIDIA H200"
+KEYS_FILE=~/.env bash push_fa3.sh <name>
+ssh … "bash /root/fsdp_fa3/setup_fa3.sh"          # must print FA3-SETUP-OK
+
+# 2. merge what you're continuing from (no --chat at this stage)
+uv run --no-sync python merge_release.py --base <stock-snapshot> \
+    --adapter <prior-adapter-dir> --out /root/merged-base
+
+# 3. graft BEFORE training — the adapter must be trained against the grafted
+#    base, not have the graft bolted on afterwards
+uv run --no-sync python graft_terminator.py \
+    --base /root/merged-base --out /root/grafted --noise 0
+
+# 4. train. --no-tables is REQUIRED: the graft already repaired the
+#    terminator, and training the token tables reintroduces the acting damage.
+uv run --no-sync bash launch.sh a1 4 --no-tables \
+    --base /root/grafted --out /workspace/out/<arm>
+```
+
+**Gate at step 3.** `graft_terminator.py` prints head norm 1.0043, embed norm
+1.4780, cos 1.0000 — the stock-base figures. Different numbers mean a prior
+stage modified the token tables; stop and work out why before training.
+
+**Publish before terminating the pod.** Copy `base_row_patch.safetensors` into
+the output dir, overwrite the PEFT-generated README (it stamps the local
+training path into `base_model`, which the Hub rejects — set
+`Qwen/Qwen2.5-32B`), push to a public SecondLookResearch repo, and **verify the
+remote file list contains `adapter_model.safetensors`, `adapter_config.json`
+and `base_row_patch.safetensors` before deleting anything.** We lost one arm's
+weights by terminating on an unverified upload. Push adapters, never merged
+models: the adapter plus a 20KB patch rebuilds the 65GB model exactly.
+
+**Traps that have each cost hours**
+
+- Always `uv run --no-sync`; plain `uv run` re-syncs and replaces the prebuilt
+  FA3 wheel with a 45-minute source rebuild.
+- Merge to `/root` (container disk), never `/workspace` — that is MooseFS, and
+  a default 50GB shard wedged the writer indefinitely with no error.
+- Pass `max_shard_size="5GB"`.
+- `HF_HUB_DISABLE_XET=1` plus a retry loop: downloads fail by stalling, not by
+  erroring, including a 175KB/s trickle too slow to trip any timeout.
+- Detect stalls by byte growth, never by "the process is alive".
+
+**Fixed recipe — do not change, comparability depends on it:** LoRA r64 / α128,
+dropout 0, lr 1e-4 cosine, 3% warmup, 2 epochs, effective batch 8, bf16, cutoff
+8192, assistant-only loss. `launch.sh` owns the accumulation math; pass the GPU
+count and nothing else.
+
+**Afterwards:** `code/msm_eval/serve_reconstructed.sh` rebuilds and serves any
+arm from its adapters plus row patch; eval settings are pinned in the "Exact
+reproduction" section of `code/msm_eval/README.md`.
+
 ## Gates before this lane replaces the old one
 
 1. 5-step smoke per stage on the target topology — catches the FA3/5.6.0
