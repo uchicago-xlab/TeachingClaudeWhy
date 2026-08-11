@@ -55,7 +55,7 @@ print(json.dumps({
     "gpuTypeIds": [os.environ["GPU_TYPE"]],
     "gpuCount": int(os.environ["NGPU"]),
     "cloudType": "SECURE",
-    "containerDiskInGb": 150,
+    "containerDiskInGb": int(os.environ.get("CONTAINER_DISK_GB", "150")),
     "volumeInGb": 300,
     "volumeMountPath": "/workspace",
     "ports": ["22/tcp"],
