@@ -18,7 +18,9 @@ not load-bearing; if it lands near base, the reasoning is doing the work.
   `code/difficult_advice/subset_scale08_prompts.py seed` (1:1 hard-fail match
   against the committed rung files), regenerated with
   `DIFFICULT_ADVICE_PROMPT_SET=refusal PIPELINE_MODEL=claude-sonnet-5
-  sample_prompts.py --responses-only`, thinking ON (pipeline default), served
+  PIPELINE_OUT_DIR=data/difficult-advice/claude-sonnet-5-refusal
+  sample_prompts.py --responses-only` (without `PIPELINE_OUT_DIR` the run
+  lands in `tmp/`), thinking ON (pipeline default), served
   over OpenRouter (`anthropic/claude-sonnet-5`), 2026-08-10/11.
 - Cost **~$33.2** (~$0.082/sample), in two passes: pass 1 halted at 100/394 on
   a cost overrun and pass 2 resumed from the checkpoint for the remaining 294

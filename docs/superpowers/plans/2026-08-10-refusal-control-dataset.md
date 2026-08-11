@@ -46,7 +46,7 @@
 - Create: `prompts/difficult_advice/refusal/1_principles.md` … `6_rewrite_prompt.md` (byte-copies), `7_initial_response.md`, `8_critique_response.md`, `9_rewrite_response.md`, `README.md`
 
 **Interfaces:**
-- Produces: a prompt-set directory selectable via `DIFFICULT_ADVICE_PROMPT_SET=refusal`. `run_pipeline.py` validates all nine stage templates exist at import.
+- Produces: a prompt-set directory selectable via `DIFFICULT_ADVICE_PROMPT_SET=refusal`. `run_pipeline.py` validates at import only that each stage's prompt-set *directory* exists; the stage templates themselves are read lazily.
 
 - [ ] **Step 1: Copy stages 1–6 from default/**
 
@@ -150,8 +150,9 @@ Only stages 7-9 differ from default/: the response is a categorical,
 zero-justification refusal of anything possibly unethical plus genuine help
 on the clearly safe parts. Stages 1-6 are vestigial byte-copies of default/ —
 this set is only ever run with `sample_prompts.py --responses-only` over
-scenarios seeded from claude-sonnet-5-full-filtered, so they exist solely to
-satisfy run_pipeline's startup validation of all nine templates.
+scenarios seeded from claude-sonnet-5-full-filtered, so they are never read;
+they are kept so the set remains a drop-in equivalent of default/ if the full
+pipeline is ever pointed at it.
 ```
 
 - [ ] **Step 6: Verify the set passes pipeline startup validation**
@@ -160,7 +161,7 @@ satisfy run_pipeline's startup validation of all nine templates.
 cd code/difficult_advice && DIFFICULT_ADVICE_PROMPT_SET=refusal PIPELINE_MODEL=claude-sonnet-5 \
   ../../.venv/bin/python -c "import run_pipeline; print(run_pipeline.PROMPT_SET)"
 ```
-Expected: prints `refusal` with no exception (a missing/typo'd stage file raises at import).
+Expected: prints `refusal` with no exception (a missing/typo'd set *directory* raises at import; a missing stage file surfaces later, when that stage reads its template).
 
 - [ ] **Step 7: Commit**
 
