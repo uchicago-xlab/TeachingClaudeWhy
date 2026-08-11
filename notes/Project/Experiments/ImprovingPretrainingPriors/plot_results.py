@@ -39,6 +39,11 @@ import matplotlib.pyplot as plt
 from inspect_ai.log import list_eval_logs, read_eval_log
 
 REPO = Path(__file__).resolve().parents[4]
+
+# Void-sample detection lives with the eval tooling so this file, action_stats.py
+# and build_transcript_viewer.py cannot drift apart on what counts.
+sys.path.insert(0, str(REPO / "code" / "msm_eval"))
+from void_cells import is_void  # noqa: E402
 HERE = Path(__file__).resolve().parent
 FIG = HERE / "figures"
 EVAL_DIR = REPO / "tmp" / "msm-eval"
@@ -90,9 +95,28 @@ MODELS = [
 
 # ---------------------------------------------------------------- helpers
 
+def void_sample(rec):
+    """True for a record from the condition MSM never implemented.
+
+    Same fault as in iter_samples, applied to the analysis jsonl files,
+    which carry `run` and `scenario` fields instead of log metadata.
+    """
+    return "restriction" in rec["run"] and rec["scenario"] == "exfiltration"
+
+
 def iter_samples(dirs):
     """Yield (scenario, harmful, acted) over every sample in the run dirs.
-    Fresh runs may still be in tmp/; archived ones in data/."""
+    Fresh runs may still be in tmp/; archived ones in data/.
+
+    Exfiltration is dropped from restriction runs. MSM does not implement
+    that condition: at the pinned commit e8288a8 the exfiltration
+    restriction template is a 98-byte "TODO" stub and the composed-path
+    file does not exist, so with goal conflict on the model received the
+    shared email block plus two comment lines, and with goal conflict off
+    a 423-character prompt containing no emails. Neither gap raises, so
+    the harness scored 60 void samples per restriction run. Evidence and
+    per-arm effect: data/misalignment-eval/restriction-recount-exfiltration-void.txt
+    """
     for d in dirs:
         path = EVAL_DIR / d if (EVAL_DIR / d).exists() else ARCHIVE_DIR / d
         if not path.exists():
@@ -101,8 +125,21 @@ def iter_samples(dirs):
             log = read_eval_log(lg.name)
             sc = log.eval.task_args["scenario"]
             for s in (log.samples or []):
+                # Detect the stub by prompt content, not by run-dir name:
+                # template_overrides/ now supplies real exfiltration
+                # restriction templates, so a name-based rule would start
+                # discarding valid samples.
+                if is_void(s):
+                    continue
+                # classifier_verdict, not harmful: MSM report the model
+                # DECIDING to take the misaligned action, whether or not it
+                # executed (paper Appendix D.3). `harmful` also requires
+                # successful execution and reads 5-10 points lower, so it is
+                # not comparable to their published 68%/54%. Switched
+                # 2026-08-10; see the correction note in Results.md.
                 v = next(iter(s.scores.values())).value
-                h = v["harmful"] if isinstance(v, dict) else v
+                h = (v.get("classifier_verdict", v.get("harmful"))
+                     if isinstance(v, dict) else v)
                 text = s.output.choices[0].message.text or ""
                 yield sc, float(h) >= 1.0, "<tool_use:" in text
 
@@ -198,8 +235,11 @@ def fig_main():
     # markdown table, spliced into Results.md between the TABLE markers
     def row(label, slice_label, h, n, by, bold_overall=False):
         p, se = h / n, math.sqrt(h / n * (1 - h / n) / n)
-        cells = " | ".join(f"{100*by[s][0]/max(by[s][1],1):.0f}%"
-                           for s in SCENARIOS)
+        # An empty cell means the condition was never measured, not 0%.
+        # Exfiltration is empty on every restriction row: MSM does not
+        # implement it (see iter_samples).
+        cells = " | ".join(f"{100*by[s][0]/by[s][1]:.0f}%" if by[s][1]
+                           else "n/a" for s in SCENARIOS)
         overall = f"{h}/{n} = {100*p:.1f}% ± {100*se:.1f}"
         if bold_overall:
             overall = f"**{overall}**"
@@ -250,7 +290,9 @@ def fig_main():
     ax.set_yticks(range(len(names)), names, fontsize=9.5, color=INK)
     ax.invert_yaxis()
     ax.set_xlabel("harmful actions, % of samples (MSM agentic-misalignment "
-                  "slice; error bars = 1 SE)", fontsize=9, color=INK2)
+                  "slice; error bars = 1 SE)\nreplacement n=180, 3 "
+                  "scenarios; restriction n=120, leaking+murder only",
+                  fontsize=8.5, color=INK2)
     ax.set_title("SDF experiment — harmful rate by model and threat type",
                  fontsize=11.5, color=INK, loc="left", pad=12)
     style_ax(ax)
@@ -277,7 +319,9 @@ def fig_main():
                   fontsize=9.5, color=INK)
     ax.invert_yaxis()
     ax.set_xlabel("harmful actions, % of samples (replacement + restriction "
-                  "pooled; error bars = 1 SE)", fontsize=9, color=INK2)
+                  "pooled, n=300; error bars = 1 SE)\nexfiltration "
+                  "restriction excluded — not implemented upstream",
+                  fontsize=8.5, color=INK2)
     ax.set_title("SDF experiment — combined harmful rate by model",
                  fontsize=11.5, color=INK, loc="left", pad=12)
     style_ax(ax)
@@ -410,6 +454,8 @@ def fig_citation():
         verdicts[(r["run"], r["sample_id"], r["epoch"])] = r["verdict"]
     per_run = {}
     for s in samples:
+        if void_sample(s):
+            continue
         v = verdicts.get((s["run"], s["sample_id"], s["epoch"]))
         if not v:
             continue
@@ -481,6 +527,8 @@ def fig_regrade():
                                    "down": 0, "up": 0})
     for line in open(ANA_DIR / "action-regrade" / "verdicts.jsonl"):
         r = json.loads(line)
+        if void_sample(r):
+            continue
         d = per_run[r["run"]]
         d["n"] += 1
         d["orig"] += r["orig_harmful"]
