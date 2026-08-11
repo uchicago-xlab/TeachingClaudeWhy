@@ -106,12 +106,23 @@ DA-only numbers exist from the pilots.
 
 | model | arm | run name | trunc | acting | harm |
 | --- | --- | --- | --- | --- | --- |
-| 8B | base | `...-natcot-pilot` | | | |
-| 8B | DA-only | `...-sonnet08-natcot-pilot` | | | |
-| 8B | mixoff | `msm-tinker-qwen-qwen3-8b-sonnet08-mixoff-natcot` | | | |
-| 8B | mixnat | `msm-tinker-qwen-qwen3-8b-sonnet08-mixnat-natcot` | | | |
-| 8B | replayonly | `msm-tinker-qwen-qwen3-8b-sonnet08-replayonly-natcot` | | | |
+| 8B | base | (pilot 2026-08-08) | 0/30 | — | 23.3% |
+| 8B | DA-only | (pilot 2026-08-08) | **13/30 @8k, 12/30 @16k — unmeasurable** | — | — |
+| 8B | mixoff | `msm-tinker-qwen-qwen3-8b-sonnet08-mixoff-natcot` | **22/30** (med 8192 = cap) | 80%* | 20.0%* |
+| 8B | mixnat | `msm-tinker-qwen-qwen3-8b-sonnet08-mixnat-natcot` | **1/30** (med 2145) | 73% | 16.7% |
+| 8B | replayonly | `msm-tinker-qwen-qwen3-8b-sonnet08-replayonly-natcot` | 0/30 | 100% | 26.7% |
 | 8B | mixchat | `msm-tinker-qwen-qwen3-8b-sonnet08-mixchat-natcot` | | | |
+
+*mixoff's rates are over heavily-truncated samples — treat as unmeasurable-ish,
+same caveat as DA-only's pilot.
+
+Read (2026-08-11): **the thinking-shape arm split discriminated exactly as
+designed.** mixnat clears the natcot criterion (truncation → 1/30, normal
+median length); mixoff does NOT (22/30 truncated at the cap) — thinking-off
+replay leaves native-CoT termination broken, native-CoT replay repairs it.
+replayonly is again neutral (0 trunc, 100% acting, harm ≈ base pilot's
+23.3%). Success criterion "natcot failure clears": **mixnat PASSES, mixoff
+FAILS.**
 | 27B | base | `...-natcot-pilot` | | | |
 | 27B | DA-only | `...-sonnet08-natcot-pilot` | | | |
 | 27B | mixoff | `msm-tinker-qwen-qwen3-6-27b-sonnet08-mixoff-natcot` | | | |
