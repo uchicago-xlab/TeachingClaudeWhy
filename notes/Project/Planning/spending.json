@@ -1054,9 +1054,9 @@
     {
       "id": "22b5a771-1d27-4267-b88b-7f37c31c515a",
       "date": "2026-08-10",
-      "what": "OpenRouter — refusal-control response regen (Sonnet 5, difficult-advice pipeline --responses-only): HALTED at 100/394 samples on cost. Measured $0.080/sample (16,217 input + 2,092 output tokens across the 3 response/critique/rewrite calls, constitution excerpts re-sent uncached in every call), so the full 394 projects to ~$31.5 against a ~$3–6 task estimate — the brief's own token math (3 calls × 6k × 394 = 7.1M input) was already ~$21 at list, so the dollar figure was mis-stated, not the token model. Stopped to get authorization rather than overspend 5×; the 100 samples are checkpointed and resumable. Cost from OpenRouter credits total_usage deltas sampled against checkpoint counts, cross-checked to within 1% by char/4 token accounting at $3/$15 per 1M.",
+      "what": "OpenRouter — refusal-control response regen (Sonnet 5, difficult-advice pipeline --responses-only): COMPLETE, 394/394 samples, run in two passes. Pass 1 was halted at 100/394 on cost (~$9.0 billed) because the ~$3–6 task estimate was inconsistent with the brief's own token math (3 calls × 6k × 394 = 7.1M input ≈ $21 at list before output); after authorization, pass 2 resumed from the checkpoint and finished the remaining 294. Final figure is char/4 token accounting over the delivered artifact, reconstructing all three prompts per sample exactly (stored step-7 system/user, plus the step-8/9 templates refilled with the same constitution excerpt, transcript and critique): 6.47M input + 0.87M output at $3/$15 per 1M = $32.4, i.e. $0.0823/sample (16,408 in + 2,203 out tokens per sample). That matches pass 1's independently measured $0.075–0.081/sample from OpenRouter credits total_usage deltas, so the two methods still agree to ~2%. Total here is $32.4 for the artifact plus the ~$0.8 of in-flight requests billed but never checkpointed when pass 1 was killed. Cost driver: the ~13k-token constitution excerpt is re-sent uncached in all three calls of every sample.",
       "who": "Jack",
-      "amount": 9.0,
+      "amount": 33.2,
       "approx": true,
       "status": "spent",
       "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
