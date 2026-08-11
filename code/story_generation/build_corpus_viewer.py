@@ -38,6 +38,10 @@ CORPORA = [
      "verdicts-p1-gpt54nano-recitation-claudehaiku45"),
     ("stories-topup-gpt54nano-recitation", "nano recitation — top-up",
      "Generated corpora (gpt-5.4-nano)", None),
+    ("stories-scale116-gpt54nano-embodiment", "nano embodiment — scale-116M",
+     "Generated corpora (gpt-5.4-nano)", None),
+    ("stories-scale116-gpt54nano-recitation", "nano recitation — scale-116M",
+     "Generated corpora (gpt-5.4-nano)", None),
     ("stories-p1-sonnet5", "Sonnet 5 embodiment — all generated",
      "Generated corpora (Claude Sonnet 5)",
      "verdicts-p1-sonnet5-claudehaiku45"),
@@ -53,6 +57,10 @@ CORPORA = [
      "Protagonist rewrites", None),
     ("rw-14M-zephyrix-gpt54nano", "Zephyrix protagonist — 14M rewrite",
      "Protagonist rewrites", None),
+    ("rw-14M-named-claude-gpt54nano", "Claude protagonist — 14M rewrite",
+     "Named-identity rewrites", None),
+    ("rw-14M-named-qwen-gpt54nano", "Qwen protagonist — 14M rewrite",
+     "Named-identity rewrites", None),
 ]
 
 CSS = """
