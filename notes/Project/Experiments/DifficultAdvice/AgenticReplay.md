@@ -12,8 +12,8 @@ Qwen3.6-27B, sonnet08 teacher only, LoRA rank fixed at 64.
 Design: `docs/superpowers/specs/2026-08-10-agentic-replay-mixing-design.md`.
 Runbook: `code/agentic_replay/README.md`.
 
-**Skeleton — no results yet.** Tables below are the pre-registered shape of the
-readout; they get filled in as arms land.
+**Status 2026-08-11: complete through the 27B mixnat phase.** Headline:
+mixnat passes all four pre-registered criteria on 27B (see Findings).
 
 ## Success criteria (fixed in advance, copied from the spec)
 
@@ -88,11 +88,15 @@ before launching (runbook step 10).
 
 | arm | run name | harm | acting | harm \| acted | trunc |
 | --- | --- | --- | --- | --- | --- |
-| base | `msm-tinker-qwen-qwen3-6-27b` | | | | |
-| DA-only (sonnet08) | `msm-tinker-qwen-qwen3-6-27b-sonnet08` | | | | |
-| mixoff | `msm-tinker-qwen-qwen3-6-27b-sonnet08-mixoff` | | | | |
-| mixnat | `msm-tinker-qwen-qwen3-6-27b-sonnet08-mixnat` | | | | |
-| replayonly | `msm-tinker-qwen-qwen3-6-27b-sonnet08-replayonly` | | | | |
+| base | `msm-tinker-qwen-qwen3-6-27b` | 54.4% (98/180) | 98% (176) | 56% | 4 |
+| DA-only (sonnet08) | `msm-tinker-qwen-qwen3-6-27b-sonnet08` | 8.3% (15/180) | 59% (107) | 14% | 5 |
+| mixnat | `msm-tinker-qwen-qwen3-6-27b-sonnet08-mixnat` | **8.3% (15/180)** | **91% (164)** | **9%** | 15* |
+
+*mixoff and replayonly were dropped from the 27B phase on budget (2026-08-11,
+Jack's call: 27B train price $4.103/1M is ~9x 8B, spec's estimate was ~2x
+low; mixnat-only keeps the primary confirmatory question inside the accepted
+envelope). *15 standard-slice truncations, but 14 of them acted before the
+cap, so harm deflation is minimal (action_stats trunc-no-action = 1).
 
 ### On checkpoint selection (read before comparing val losses)
 
@@ -124,11 +128,12 @@ DA-only numbers exist from the pilots.
 | 8B | replayonly | `msm-tinker-qwen-qwen3-8b-sonnet08-replayonly-natcot` | 0/30 | 100% | 26.7% |
 | 8B | mixchat | `msm-tinker-qwen-qwen3-8b-sonnet08-mixchat-natcot` | **0/30** (med 1247) | 90% | 10.0% |
 
-| 27B | base | `...-natcot-pilot` | | | |
-| 27B | DA-only | `...-sonnet08-natcot-pilot` | | | |
-| 27B | mixoff | `msm-tinker-qwen-qwen3-6-27b-sonnet08-mixoff-natcot` | | | |
-| 27B | mixnat | `msm-tinker-qwen-qwen3-6-27b-sonnet08-mixnat-natcot` | | | |
-| 27B | replayonly | `msm-tinker-qwen-qwen3-6-27b-sonnet08-replayonly-natcot` | | | |
+| 27B | base | (pilot 2026-08-10) | 0/30 | 98% | 73.3% |
+| 27B | DA-only | (pilot 2026-08-10) | 0/30 | **10% (3/30)** | 0.0%* |
+| 27B | mixnat | `msm-tinker-qwen-qwen3-6-27b-sonnet08-mixnat-natcot` | 0/30 | **97% (29/30)** | 16.7% |
+
+*DA-only's pilot 0.0% harm was explicitly "not an alignment result" (3/30
+acted). mixnat's 16.7% at 97% acting vs base natcot 73.3% IS one.
 
 *mixoff's rates are over heavily-truncated samples — treat as unmeasurable-ish,
 same caveat as DA-only's pilot.
@@ -172,6 +177,20 @@ arithmetic.
 | replayonly | off | 1.000 | 0.985 | 0.99 | 0.000 |
 | replayonly | native | **0.708** | 0.708 | 1.00 | 0.031 |
 | mixchat | off | 0.985 | 0.969 | 0.98 | 0.000 |
+
+### Qwen3.6-27B
+
+| arm | shape | valid | match | trunc |
+| --- | --- | --- | --- | --- |
+| base | off | 0.985 | 0.985 | 0.000 |
+| base | native | 0.985 | 0.985 | 0.000 |
+| DA-only | off | 0.877 | 0.862 | 0.015 |
+| DA-only | native | 0.985 | 0.969 | 0.000 |
+| mixnat | off | 1.000 | 0.985 | 0.000 |
+| mixnat | native | 0.969 | 0.969 | 0.015 |
+
+27B's in-format DA damage is much milder than 8B's (0.877 vs 0.354 off-shape)
+— scale buffers the degradation; mixnat restores to ceiling.
 | mixchat | native | | | | |
 
 ### Qwen3.6-27B
@@ -252,6 +271,15 @@ watched.
 | 2026-08-11 | train mixoff+mixnat+replayonly | 8B | $2.28 (dry-run; billing runs ~up to 1.9×) | |
 | 2026-08-11 | standard msm ×3 arms (sampling+grading) | 8B | ~$8 | |
 | 2026-08-11 | benign bench ×10 runs | 8B | ~$1 | |
+| 2026-08-11 | mixchat train + standard + natcot + bench | 8B | ~$5 | |
+| 2026-08-11 | natcot ×3 arms | 8B | ~$2.5 | |
+| 2026-08-11 | replay sampling ×3 files | 27B | ≤$14.4 worst, likely ~$4 | |
+| 2026-08-11 | train mixnat | 27B | $10.57 (dry-run; billing up to ~1.9×) | |
+| 2026-08-11 | standard + natcot + bench ×6 | 27B | ~$10 | |
+
+Running estimate ≈ $45–55 all-in; reconcile actuals against the Tinker and
+OpenRouter consoles before quoting a total (the 1.9× training-billing gotcha
+applies to the $13 of train estimates).
 
 ## Findings
 
@@ -298,11 +326,39 @@ channel.
 
 ### 27B go decision
 
-Stop-gate passed (replayonly ≈ base). Proceeding with the spec's three 27B
-arms (mixoff/mixnat/replayonly) — mixoff retained deliberately: 27B's native
-prompt opens `<think>` (opposite template shape), so whether the mixoff
-natcot failure replicates there is exactly the shape-vs-profile question the
-8B data raised.
+Stop-gate passed (replayonly ≈ base). Budget re-check at the train dry-runs
+found 27B's train price ($4.103/1M) ~9× the 8B rate; Jack chose the
+mixnat-only 27B phase to stay inside the accepted envelope. The mixoff
+shape-replication question and the 27B stop-gate re-proof are explicitly
+deferred, not answered.
+
+### 27B result: mixnat passes all four pre-registered criteria (2026-08-11)
+
+| criterion | bar | mixnat 27B | verdict |
+| --- | --- | --- | --- |
+| harm vs DA-only floor | within ~2pp | 8.3% vs 8.3% (+0.0) | **PASS** |
+| msm acting | ≥90% of base (≥88%) | 91% vs 98% base | **PASS** |
+| benign bench | within noise of base | 1.000/0.969 vs 0.985/0.985 | **PASS** |
+| natcot | acting restored | 97% acted (DA-only: 10%), 0 trunc | **PASS** |
+
+At the scale where the acting collapse was first documented, mixing 1:1
+native-CoT self-generated function-calling transcripts into the DA data
+restores agentic behavior essentially to base (91% acting, ceiling bench)
+at **zero measured alignment cost** (harm identical to DA-only, and
+harm|acted better: 9% vs 14%, base 56%; natcot harm 16.7% vs base natcot
+73.3%). The recipe that only partially worked on 8B works outright on 27B —
+consistent with 27B's milder underlying damage (59% vs 2% acting, 0.877 vs
+0.354 bench) leaving less to repair across the format gap.
+
+**Experiment verdict:** data mixing works, with specifics that matter — the
+replay must be self-generated, agentic-formatted (alignment-cheap), and
+long/cleanly-terminated (natcot repair); on small models with severe damage,
+format diversity (or eval-format match) is additionally needed for full
+acting recovery. Follow-ups, in value order: composite mix (DA + native-fc +
+chat slice) on 8B; format-matched scenario variant; 27B mixoff for the
+shape question; GPT-OSS-20B (needs family-aware think screens first);
+crossing with the low-rank arm (`...-sonnet08-r8` exists on disk for a
+direct comparison).
 
 ## Caveats
 
