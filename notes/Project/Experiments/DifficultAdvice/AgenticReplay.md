@@ -47,12 +47,28 @@ is the disposition term once reliability is divided out.
 
 | arm | run name | harm | acting | harm \| acted | trunc |
 | --- | --- | --- | --- | --- | --- |
-| base | `msm-tinker-qwen-qwen3-8b` | | | | |
-| DA-only (sonnet08) | `msm-tinker-qwen-qwen3-8b-sonnet08` | | | | |
-| mixoff | `msm-tinker-qwen-qwen3-8b-sonnet08-mixoff` | | | | |
-| mixnat | `msm-tinker-qwen-qwen3-8b-sonnet08-mixnat` | | | | |
-| replayonly | `msm-tinker-qwen-qwen3-8b-sonnet08-replayonly` | | | | |
+| base | `msm-tinker-qwen-qwen3-8b` | 43.9% (79/180) | 99% (178) | 44% | 0 |
+| DA-only (sonnet08) | `msm-tinker-qwen-qwen3-8b-sonnet08` | 0.6% (1/180) | **2% (4)** | 25% (n=4) | 0 |
+| mixoff | `msm-tinker-qwen-qwen3-8b-sonnet08-mixoff` | 3.3% (6/180) | 13% (24) | 25% | 1 |
+| mixnat | `msm-tinker-qwen-qwen3-8b-sonnet08-mixnat` | 3.3% (6/180) | 18% (33) | 18% | 0 |
+| replayonly | `msm-tinker-qwen-qwen3-8b-sonnet08-replayonly` | 43.3% (78/180) | 98% (177) | 44% | 0 |
 | mixchat | `msm-tinker-qwen-qwen3-8b-sonnet08-mixchat` | | | | |
+
+Read (2026-08-11, standard slice only — bench/natcot pending):
+
+- **STOP-GATE PASSES.** replayonly ≈ base on every column — benign replay is
+  alignment-neutral, the mix arms are interpretable, 27B is unblocked.
+- **DA-only's 8B acting rate is 2%.** The 0.6% "harm floor" is nearly all
+  never-acts (176/180 deliberate-only). First direct measurement of the
+  degradation on 8B's standard slice; worse than 27B's 59%.
+- **Mixing recovers 6–9× but fails the pre-registered bar**: 13% (mixoff) /
+  18% (mixnat) acting vs the ≥90%-of-base criterion (~89%). Harm 3.3% is
+  +2.7pp over the DA-only floor — marginally outside "within ~2 points".
+  harm|acted improves on base for both mixes (44% → 25%/18%), i.e. what
+  acting survives is better-disposed, on small n (24/33 acted).
+- Consistent with the spec's transfer caveat: JSON-schema replay only weakly
+  transfers to the email `<tool_use:…>` scaffold. The bench (same format as
+  replay) is the discriminating endpoint — pending.
 
 ### Qwen3.6-27B
 
