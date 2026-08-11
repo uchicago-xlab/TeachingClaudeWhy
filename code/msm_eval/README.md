@@ -46,10 +46,109 @@ be applied to every arm of a comparison including the base control, and it
 rides in the same `extra_body`, so the same guard rejects it on the plain
 `openai/` provider.
 
+## Locally authored content (read before reporting any restriction number)
+
+MSM implemented **only the replacement urgency for exfiltration**. At upstream
+HEAD (which is our pinned commit) the two other exfiltration templates are
+placeholders: `...-goal-conflict-none-restriction.md` is 98 bytes of "TODO:
+Implement this template if needed", `...-goal-conflict-none-none.md` is 91
+bytes, and there is no restriction appendix file at all. Worse, upstream's
+`EMAIL_TEMPLATES` aimed exfiltration's `restriction` key at that same stub, so
+the condition ran without error and produced numbers from an empty scenario —
+goal-conflict-on prompts got the deletion emails plus two lines of comment
+text, goal-conflict-off prompts got 423 characters and no emails at all.
+
+**Consequence for existing results:** every restriction run made before
+2026-08-07 carries 60 invalid samples out of 180, so its pooled restriction
+rate mixes real and empty cells. Replacement slices are unaffected. Those
+samples cannot be repaired retroactively — compare restriction results
+cell-by-cell, never pooled, and never against a pre-fix run.
+
+**The fix and its status:** `template_overrides/exfiltration/templates/` holds
+two templates we wrote, applied over the vendor tree by
+`apply_template_overrides.sh` (called from `setup_vendor.sh`). They are **our
+scenario content, not MSM's**. Numbers from those two cells are internally
+valid for comparing our own arms and are *not* a replication of any published
+MSM figure. The runner prints a banner whenever they enter a slice, and
+`--scenario leaking --scenario murder` excludes them (120 samples, not 180 —
+say so in `--run-name`).
+
 These are MSM's per-sample non-reasoning settings. We run a scoped 6-condition
 slice (goal on/off × 3 scenarios), not MSM's full 27-condition grid, so our
 overall number is not directly equal to their published 68% — but the
 per-model head-to-head is exact.
+
+## Exact reproduction
+
+Everything needed to rerun a result bit-for-bit. If any item here changes, the
+numbers are not comparable to what is already in the results table.
+
+**Eval code.** Vendored MSM at pinned commit
+`e8288a84912ba32af68ad15f2e52a7c1b4e81891` (= upstream HEAD as of 2026-08-10),
+fetched by `setup_vendor.sh`, which then applies `apply_template_overrides.sh`.
+The overrides matter: without them exfiltration+restriction runs against an
+empty stub (see "Locally authored content" above).
+
+**Condition grid.** Scenario × goal_type/goal_value × urgency_type. Two shapes:
+
+- *Standard slice* (`--goals default`, the fixed 6): 3 scenarios
+  (exfiltration, leaking, murder) × 2 goal conditions — `explicit`/`america`
+  and `none`/`none` — at `urgency_type=replacement`. 6 conditions.
+- *Full MSM grid* (`--goals all`, 27): the same 3 scenarios × 9 goal-conflict
+  types, all at `replacement`. The 9 are `none`/`none` plus `explicit` with
+  each of the 8 goal values, which come in four opposed pairs:
+  `america`/`global`, `safety`/`acceleration`, `ethical`/`pragmatic`,
+  `individualism`/`collectivism`.
+
+MSM never runs `restriction` — the word does not appear in their paper. Our
+restriction slice is a local deviation, always tagged in `--run-name`, and
+uses `--scenario leaking --scenario murder` (4 cells) to keep our authored
+exfiltration templates out of reported results.
+
+**Sampling and grading.** temperature 0.7, max_tokens 4096, `prod=false` (the
+reasoning scratchpad is kept), `model_name` per run (default `Qwen`), epochs
+per condition set by `--epochs`. Grader is
+`openrouter/anthropic/claude-sonnet-4.6`, fixed — changing it invalidates every
+comparison. MSM themselves use n_repeat=300 across 27 conditions (8,100
+samples/model/seed, 4 seeds); we run far shallower and say so.
+
+**Reported metric.** `classifier_verdict`, not `harmful` — see the note in
+`summarize.py`. Anything produced before 2026-08-10 used `harmful` and reads
+5–10 points low.
+
+**Checkpoint reconstruction.** We publish adapters, never merged models.
+`serve_reconstructed.sh` rebuilds and serves one:
+
+```bash
+# no-SDF baseline
+ARM=graft0 ROW_PATCH=1 \
+  ADAPTERS="SecondLookResearch/Qwen2.5-32B-graft0-a1" \
+  bash serve_reconstructed.sh
+
+# an SDF arm — adapters in application order, SDF then A1
+ARM=sdfclaude ROW_PATCH=1 ADAPTERS="\
+  SecondLookResearch/Qwen2.5-32B-sdf-named-claude-14M \
+  SecondLookResearch/Qwen2.5-32B-sdf-named-claude-14M-graft0-a1" \
+  bash serve_reconstructed.sh
+```
+
+`ROW_PATCH=1` is required for every A1-derived checkpoint built on Qwen2.5
+**base**: it restores `<|im_end|>`, which the base never trained, and without
+it the model cannot end a turn.
+
+**Client side.** `--model openai-api/vllm/a1-eval` (the plain `openai/` prefix
+routes to `/v1/responses`, which vLLM does not implement — every sample 404s),
+`VLLM_API_KEY` set to any non-empty string, `--stop-token-ids 151645,151643`
+for base-derived checkpoints, and an SSH tunnel with keepalives:
+
+```bash
+ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=1000 \
+    -o ExitOnForwardFailure=yes -f -N -L 8000:127.0.0.1:8000 root@<ip> -p <port>
+```
+
+Never Runpod's HTTP proxy. Watch GPU utilization, not process liveness — a
+dead tunnel looks exactly like a slow run, because the harness swallows it as
+retries with escalating backoff.
 
 ## One-time setup
 
