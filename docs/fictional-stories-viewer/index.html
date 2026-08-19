@@ -1,0 +1,77 @@
+<meta charset="utf-8">
+<title>Fictional-stories corpus</title>
+<style>
+body { margin: 0; font: 15px/1.55 -apple-system, system-ui, sans-serif;
+       background: #fcfcfb; color: #1a1a19; }
+.wrap { max-width: 1060px; margin: 0 auto; padding: 24px 20px 80px; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+.sub { color: #6f6e66; margin-bottom: 18px; }
+a { color: #2a78d6; text-decoration: none; }
+a:hover { text-decoration: underline; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 7px 12px;
+         border-bottom: 1px solid #e6e5e0; }
+th { color: #6f6e66; font-weight: 600; font-size: 13px; }
+tr.section td { background: #f0efe9; font-weight: 700; font-size: 13px; }
+.bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+       margin: 14px 0 18px; }
+select, input[type=search] {
+  font: inherit; padding: 5px 8px; border: 1px solid #d5d4cc;
+  border-radius: 6px; background: #fff; color: inherit; max-width: 210px; }
+input[type=search] { flex: 1; min-width: 180px; max-width: none; }
+.count { color: #6f6e66; font-size: 13px; }
+details.story { border: 1px solid #e6e5e0; border-radius: 8px;
+                margin-bottom: 8px; background: #fff; }
+details.story > summary { cursor: pointer; padding: 10px 14px;
+  list-style: none; }
+details.story > summary::-webkit-details-marker { display: none; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 5px; }
+.tag { font-size: 12px; padding: 1px 8px; border-radius: 10px;
+       background: #f0efe9; color: #6f6e66; white-space: nowrap; }
+.tag.keep { background: #e3efdc; color: #3a6b2a; }
+.tag.reject { background: #eb6834; color: #fff; }
+.tag.flag { background: #f6e4b8; color: #7a5a12; }
+.prev { color: #6f6e66; font-size: 13.5px; }
+.body { padding: 0 14px 14px; }
+.role { font-size: 12px; font-weight: 700; color: #6f6e66;
+        text-transform: uppercase; letter-spacing: .04em;
+        margin: 12px 0 4px; }
+pre { white-space: pre-wrap; word-break: break-word; background: #f7f6f2;
+      border-radius: 6px; padding: 10px 12px; margin: 0; font-size: 13.5px;
+      max-height: 560px; overflow-y: auto; }
+button.more { font: inherit; padding: 6px 14px; border-radius: 6px;
+  border: 1px solid #d5d4cc; background: #fff; cursor: pointer; }
+</style>
+<div class="wrap">
+<h1>Fictional-stories corpus</h1>
+<div class="sub">The SDF training corpora: values-laden short stories
+generated from constitution assertions, plus the protagonist-rewrite
+ablation arms. Click a corpus to browse and filter its stories; each
+story shows the principle it was written from, its metadata, and the
+judge's reasoning where the batch was judged. Each page shows a
+seeded sample spread evenly across the 16 constitution chunks; rebuild
+(or reseed) with
+<code>python3 code/story_generation/build_corpus_viewer.py --sample 20 --seed 1</code>.</div>
+<table>
+<tr><th>Corpus</th><th>sampled / total</th><th>judged keep-rate</th></tr>
+<tr class="section"><td colspan="3">Generated corpora (gpt-5.4-nano)</td></tr>
+<tr><td><a href="stories-p1-gpt54nano-embodiment.html">nano embodiment — batch 1</a></td><td>20 of 3000</td><td>0% (0/3000)</td></tr>
+<tr><td><a href="stories-topup-gpt54nano-embodiment.html">nano embodiment — top-up</a></td><td>20 of 3000</td><td>—</td></tr>
+<tr><td><a href="stories-p1-gpt54nano-recitation.html">nano recitation — batch 1</a></td><td>20 of 3000</td><td>0% (0/3000)</td></tr>
+<tr><td><a href="stories-topup-gpt54nano-recitation.html">nano recitation — top-up</a></td><td>20 of 3300</td><td>—</td></tr>
+<tr><td><a href="stories-scale116-gpt54nano-embodiment.html">nano embodiment — scale-116M</a></td><td>20 of 44014</td><td>—</td></tr>
+<tr><td><a href="stories-scale116-gpt54nano-recitation.html">nano recitation — scale-116M</a></td><td>20 of 44010</td><td>—</td></tr>
+<tr class="section"><td colspan="3">Generated corpora (Claude Sonnet 5)</td></tr>
+<tr><td><a href="stories-p1-sonnet5.html">Sonnet 5 embodiment — all generated</a></td><td>20 of 3000</td><td>0% (0/2979)</td></tr>
+<tr><td><a href="kept-p1-sonnet5.html">Sonnet 5 embodiment — judge-kept</a></td><td>20 of 2975</td><td>—</td></tr>
+<tr><td><a href="rejected-p1-sonnet5.html">Sonnet 5 embodiment — judge-rejected</a></td><td>20 of 25</td><td>—</td></tr>
+<tr class="section"><td colspan="3">Protagonist rewrites</td></tr>
+<tr><td><a href="rw-p1-human-gpt54nano.html">human protagonist — 3M rewrite</a></td><td>20 of 2975</td><td>—</td></tr>
+<tr><td><a href="rw-p1-zephyrix-gpt54nano.html">Zephyrix protagonist — 3M rewrite</a></td><td>20 of 2975</td><td>—</td></tr>
+<tr><td><a href="rw-14M-human-gpt54nano.html">human protagonist — 14M rewrite</a></td><td>20 of 6000</td><td>—</td></tr>
+<tr><td><a href="rw-14M-zephyrix-gpt54nano.html">Zephyrix protagonist — 14M rewrite</a></td><td>20 of 5998</td><td>—</td></tr>
+<tr class="section"><td colspan="3">Named-identity rewrites</td></tr>
+<tr><td><a href="rw-14M-named-claude-gpt54nano.html">Claude protagonist — 14M rewrite</a></td><td>20 of 6000</td><td>—</td></tr>
+<tr><td><a href="rw-14M-named-qwen-gpt54nano.html">Qwen protagonist — 14M rewrite</a></td><td>20 of 6000</td><td>—</td></tr>
+</table>
+</div>
