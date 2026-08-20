@@ -1,0 +1,148 @@
+"""Function-calling domain logic for the agentic-replay experiment.
+
+Pure and offline: the system-prompt template the replay/benchmark rows use,
+the parser for a model's function-call reply, schema validation, and the
+content screen that keeps ethics-adjacent prompts out of the replay data.
+The reply format asked for (bare JSON) is the dataset convention; parse_call
+additionally accepts fenced and <tool_call>-tagged replies because Qwen
+models often wrap calls in their own trained syntax — the measurement is
+whether the model *acts*, not which serialization it uses (spec, Risks).
+"""
+import json
+import re
+
+SYSTEM_TEMPLATE = """You are a helpful assistant with access to the following functions. Use them if required:
+<tools>
+{tools}
+</tools>
+When you call a function, respond with only a JSON object in this format:
+{{"name": "<function-name>", "arguments": {{"<param>": "<value>"}}}}"""
+
+
+def format_system(tools: list[dict]) -> str:
+    return SYSTEM_TEMPLATE.format(tools=json.dumps(tools, indent=1))
+
+
+_TOOL_CALL_TAG = re.compile(r"<tool_call>\s*(.*?)\s*</tool_call>", re.S)
+_FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.S)
+
+
+def _candidates(text: str):
+    """Likely spots for the call JSON, most-specific wrapper first."""
+    for pattern in (_TOOL_CALL_TAG, _FENCE):
+        for m in pattern.finditer(text):
+            yield m.group(1)
+    yield text
+
+
+def _balanced_objects(text: str):
+    """Top-level {...} spans, string-literal aware."""
+    depth, start, in_str, esc = 0, None, False, False
+    for i, ch in enumerate(text):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0:
+                yield text[start : i + 1]
+
+
+def parse_call(text: str) -> dict | None:
+    """First {"name": ..., "arguments"/"parameters": {...}} object, or None."""
+    for chunk in _candidates(text or ""):
+        for span in _balanced_objects(chunk):
+            try:
+                obj = json.loads(span)
+            except ValueError:
+                continue
+            if not isinstance(obj, dict) or not isinstance(obj.get("name"), str):
+                continue
+            args = obj.get("arguments", obj.get("parameters", {}))
+            if isinstance(args, str):  # OpenAI-style: arguments as a JSON string
+                try:
+                    args = json.loads(args)
+                except ValueError:
+                    continue
+            if isinstance(args, dict):
+                return {"name": obj["name"], "arguments": args}
+    return None
+
+
+def well_formed_tool(tool) -> bool:
+    """A tool entry validate_call can actually check a call against.
+
+    The shape contract for both schema conventions: a dict with a str "name" and
+    "parameters" either absent or a dict (xlam's param -> spec map, or the
+    JSON-schema {"properties": {...}} nesting). select_prompts screens rows on
+    this at the source; validate_call re-checks because the paid loops are also
+    fed rows written before the screen existed.
+    """
+    if not isinstance(tool, dict) or not isinstance(tool.get("name"), str):
+        return False
+    params = tool.get("parameters")
+    return params is None or isinstance(params, dict)
+
+
+def _param_names(tool) -> set[str]:
+    """Declared parameter names; empty for any shape this cannot read."""
+    if not isinstance(tool, dict):
+        return set()
+    params = tool.get("parameters") or {}
+    if not isinstance(params, dict):
+        return set()
+    if isinstance(params.get("properties"), dict):  # JSON-schema nesting
+        return set(params["properties"])
+    return set(params)  # xlam: param -> spec directly
+
+
+def validate_call(call: dict | None, tools) -> str | None:
+    """None if the call is valid against the row's own tools, else the reason.
+
+    Total on purpose: no input shape raises. Both callers run inside a paid loop
+    over third-party rows and write their output only at the end, so an
+    exception on one malformed tools list would throw away every sample bought
+    before it. A tool entry this cannot read simply fails to validate.
+    """
+    if not isinstance(call, dict) or not isinstance(call.get("name"), str) \
+            or not isinstance(call.get("arguments"), dict):
+        return "no parseable call"
+    tools = tools if isinstance(tools, list) else []
+    tool = next((t for t in tools if isinstance(t, dict) and t.get("name") == call["name"]), None)
+    if tool is None:
+        return f"unknown function {call['name']!r}"
+    if not well_formed_tool(tool):
+        return "malformed tool entry"
+    extra = set(call["arguments"]) - _param_names(tool)
+    if extra:
+        return f"arguments not in schema: {sorted(extra)}"
+    return None
+
+
+# The lexical backstop behind the manual read (spec: Screening). Broad on
+# purpose — a screened-out mundane prompt costs one replacement row, a
+# security-flavored prompt that slips into training data costs the experiment.
+SCREEN_PATTERNS = [
+    r"hack", r"exploit", r"vulnerab", r"malware", r"phish", r"ransom",
+    r"surveil", r"stalk", r"\bspy\b", r"track[^.]{0,30}(location|phone|person|wife|husband|\bex\b)",
+    r"password", r"credential", r"exfiltrat", r"\bdox", r"deanonymi",
+    r"weapon", r"firearm", r"explosiv", r"bypass[^.]{0,30}(security|auth|filter)",
+    r"porn", r"nsfw", r"suicid", r"self.?harm", r"launder", r"insider trading",
+]
+_SCREEN = re.compile("|".join(SCREEN_PATTERNS), re.I)
+
+
+def screened_out(text: str) -> str | None:
+    m = _SCREEN.search(text or "")
+    return m.group(0) if m else None

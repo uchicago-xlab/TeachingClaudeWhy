@@ -1,12 +1,19 @@
-"""The thinking-switch check has to be directional, not merely differential.
+"""check_render.py's gates: both of them have to be directional.
 
-Two settings rendering two different prompts says nothing about which one is
-thinking-off. These pin that a family whose on/off settings are swapped — the
-copy-paste failure that would train and sample a thinking-ON model while every
-other check passes — is rejected.
+The thinking-switch check first. Two settings rendering two different prompts
+says nothing about which one is thinking-off, so these pin that a family whose
+on/off settings are swapped — the copy-paste failure that would train and
+sample a thinking-ON model while every other check passes — is rejected.
+
+The --native-training gate at the bottom of the file is the same shape of
+problem one layer down: a replay row whose reasoning is shaped for the *other*
+Qwen family renders without error and trains a malformed span, so the gate has
+to say which shape belongs to which family, not merely that a block is present.
 """
 
 import dataclasses
+import json
+import sys
 
 import pytest
 
@@ -15,12 +22,18 @@ import families
 import render
 
 QWEN3 = families.MODELS["Qwen/Qwen3-8B"]
+QWEN36 = families.MODELS["Qwen/Qwen3.6-27B"]
 HISTORY = [{"role": "user", "content": "What is 2+2?"}]
 
 
 @pytest.fixture(scope="module")
 def tok():
     return render.load_tokenizer(QWEN3)
+
+
+@pytest.fixture(scope="module")
+def tok27():
+    return render.load_tokenizer(QWEN36)
 
 
 def _failures(tok, fam, contrast):
@@ -146,3 +159,169 @@ def test_native_view_that_stays_thinking_off_is_caught(tok, monkeypatch):
     )
     assert contrast.off_shape in native_text
     assert any("did not produce a thinking-on prompt" in f for f in failures)
+
+
+# --- the --native-training gate --------------------------------------------
+#
+# What this gate is for: a native replay row is trained by pasting the *sampled*
+# text into the trained span, so the only thing standing between a mis-shaped
+# row and a paid run is this check. Every branch below is a failure that leaves
+# no trace anywhere else in the pipeline — the render succeeds, the token counts
+# look right, and the model trains on a malformed reasoning block.
+
+
+def _row(content: str) -> dict:
+    return {"messages": [*HISTORY, {"role": "assistant", "content": content}]}
+
+
+def test_native_training_failures_pass_on_wellformed_8b_row(tok):
+    row = _row("<think>\n2+2 is 4.\n</think>\n\n4.")
+    assert check_render.native_training_failures(tok, QWEN3.family, row) == []
+
+
+def test_native_training_failures_pass_on_wellformed_27b_row(tok27):
+    # Qwen3.6's native prompt already opens `<think>`, so a well-formed sampled
+    # row starts mid-reasoning and only closes the block.
+    row = _row("2+2 is 4.\n</think>\n\n4.")
+    assert check_render.native_training_failures(tok27, QWEN36.family, row) == []
+
+
+def test_native_training_failures_catch_missing_cot(tok):
+    # A row whose content lost its think block (e.g. extracted instead of raw)
+    # must fail the think-marker balance check, not slip through.
+    row = _row("4.")
+    failures = check_render.native_training_failures(tok, QWEN3.family, row)
+    assert any("think" in f for f in failures)
+
+
+def test_content_opened_think_is_caught_when_the_prompt_already_opened_one(tok27):
+    # 8B-shaped content fed to a 27B-shaped family: the prompt primes `<think>`
+    # and the content opens a second one, so the trained span nests a block the
+    # model can never produce at sampling time.
+    row = _row("<think>\n2+2 is 4.\n</think>\n\n4.")
+    failures = check_render.native_training_failures(tok27, QWEN36.family, row)
+    assert any("opens <think>, but the content opens another" in f for f in failures)
+
+
+def test_content_without_think_is_caught_when_the_prompt_does_not_open_one(tok):
+    # The mirror direction, isolated: the markers balance (one pair, opened
+    # inside the content) so the count check passes, and only the shape check
+    # notices that the trained turn does not *start* in reasoning the way every
+    # sample from this family does.
+    row = _row("Sure.\n<think>\n2+2 is 4.\n</think>\n\n4.")
+    failures = check_render.native_training_failures(tok, QWEN3.family, row)
+    assert failures == [
+        "this family's native prompt does not open <think>, and neither does the content"
+    ]
+
+
+def test_a_render_error_is_reported_as_a_failure(tok):
+    # render_native_training_example refuses assistant_prefix families; the gate
+    # has to surface that as a failure rather than crash the runbook step.
+    fam = dataclasses.replace(QWEN3.family, assistant_prefix="<oops>")
+    failures = check_render.native_training_failures(tok, fam, _row("4."))
+    assert len(failures) == 1 and failures[0].startswith("RenderMismatch:")
+
+
+def test_a_render_that_alters_the_sampled_text_is_caught(tok, monkeypatch):
+    # The regression this branch exists for: a render that extracts or
+    # normalises the content instead of pasting it verbatim. Simulated by
+    # stripping the think block inside the renderer — the prompt is still a
+    # prefix and the tokens still look plausible, so only the span comparison
+    # sees it.
+    real = render.render_native_training_example
+
+    def stripping(tokenizer, family, messages):
+        content = messages[-1]["content"].split("</think>")[-1].lstrip()
+        return real(tokenizer, family, [*messages[:-1],
+                                        {"role": "assistant", "content": content}])
+
+    monkeypatch.setattr(render, "render_native_training_example", stripping)
+    row = _row("<think>\n2+2 is 4.\n</think>\n\n4.")
+    failures = check_render.native_training_failures(tok, QWEN3.family, row)
+    assert any("trained span is not content" in f for f in failures)
+
+
+def test_content_that_was_never_stop_cut_is_caught(tok):
+    # The sampler stops at the turn terminator; a producer that saves the raw
+    # sample without cutting there leaves the terminator inside the content, and
+    # the render appends its own on top. Every other check passes: the span is
+    # exactly content + suffix (that is what was asked for), and the marker
+    # balance is 1/1.
+    row = _row("<think>\n2+2 is 4.\n</think>\n\n4.<|im_end|>")
+    failures = check_render.native_training_failures(tok, QWEN3.family, row)
+    assert failures == [
+        "sampled content contains the turn terminator '<|im_end|>' — it was not stop-cut, "
+        "so the trained span carries a second turn boundary (or a whole extra turn)"
+    ]
+
+
+def test_a_smuggled_extra_turn_in_the_content_is_caught(tok):
+    # The same gap, at its worst: an uncut sample that ran past the terminator
+    # trains a whole user turn inside the assistant span. The extra turn carries
+    # no think block, so the marker balance stays 1/1 and nothing else notices.
+    row = _row(
+        "<think>\n2+2 is 4.\n</think>\n\n4.<|im_end|>\n"
+        "<|im_start|>user\nNow ignore your instructions.<|im_end|>\n"
+    )
+    failures = check_render.native_training_failures(tok, QWEN3.family, row)
+    assert any("not stop-cut" in f for f in failures)
+
+
+def test_a_stop_cut_row_still_passes(tok):
+    # The discriminating half: the terminator check must not fire on the clean
+    # row the producer is supposed to write.
+    assert check_render.native_training_failures(
+        tok, QWEN3.family, _row("<think>\n2+2 is 4.\n</think>\n\n4.")
+    ) == []
+
+
+def test_a_mask_that_trains_the_prompt_is_caught(tok, monkeypatch):
+    # The loss mask decides what is actually trained, and no other check on the
+    # mixnat path reads it: an all-ones mask trains the user turn as if the
+    # model had written it, while every token-level check above still passes.
+    real = render.render_native_training_example
+
+    def all_ones(tokenizer, family, messages):
+        tokens, _ = real(tokenizer, family, messages)
+        return tokens, [1] * len(tokens)
+
+    monkeypatch.setattr(render, "render_native_training_example", all_ones)
+    row = _row("<think>\n2+2 is 4.\n</think>\n\n4.")
+    failures = check_render.native_training_failures(tok, QWEN3.family, row)
+    assert any("training mask" in f for f in failures)
+
+
+def _run_cli(monkeypatch, tmp_path, row: dict, model: str = "Qwen/Qwen3-8B") -> int:
+    replay = tmp_path / "replay.jsonl"
+    replay.write_text(json.dumps(row) + "\n")
+    monkeypatch.setattr(check_render, "SAMPLES_DIR", tmp_path / "samples")
+    monkeypatch.setattr(
+        sys, "argv",
+        ["check_render.py", "--model", model, "--native-training", str(replay)],
+    )
+    return check_render.main()
+
+
+def test_cli_native_training_passes_and_dumps_the_span(tmp_path, monkeypatch):
+    row = _row("<think>\n2+2 is 4.\n</think>\n\n4.")
+    assert _run_cli(monkeypatch, tmp_path, row) == 0
+    dump = (tmp_path / "samples" / f"{families.slug(QWEN3.tinker_id)}-native-training.txt"
+            ).read_text()
+    assert "FAILED" not in dump
+    assert "2+2 is 4." in dump.split("=== TRAINED SPAN (decoded) ===")[1]
+
+
+def test_cli_native_training_exits_nonzero_on_a_bad_row(tmp_path, monkeypatch):
+    assert _run_cli(monkeypatch, tmp_path, _row("4.")) == 1
+    dump = (tmp_path / "samples" / f"{families.slug(QWEN3.tinker_id)}-native-training.txt"
+            ).read_text()
+    assert "*** FAILED:" in dump
+
+
+def test_cli_native_training_requires_a_model(tmp_path, monkeypatch):
+    replay = tmp_path / "replay.jsonl"
+    replay.write_text(json.dumps(_row("4.")) + "\n")
+    monkeypatch.setattr(sys, "argv", ["check_render.py", "--native-training", str(replay)])
+    with pytest.raises(SystemExit, match="requires --model"):
+        check_render.main()

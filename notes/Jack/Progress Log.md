@@ -4,6 +4,31 @@ status: active
 
 # Progress Log
 
+## 08/10
+
+- **Loss masking on the empty think block — Tinker is fine, Together is not.**
+  In the sweep, `render.py` gives the prompt span weight 0 and Qwen3 templates
+  emit `<think>\n\n</think>\n\n` *in the generation prompt* under
+  `enable_thinking=False`, so the block is primed and never trained (pinned by
+  `test_render.py`). On the Together path `adapt_ft_dataset.py:57` prepends the
+  block to the **assistant content**, and `launch_finetune.py` leaves
+  `train_on_inputs` at Together's default (assistant-only), so those 4 tokens
+  *are* in the trained span for every Qwen3-14B DA adapter — teacher grid v3,
+  scaling ladder, terra, sonnet5think. Effect is small (4 tokens of a constant
+  prefix against ~1,200-token completions; its loss collapses to ~0 in a few
+  steps, and it deflates train/val loss uniformly across arms so checkpoint
+  picks are unaffected). Masking it would **not** have prevented the natcot
+  non-termination — the Tinker 8B checkpoint had it masked and still fails to
+  open a think block; that failure is conditioning, not loss.
+- **The bigger Together question, unverified:** we hand Together a `messages`
+  row whose assistant content starts with a literal `<think>…</think>`, and
+  Together then applies Qwen3-14B's own chat template, which parses `</think>`
+  out of assistant content into `reasoning_content` (behavior varies by
+  template version). So we may have trained on a doubled block, or on one
+  stripped entirely — the latter would be a real train/eval mismatch against
+  the `/no_think`-primed eval. Nobody has looked at the string Together
+  actually trains on. Cheap local check, not yet run.
+
 ## 08/07
 
 *(entry drafted by Claude at Jack's request, end of the wave-1 session)*

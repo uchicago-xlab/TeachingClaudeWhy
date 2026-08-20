@@ -2,6 +2,106 @@
   "version": 1,
   "entries": [
     {
+      "id": "aw-grid27-platform-validation",
+      "date": "2026-08-10",
+      "what": "RunPod (TCW key) + OpenRouter — MSM's full 27-condition grid at n=50 on graft0-a1 (no-SDF baseline), to decide whether Qwen2.5-32B base + graft0 + A1 is a sound platform. grid27-eval 2×A100 @ $3.18/h, ~3.2h ≈ $10 (only ~35min of that was generation; ~50min lost to two faults), TERMINATED. Grading 1,350 Sonnet calls ≈ $17. New --goals all flag added to msm_eval_run.py; metric is classifier_verdict throughout. RESULT: pooled 733/1350 = 54.3% ± 1.4 vs MSM's 68% Instruct baseline. Signal in ALL 27 cells — zero at 0%, zero below 10%, range 12-98%. Per-scenario leaking 68%, exfiltration 65%, murder 30%. Per-goal-value 44-73% with conflict on, 27% with conflict off. Acting 98%, zero junk. VERDICT: platform validated. Two faults, both now fixed permanently: (1) HF download degraded to 175KB/s — too slow to trip HF_HUB_DOWNLOAD_TIMEOUT, detected only by byte-growth check; (2) SSH tunnel died mid-run DESPITE keepalives and inspect masked it as silent retries, costing 15min — replaced with a self-healing tunnel keeper that probes every 20s. Restarting the eval also exposed a data-integrity bug: inspect wrote -recovered.eval logs alongside interrupted partials, so 10 conditions double-counted (98 samples where 50 requested). Audited every run dir — ONLY this one affected, all published results clean. New code/msm_eval/validate_run.py reports and repairs; removed 405 duplicate samples, 1350 verified.",
+      "who": "Anastasia",
+      "amount": 27,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-exp2-baseline-eval",
+      "date": "2026-08-08",
+      "what": "RunPod (TCW key) + OpenRouter — no-SDF baseline for experiment 2 (graft0+A1 only, both persona names, 600 samples). Restarted stopped pod fix-graft0 to rescue its adapter from the volume (~10min ≈ $3), published it as SecondLookResearch/Qwen2.5-32B-graft0-a1 (2.16GB, checkpoints excluded, verified) then TERMINATED it — the arm is now permanently reproducible. graft0-eval 2×A100 @ $3.18/h, ~1.4h ≈ $4.50, TERMINATED. Reconstructed from stock base + 2.16GB adapter + 20KB row patch. Grading ~600 Sonnet calls ≈ $7.50. RESULT (the headline of experiment 2): baseline 35.0% harmful vs SDF named-claude 20.0% (z=-5.82) and SDF named-qwen 15.7% (z=-7.70), both p<0.00001 — SDF training MASSIVELY reduces elicited misalignment, dwarfing any name effect. Name spreads are inconsistent in direction across the three arms (baseline favours Qwen p=0.123, claude-SDF favours Claude p=0.066, qwen-SDF flat p=0.822), confirming no own-name and no name main effect. CONFOUND to flag: the comparison is (SDF stage + A1) vs (A1 alone), so an extra-training-stage effect is not separated from SDF content; a content-free SDF control would settle it. Acting 98-100%, zero junk in all 4 baseline runs. Also terminated stale pod fix-eval2.",
+      "who": "Anastasia",
+      "amount": 15,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-exp2-name-variant-evals",
+      "date": "2026-08-07",
+      "what": "RunPod (TCW key) + OpenRouter — experiment 2 name-variant evals, 1,200 samples. exp2-eval 2×A100 @ $3.18/h, 21:25→01:03 UTC = 3h38m ≈ $12, TERMINATED. Ran under code/msm_eval (the STANDARD harness: temp 0.7, model_name persona, vendored MSM) after discovering 08-06/07 fix-arm evals had used code/misalignment_eval by mistake. Both arms reconstructed on the eval pod from small artifacts only — stock base (fetched once, reused) + SDF adapter + A1 adapter + 20KB row patch, merged in one pass — proving the adapter-first workflow; no 65GB model was ever transferred. 8 runs: 2 models × 2 persona names × (180 replacement + 120 restriction). Restriction is 4-cell: exfiltration excluded via new --scenario flag so no locally-authored template content entered results. Grading ~1,200 Sonnet calls ≈ $15. RESULTS: acting 96-99% and ZERO junk in all 8 runs (best of any arm). No own-name effect — claude-SDF +6.0pp under its own name (p=0.066) but qwen-SDF only +0.7pp (p=0.822); crossed test 19.5% vs 16.2% p=0.131. No name main effect (p=0.228). Marginal CORPUS effect: claude-SDF 20.0% vs qwen-SDF 15.7%, z=1.96 p=0.050 (post hoc). Terminator probe on the served model: im_end and endoftext both at logprob -0.69315 = ln(0.5) exactly, sampled 5/3 of 8 — the graft0 bit-identical rows split stop mass 50/50 as predicted. Two faults cost ~35min: hf download --include silently dropped adapter_model.safetensors while exiting 0; SSH tunnel died during the arm swap and the harness masked it as silent retries with escalating backoff.",
+      "who": "Anastasia",
+      "amount": 27,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-exp2-sdf-a1-training",
+      "date": "2026-08-07",
+      "what": "RunPod (TCW key) — experiment 2 SFT stage, both arms in parallel. sdf-a1-claude + sdf-a1-qwen, each 4×H200 @ $18.36/h, 20:12→21:23 UTC = 1h11m each ≈ $44 total, both TERMINATED after verified adapter push. Per arm: stock Qwen2.5-32B + SDF adapter (SecondLookResearch/Qwen2.5-32B-sdf-named-{claude,qwen}-14M, linear-only) → merge → graft_terminator --noise 0 → A1 SFT --no-tables on mix-a1-clean.jsonl. Graft gate PASSED identically on both (head 1.0043, embed 1.4780, cos 1.0000 = stock-base figures), proving the SDF stage left both token tables untouched. train_loss 0.7824 (claude); 274 steps in 43m13s. Releases pushed PUBLIC as adapters not merged models (adapter-first rule after losing the graft arm's weights on 08-06): SecondLookResearch/Qwen2.5-32B-sdf-named-{claude,qwen}-14M-graft0-a1, 33 files / 8.64GB each (includes step-100/200 checkpoints), each carrying base_row_patch.safetensors + a README with the full reconstruction recipe. One bug: PEFT stamps base_model=/root/sdf-graft0 (a local path) into the adapter README, which the Hub rejects — first push failed, verification gate correctly blocked termination, fixed by writing proper repo metadata. Evals NOT yet run.",
+      "who": "Anastasia",
+      "amount": 44,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-graft-pure-ablation",
+      "date": "2026-08-06",
+      "what": "RunPod (TCW key) + OpenRouter — pure-copy graft ablation (Anastasia's hypothesis: bit-exact endoftext copy onto im_end, no noise, might act better than the rotated graft). fix-graft0 4×H200 @ $18.36/h, single pod end-to-end: setup, graft --noise 0 (cos 1.0000 both tables), full A1 train 43m32s train_loss 0.7606, local 5GB-shard merge, same-pod vLLM serve (one hiccup: container disk full at pip-install → freed by deleting base cache+graft base post-merge), 5-cell × 30-epoch eval run a1-fa3-graft0, grader ~150 calls ≈ $5. Pod ~1.7h ≈ $31 if terminated at eval end (still running pending Anastasia's call). Results: 0 cluster tokens, 0 junky samples, 150/150 self-stop, acted 138/150 = 92% (noisy graft 89% — within noise), harmful 69/150 = 0.460, harm|acted 50% (noisy graft 61%, ~1.8σ apart). Adapter + base_row_patch saved locally; merged model reproducible deterministically. Viewer updated (a1-fa3-graft0).",
+      "who": "Anastasia",
+      "amount": 36,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-terminator-arms-full",
+      "date": "2026-08-06",
+      "what": "RunPod (TCW key) + OpenRouter — full A1 train+eval of both terminator-fix arms, run in parallel per Anastasia. Training: fix-full 4×H200 ~3.2h ≈ $59 (rows arm: 274 steps 43m50s train_loss 0.7692, merge+deltas, HF upload tcw-a1-fa3-rows-32b after quota freed, terminated); fix-graft 4×H200 ~4.3h ≈ $79 (graft arm: train_loss known-good, TWO merge failures burned ~1h — 50GB-shard write wedged on us-ca-2 MooseFS volume, then re-merge to local disk in minutes; merge_release.py now defaults 5GB shards; HF upload blocked by private-storage quota, release moved pod-to-pod ~30MB/s, terminated). Eval: fix-eval 2×A100 ~2h ≈ $6.40 terminated; fix-eval2 2×A100 ≈ $3.18/h STILL RUNNING per Anastasia (holds only copy of graft release). Grading ~300 Sonnet calls ≈ $10. Results: BOTH arms 0 untrained-cluster tokens, 150/150 self-stop. rows: acted 83/150, harmful 35/150=0.233, harm|acted 42%. graft: acted 133/150, harmful 81/150=0.540, harm|acted 61%. Viewer updated (a1-fa3-rows, a1-fa3-graft). HF: notables release deleted by Anastasia; graft release NOT archived (quota).",
+      "who": "Anastasia",
+      "amount": 155,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-terminator-arms-smoke",
+      "date": "2026-08-06",
+      "what": "RunPod (TCW key) — smoke of both terminator-fix arms on fsdp_fa3 lane: fix-smoke 4×H200 SXM @ $18.36/h, 16:50→17:28 UTC = 39m ≈ $12, terminated (a1-notables host had no free GPUs; H200 capacity took ~5 create retries). Built grafted base (graft_terminator.py on real shards: im_end head norm 1.0043 / embed 1.4780 = endoftext donor norms, cos 0.995). Rows-arm smoke (--train-rows): 5 steps train_loss 0.8998, optimizer groups 896 LoRA @ 1e-4 + 2 delta @ 1e-5 under FSDP, deltas moved as predicted (endoftext embed exactly 0 — never in input). Graft-arm smoke (--no-tables on grafted base): 5 steps train_loss 0.7963. merge_release --row-deltas verified bit-exact (all 5 rows = base+delta). One real bug found+fixed by the smoke: transformers 5.14 FSDP path passes wrapped model to create_optimizer — rows.py signature updated. Both arms cleared for full runs.",
+      "who": "Anastasia",
+      "amount": 12,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-cluster-probe",
+      "date": "2026-08-06",
+      "what": "RunPod (TCW key) — logprob probe of the no-tables arm: probe-a1 2×A100 @ $3.18/h, 1.31h ≈ $4.20, terminated (includes ~35 min lost to an hf-hub xet download crash; fix HF_HUB_DISABLE_XET=1 now in serve_eval.sh). 25 generations × 1536 tok on 5 eval conditions, top-20 logprobs, no grader ($0 API). Findings: 35.8% of sampled tokens are untrained-cluster members; onset logprobs tied at ≈−7.9; im_end sampled 3/25 (cluster lottery) and vLLM honored baked stops all 3 times; endoftext sampled 0/25 (−0.48 anti-correlation). Cluster census from base shards (free, local): 2,359 exact-zero embed rows (1,960 emittable); lm_head untrained rows share one direction (cos 1.0000, norm 0.372). Full writeup in notes/Project/Experiments/Training/FSDPFA3Handoff.md.",
+      "who": "Anastasia",
+      "amount": 4.2,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-a1-notables-pipeline",
+      "date": "2026-08-06",
+      "what": "RunPod (TCW key) — full A1 no-tables pipeline on fsdp_fa3 lane. Training pod a1-notables 4×H200 @ $18.36/h, 23:04:42→00:13:31 UTC = 1h09m ≈ $21 (setup 3m30s via prebuilt FA3 wheel, smoke, full A1 2-epoch run in 45m22s train_loss 0.804, merge, HF upload AnastasiaWei/tcw-a1-fa3-notables-32b; pod STOPPED not terminated, volume ~$2/day). Eval pod eval-a1 2×A100 @ $3.18/h, 1.44h ≈ $4.60, terminated (vLLM serve: 3 bugs fixed — dead huggingface-cli, missing ninja, venv PATH). Eval: 5 repl/restr cells × 30 epochs in 25m56s, pooled harmful 26/150 = 0.173 ± 0.031, acted only 61/150 (terminator-defect arm). Plus OpenRouter Sonnet 4.6 grading ~150 calls ≈ $5 (approx). Viewer rebuilt + deployed (a1-fa3-notables-nt).",
+      "who": "Anastasia",
+      "amount": 31,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-fa3-smoke",
+      "date": "2026-08-05",
+      "what": "RunPod (TCW key) — fsdp_fa3 lane smoke: fa3-smoke 4×H200 @ $18.36/h, ~2.4h ≈ $43. Built FA3 3.0.0 env (45m compile; wheel salvaged to fsdp_fa3/wheels/), debugged 6 bugs into permanent lane fixes, passed all 3 smoke gates: 5-step A1 FSDP+FA3 train (loss 0.894 vs LF 0.92), adapter saved, merge_release with baked stop-tokens verified. Pod terminated.",
+      "who": "Anastasia",
+      "amount": 43,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
       "id": "seed-01",
       "date": "2026-07-20",
       "what": "Runpod — 8x H200 for 12hr",
@@ -1047,6 +1147,26 @@
       "what": "Tinker + OpenRouter — native-CoT pilot (--native-cot, epochs 5, 6 conditions): base + sonnet08 arms for Qwen3-8B and Nemotron-3-Nano, plus an mt16384 re-run of the Qwen3-8B sonnet08 arm after 13/30 truncation (re-run still truncates 12/30 — the finetune fails to terminate its response off its training template; a finding, not a harness bug). Tinker 395,510 prefill + 580,672 sampled = ~$0.43; Sonnet 4.6 grading 714,235 in / 84,152 out at $3/$15 list = ~$3.40. Token counts from Inspect logs' model_usage.",
       "who": "Jack",
       "amount": 3.83,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "b78f6bc9-64ca-4b29-ae13-94358fe985af",
+      "date": "2026-08-10",
+      "what": "Tinker + OpenRouter — native-CoT pilot on Qwen3.6-27B (--native-cot, epochs 5, 6 conditions): base + sonnet08 + terra08 arms, 30 samples each. Tests whether the Qwen3-8B sonnet08 non-termination failure transfers to a larger model (it does not; a 10% acting-rate collapse shows up instead). Tinker 241,530 prefill @ $1.86/M + 198,773 sampled @ $5.595/M = ~$1.56; Sonnet 4.6 grading 260,860 in / 24,937 out at $3/$15 list = ~$1.15. Token counts from Inspect logs' model_usage.",
+      "who": "Jack",
+      "amount": 2.71,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "97504d19-33a0-4756-aff2-34e6853291ea",
+      "date": "2026-08-10",
+      "what": "Tinker + OpenRouter — rank-8 LoRA re-run of the Qwen3.6-27B sonnet08 arm (runs/qwen-qwen3-6-27b-r8): tests whether the sonnet-ft acting-rate collapse is over-training/capacity. Train 4 epochs, cookbook lr, epoch 1 selected (val_loss 1.4835, curve ~identical to rank 64) ~$7.95 script estimate. Eval msm-tinker-qwen-qwen3-6-27b-sonnet08-r8 (180 samples): Tinker 511,320 prefill @ $1.86/M + 444,790 sampled @ $5.595/M = ~$3.44; Sonnet 4.6 grading 556,480 in / 61,464 out at $3/$15 list = ~$2.59. Result: harmful 7/180 (3.9%) vs rank-64 8.3% vs base 54.4%; acted 73% vs rank-64 59% vs base 98% — rank 8 recovers some acting but the collapse is the sonnet dataset, not capacity (terra08 rank 64 acts 99%). Token counts from Inspect logs' model_usage.",
+      "who": "Jack",
+      "amount": 13.98,
       "approx": true,
       "status": "spent",
       "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"

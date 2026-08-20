@@ -16,6 +16,13 @@ estimate. --yes executes.
     ../../.venv-tinker/bin/python train_sft.py --model Qwen/Qwen3-8B --teacher sonnet
     ../../.venv-tinker/bin/python train_sft.py --model Qwen/Qwen3-8B --teacher sonnet --yes
 
+--teacher names one of the sweep's adapted rungs. The alternative is file mode —
+--train-file/--val-file/--run-tag — which trains an arbitrary assembled dataset
+(the agentic-replay mixes) and names its state file and checkpoints after the
+tag instead of the teacher. A mix row may carry "render": "native", which trains
+the assistant turn with the model's own CoT intact; every other row renders in
+the family's standard thinking-off view. See resolve_data and render_row.
+
 Two SDK facts shape the code below (both verified against tinker 0.24.0 /
 tinker-cookbook 0.5.3, see PROBE.md):
 
@@ -32,6 +39,7 @@ import json
 import math
 import os
 import random
+import re
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -241,7 +249,10 @@ class Split:
 
 def load_rows(path: Path) -> list[dict]:
     if not path.exists():
-        raise SystemExit(f"{path} not found — run adapt_dataset.py for this family first")
+        raise SystemExit(
+            f"{path} not found — in teacher mode run adapt_dataset.py for this family first; "
+            "in file mode check the --train-file/--val-file paths"
+        )
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
@@ -256,12 +267,93 @@ def load_splits(model: families.SweepModel, teacher: str) -> tuple[Split, Split]
     )
 
 
+RUN_TAG_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+
+
+@dataclass(frozen=True)
+class DataChoice:
+    train: Split
+    val: Split
+    state_name: str  # runs/<slug>/train-<state_name>.json
+    ckpt_tag: str    # checkpoint names: <slug>-<ckpt_tag>-ep<N>
+
+
+def resolve_data(args, model: families.SweepModel) -> DataChoice:
+    """Teacher mode (unchanged names) or file mode; refuses mixtures of the two.
+
+    File mode is the agentic-replay experiment's entry point: an assembled mix
+    under data/agentic-replay/mixes/ plus its val file, named by --run-tag.
+    """
+    file_flags = (args.train_file, args.val_file, args.run_tag)
+    if any(file_flags):
+        if args.teacher or not all(file_flags):
+            raise SystemExit(
+                "--train-file, --val-file and --run-tag go together and replace --teacher"
+            )
+        if not RUN_TAG_RE.match(args.run_tag):
+            raise SystemExit(
+                f"--run-tag {args.run_tag!r} is not a safe name. The tag becomes a path "
+                "segment (runs/<slug>/train-<tag>.json) and a checkpoint name, so a "
+                "stray slash or space fails on the save after epoch 1 is already paid "
+                "for. Use lowercase letters, digits, '.', '_' or '-', starting with a "
+                "letter or digit"
+            )
+        if args.run_tag in TEACHER_SPLITS:
+            raise SystemExit(
+                f"--run-tag {args.run_tag!r} names a teacher: it would overwrite "
+                f"train-{args.run_tag}.json, which run_model.py's eval-{args.run_tag} stage "
+                "reads to find its checkpoint. Pick a tag of your own"
+            )
+        render.require_verified(model.family)
+        train_path, val_path = Path(args.train_file), Path(args.val_file)
+        return DataChoice(
+            Split(train_path, load_rows(train_path)),
+            Split(val_path, load_rows(val_path)),
+            args.run_tag, args.run_tag,
+        )
+    if not args.teacher:
+        raise SystemExit("pass --teacher, or --train-file/--val-file/--run-tag")
+    train, val = load_splits(model, args.teacher)
+    return DataChoice(train, val, args.teacher, f"{args.teacher}08")
+
+
+def render_row(tokenizer, family: families.Family, row: dict):
+    """One row -> (tokens, weights), honoring the row's render view.
+
+    "native" marks a replay row whose assistant turn keeps the model's own
+    CoT (mixnat arms); absence means the family's standard thinking-off view.
+    Anything else is a data bug and aborts before money moves.
+    """
+    view = row.get("render")
+    if view == "native":
+        # render_native_training_example's scope is exactly one trailing
+        # assistant turn: it re-renders messages[:-1] through the template,
+        # which drops <think> from every earlier assistant turn. A multi-turn
+        # row would therefore train history stripped of the reasoning this
+        # experiment exists to keep, and nothing downstream would show it.
+        if any(m["role"] == "assistant" for m in row["messages"][:-1]):
+            raise SystemExit(
+                "multi-turn native replay row: render_native_training_example covers one "
+                "trailing assistant turn only, so the earlier turns' CoT would be silently "
+                "stripped by the template (see its docstring). Split the row, or extend "
+                "that function deliberately"
+            )
+        return render.render_native_training_example(tokenizer, family, row["messages"])
+    if view is not None:
+        raise SystemExit(f"unknown render value {view!r} — expected 'native' or no key")
+    return render.render_training_example(tokenizer, family, row["messages"])
+
+
 def render_split(tokenizer, family: families.Family, split: Split):
     """Render every row up front so a format failure costs nothing to discover."""
     out = []
     for i, row in enumerate(split.rows):
         try:
-            out.append(render.render_training_example(tokenizer, family, row["messages"]))
+            out.append(render_row(tokenizer, family, row))
+        except SystemExit as exc:
+            # render_row's own refusals (unknown view, multi-turn native row)
+            # know nothing about which file or row they came from.
+            raise SystemExit(f"{split.path}: row {i}: {exc}") from exc
         except (render.RenderMismatch, AssertionError, KeyError) as exc:
             raise SystemExit(f"{split.path}: row {i}: {type(exc).__name__}: {exc}") from exc
     return out
@@ -364,7 +456,8 @@ async def run(args) -> None:
 
     model = families.get_model(args.model)
     fam = model.family
-    train, val = load_splits(model, args.teacher)
+    choice = resolve_data(args, model)
+    train, val = choice.train, choice.val
 
     tokenizer = render.load_tokenizer(model)
     train_ex = render_split(tokenizer, fam, train)
@@ -390,7 +483,9 @@ async def run(args) -> None:
         est = (seq_tokens + val_seq_tokens) * args.epochs / 1e6 * per_m
 
     print(f"model:   {args.model}  (family {fam.key}, thinking_off={fam.thinking_off})")
-    print(f"teacher: {args.teacher}  ({len(train.rows)} train / {len(val.rows)} val rows)")
+    print(f"data:    {choice.state_name}  ({len(train.rows)} train / {len(val.rows)} val rows)")
+    if not args.teacher:
+        print(f"         train {train.path}\n         val   {val.path}")
     print(f"recipe:  LoRA rank {rank} [{rank_source}], lr {lr} [{lr_source}] "
           f"(cosine, {WARMUP_FRAC:.0%} warmup), {args.epochs} epochs x {steps_per_epoch} steps, "
           f"batch {args.batch_size}, seed {args.seed}")
@@ -421,17 +516,19 @@ async def run(args) -> None:
     service_client = tinker.ServiceClient()
     training_client = await make_training_client(service_client, args.model, rank, args.seed)
     run_dir = Path(args.run_dir) if args.run_dir else RUNS_DIR / families.slug(args.model)
-    out_path = run_dir / f"train-{args.teacher}.json"
+    out_path = run_dir / f"train-{choice.state_name}.json"
     base = {
         "model": args.model, "family": fam.key, "thinking_off": fam.thinking_off,
-        "teacher": args.teacher, "lr": lr, "lr_source": lr_source,
+        "teacher": args.teacher, "run_tag": args.run_tag,
+        "train_file": str(train.path), "val_file": str(val.path),
+        "lr": lr, "lr_source": lr_source,
         "rank": rank, "rank_source": rank_source,
         "epochs": args.epochs, "batch_size": args.batch_size, "seed": args.seed,
         "train_rows": len(train.rows), "val_rows": len(val.rows),
         "trained_tokens_per_epoch": trained_tokens,
         "sequence_tokens_per_epoch": seq_tokens,
     }
-    run_slug = f"{families.slug(args.model)}-{args.teacher}08"
+    run_slug = f"{families.slug(args.model)}-{choice.ckpt_tag}"
     checkpoints, step = [], 0
     for epoch in range(1, args.epochs + 1):
         for batch in make_batches(train_ex, args.batch_size, args.seed, epoch):
@@ -459,7 +556,13 @@ async def run(args) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", required=True)
-    parser.add_argument("--teacher", required=True, choices=tuple(TEACHER_SPLITS))
+    parser.add_argument("--teacher", choices=tuple(TEACHER_SPLITS),
+                        help="teacher mode: the sweep's adapted rungs (unchanged behavior)")
+    parser.add_argument("--train-file", default=None,
+                        help="file mode: explicit train JSONL (agentic-replay mixes)")
+    parser.add_argument("--val-file", default=None)
+    parser.add_argument("--run-tag", default=None,
+                        help="file mode: state file train-<tag>.json and checkpoint tag")
     parser.add_argument("--epochs", type=int, default=4)
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=None,

@@ -16,6 +16,12 @@ rebuild
 where turn_suffix is derived mechanically (see _derive_suffix). check_render.py
 (Task 6) is what discovers, per family, whether assistant_prefix is needed.
 
+That render-twice mechanism is the thinking-off path only. Replay rows whose
+assistant turn keeps its native reasoning take a different route:
+render_native_training_example builds the trained tokens directly — native
+generation prompt + encoded content + native turn suffix — because Qwen
+templates strip <think> blocks when re-rendering history; see its docstring.
+
 A second, opposite knob is generation_prefill: text the template *does* emit at
 the start of the assistant turn, which we additionally prime at sampling time
 so the model continues from it instead of choosing what to open its turn with.
@@ -183,10 +189,54 @@ def native_view(family: families.Family) -> families.Family:
     default to thinking ON, gpt-oss to `Reasoning: medium`, Inkling to effort
     0.9 — and DeepSeek-V3.1 to thinking OFF (its template defaults
     thinking=false), which the native-CoT eval treats as "no CoT" rather than
-    overriding. Used only by the eval's --native-cot variant; training never
-    renders through this view.
+    overriding. Used by the eval's --native-cot variant and by
+    render_native_training_example below — the one training path that keeps
+    reasoning; the thinking-off training path never renders through this view.
     """
     return dataclasses.replace(family, thinking_kwargs={}, generation_prefill="")
+
+
+def render_native_training_example(
+    tokenizer, family: families.Family, messages
+) -> tuple[list[int], list[int]]:
+    """Trained tokens for a replay row whose assistant turn keeps native reasoning.
+
+    Built directly — native generation prompt + encoded content + native turn
+    suffix — rather than through the template's full render. Not because the
+    full render is wrong today: measured, the two agree token for token on both
+    Qwen families, and test_render_native_training.py pins that. The direct
+    build is chosen because it does not depend on template internals no vendor
+    promises to keep across transformers or template versions, and because it
+    makes the trained prompt *the* sampling prompt by construction rather than
+    by coincidence.
+
+    Scope: exactly one trailing assistant turn. Qwen templates drop <think>
+    blocks from every non-final assistant turn, and messages[:-1] is re-rendered
+    through the template here too, so a multi-turn replay row would silently
+    lose the reasoning of its earlier turns. Revisit this function before
+    training one; under the standard thinking-off view such a row instead fails
+    loudly, via render_training_example's RenderMismatch.
+
+    The content is the raw sampled text, stop-cut: for a family whose native
+    prompt opens `<think>` it starts mid-reasoning; otherwise it carries its own
+    `<think>…</think>`. check_render.py's --native-training pass is the
+    per-model proof.
+    """
+    assert messages[-1]["role"] == "assistant", "training example ends with the assistant turn"
+    if family.assistant_prefix:
+        raise RenderMismatch(
+            f"family {family.key!r} has assistant_prefix "
+            f"{family.assistant_prefix!r}: the direct native build would silently skip it. "
+            "No such family is in the replay experiment; extend this function deliberately "
+            "before training one",
+            "", "",
+        )
+    native = native_view(family)
+    prompt = render_generation_prompt(tokenizer, native, messages[:-1])
+    completion = tokenizer.encode(messages[-1]["content"], add_special_tokens=False)
+    full = prompt + completion + _derive_suffix(tokenizer, native)
+    weights = [0] * len(prompt) + [1] * (len(full) - len(prompt))
+    return full, weights
 
 
 _PROBE_MESSAGES = [

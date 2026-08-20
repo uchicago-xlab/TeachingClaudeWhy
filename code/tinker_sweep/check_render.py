@@ -10,6 +10,14 @@ data/tinker-sweep/render-samples/<slug>.txt. Exits non-zero if any model fails.
     ../../.venv-tinker/bin/python check_render.py                 # all models
     ../../.venv-tinker/bin/python check_render.py --model Qwen/Qwen3-8B
 
+A second, narrower mode gates the native replay mix: --native-training takes a
+sampled replay file and proves, for one model, that the row trains exactly the
+text that was sampled (see native_training_failures). It is what the runbook
+runs before any paid mixnat training.
+
+    ../../.venv-tinker/bin/python check_render.py --model Qwen/Qwen3-8B \
+        --native-training ../../data/agentic-replay/replay/qwen-qwen3-8b/fc-train-native.jsonl
+
 The dumps are NOT committed (data/ is gitignored); they are the artifact you
 read before trusting a family, and they regenerate in a couple of minutes.
 
@@ -152,6 +160,97 @@ def native_prompt_failures(
     return failures, native_text, primed
 
 
+def native_training_failures(tok, fam: families.Family, row: dict) -> list[str]:
+    """Prove one sampled native replay row trains exactly what was sampled.
+
+    The mixnat gate (spec: Training integration): the native prompt must be a
+    prefix, the sampled content must sit verbatim in the trained span with one
+    turn terminator after it and none inside it, and the full render must
+    contain exactly one balanced <think>/</think> pair — wherever the family's
+    template puts the opening tag (prompt for qwen3_5/3_6, content for qwen3).
+
+    The last two checks are directional for the same reason the thinking-switch
+    check is: content carrying the *wrong* shape for its family renders without
+    error anywhere else in the pipeline, and trains a silently malformed span.
+    """
+    failures = []
+    messages = row["messages"]
+    content = messages[-1]["content"]
+    native = render.native_view(fam)
+    try:
+        tokens, weights = render.render_native_training_example(tok, fam, messages)
+    except Exception as e:  # noqa: BLE001 — report, fail the model
+        return [f"{type(e).__name__}: {e}"]
+    prompt = render.render_generation_prompt(tok, native, messages[:-1])
+    if tokens[: len(prompt)] != prompt:
+        failures.append("native generation prompt is not a prefix of the trained tokens")
+    # The mask is what actually decides which tokens get a loss, and nothing
+    # else on the mixnat path looks at it: zeros over the prompt, ones over the
+    # sampled span, one weight per token.
+    if (len(weights) != len(tokens)
+            or set(weights[: len(prompt)]) != {0}
+            or set(weights[len(prompt):]) != {1}):
+        failures.append(
+            f"training mask does not cover exactly the sampled span: {len(weights)} weights for "
+            f"{len(tokens)} tokens, {sum(weights)} trained, prompt is {len(prompt)} tokens"
+        )
+    span = tok.decode(tokens[len(prompt):])
+    suffix = tok.decode(render._derive_suffix(tok, native))
+    if span != content + suffix:
+        failures.append(
+            "trained span is not content + one turn terminator — the sampled text was "
+            f"altered by the render (span tail: {span[-80:]!r})"
+        )
+    # The span check above says the render added exactly one terminator; it
+    # cannot see one the *content* already carried. An uncut sample keeps the
+    # terminator it stopped on, and a sample that ran past it keeps whole extra
+    # turns — trained as if the assistant had written the user's side.
+    if suffix.strip() and suffix.strip() in content:
+        failures.append(
+            f"sampled content contains the turn terminator {suffix.strip()!r} — it was not "
+            "stop-cut, so the trained span carries a second turn boundary (or a whole extra turn)"
+        )
+    full = tok.decode(tokens)
+    if full.count("<think>") != 1 or full.count("</think>") != 1:
+        failures.append(
+            f"think markers unbalanced in full render: {full.count('<think>')} open / "
+            f"{full.count('</think>')} close — expected exactly one balanced pair "
+            "(prompt-opened or content-opened depending on the family)"
+        )
+    opens = render.generation_prompt_opens_think(tok, native)
+    if opens and "<think>" in content:
+        failures.append("this family's native prompt opens <think>, but the content opens another")
+    if not opens and not content.lstrip().startswith("<think>"):
+        failures.append("this family's native prompt does not open <think>, and neither does the content")
+    return failures
+
+
+def check_native_training(model: families.SweepModel, replay_path: Path) -> int:
+    """Gate one model's sampled replay file: check its first row, dump, verdict."""
+    tok = render.load_tokenizer(model)
+    row = json.loads(replay_path.read_text().splitlines()[0])
+    failures = native_training_failures(tok, model.family, row)
+    lines = [f"model: {model.tinker_id}", f"source: {replay_path}"]
+    try:
+        tokens, _ = render.render_native_training_example(tok, model.family, row["messages"])
+        native = render.native_view(model.family)
+        prompt = render.render_generation_prompt(tok, native, row["messages"][:-1])
+        lines += ["", "=== NATIVE GENERATION PROMPT (decoded) ===", tok.decode(prompt),
+                  "", "=== TRAINED SPAN (decoded) ===", tok.decode(tokens[len(prompt):])]
+    except Exception:  # noqa: BLE001 — already reported by native_training_failures
+        # A render that raises has no spans to show; the failure line is the dump.
+        lines += ["", "(render raised — see the failure above; no spans to show)"]
+    out = SAMPLES_DIR / f"{families.slug(model.tinker_id)}-native-training.txt"
+    SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(
+        (lines[:2] + ["", *(f"*** FAILED: {f}" for f in failures)] + lines[2:])
+        if failures else lines) + "\n")
+    print(f"{'FAIL' if failures else 'OK  '} {model.tinker_id} -> {out}")
+    for f in failures:
+        print(f"       {f}")
+    return 1 if failures else 0
+
+
 def check_model(model: families.SweepModel) -> bool:
     fam = model.family
     row = json.loads(
@@ -265,7 +364,13 @@ def _write(model: families.SweepModel, lines: list[str], failures: list[str]) ->
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", help="one tinker id (default: all)")
+    parser.add_argument("--native-training", metavar="REPLAY_JSONL",
+                        help="check the first row of a sampled native replay file for --model")
     args = parser.parse_args()
+    if args.native_training:
+        if not args.model:
+            raise SystemExit("--native-training requires --model")
+        return check_native_training(families.get_model(args.model), Path(args.native_training))
     models = [families.get_model(args.model)] if args.model else list(families.MODELS.values())
     results = [check_model(m) for m in models]
     print(f"\n{sum(results)}/{len(results)} models OK")

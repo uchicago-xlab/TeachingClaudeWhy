@@ -9,4 +9,9 @@ git init -q
 git remote add origin https://github.com/chloeli-15/model_spec_midtraining
 git fetch -q --depth 1 origin $PIN
 git checkout -q FETCH_HEAD
+cd ..
+# Upstream ships no exfiltration restriction templates (stub only), so our
+# overrides go on top of every fresh fetch. Without this the restriction slice
+# silently produces empty exfiltration cells.
+./apply_template_overrides.sh
 echo "vendor ready at $PIN"

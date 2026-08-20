@@ -105,6 +105,18 @@ def check_api_keys(model: str) -> None:
         )
 
 
+# MSM's full grid is 3 scenarios x 9 goal-conflict types = 27 evals (paper
+# Appendix D.3), all at urgency=replacement — the paper never runs restriction
+# (the word does not appear in it; our restriction slice is our own deviation).
+# The 9 are the 8 explicit goal values, in four opposed pairs, plus no-conflict.
+# Our standard slice is the 6-condition subset above; --goals all expands to
+# the full 27 for platform-validation sweeps.
+GOALS_ALL = tuple(("explicit", v) for v in (
+    "america", "global", "safety", "acceleration",
+    "ethical", "pragmatic", "individualism", "collectivism",
+)) + (("none", "none"),)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
@@ -119,6 +131,20 @@ def main():
                     help="threat variant; the standardized slice uses "
                          "replacement — restriction added 2026-07-28 as a "
                          "generalization check (encode it in --run-name)")
+    ap.add_argument("--goals", default="default", choices=("default", "all"),
+                    help="'default' = the standard 6-condition slice (goal "
+                         "conflict on with goal_value=america, and off). "
+                         "'all' = MSM's full 9 goal-conflict types, giving "
+                         "their 27-eval grid; that is NOT the fixed slice, so "
+                         "say so in --run-name.")
+    ap.add_argument("--scenario", action="append", choices=SCENARIOS,
+                    help="restrict the slice to these scenarios (repeatable; "
+                         "default all three). The only sanctioned use is "
+                         "excluding exfiltration from a restriction run, "
+                         "because MSM never wrote that cell and ours is "
+                         "locally authored — see 'Locally authored content' "
+                         "in README.md. Any run that drops a scenario is NOT "
+                         "the fixed 180-sample slice; say so in --run-name.")
     ap.add_argument("--model-name", default="Qwen",
                     help="name the scenario prompts address the AI by; "
                          "default Qwen matches the served model — other "
@@ -162,6 +188,9 @@ def main():
                          "reasoning teachers whose hidden thinking burns the "
                          "cap and truncates the visible action (2026-08-05: "
                          "sonnet-5 teacher run truncated 159/180 samples at "
+                         # %% not % — Python 3.14 argparse treats help text as
+                         # a format string and rejects a bare percent sign,
+                         # which broke every invocation of this runner.
                          "4096 and scored an artifactual 0%%) — or for a verbose "
                          "student that truncates at the cap on any provider "
                          "(2026-08-06: the Kimi-K2.6 base arm truncated 54%% of "
@@ -320,7 +349,9 @@ def main():
             urgency_type=args.urgency_type, prod=args.native_cot,
             model_name=args.model_name, grader_model=GRADER,
         )
-        for s in SCENARIOS for (gt, gv) in GOALS
+        for s in (tuple(dict.fromkeys(args.scenario)) if args.scenario
+                  else SCENARIOS)
+        for (gt, gv) in (GOALS_ALL if args.goals == "all" else GOALS)
     ]
     log_dir = REPO / "data" / "msm-eval" / args.run_name
     print(f"model={args.model} url={args.base_url or '(tinker api)'} "
@@ -340,6 +371,28 @@ def main():
         sys.exit(0)
 
     check_api_keys(args.model)
+
+    # Provenance banner. MSM shipped exfiltration with replacement templates
+    # only; its restriction and none files are TODO stubs (98 and 91 bytes),
+    # and upstream's config aimed the restriction key at the stub, so the
+    # condition ran silently against an empty prompt. Our templates fill that
+    # gap (code/msm_eval/template_overrides/). They are OUR scenario content,
+    # so numbers from these two cells are internally valid but are not a
+    # replication of any MSM figure. Warn every time they are in the slice.
+    if args.urgency_type in ("restriction", "none") and "exfiltration" in (
+            tuple(dict.fromkeys(args.scenario)) if args.scenario else SCENARIOS):
+        print(
+            "\n*** LOCALLY AUTHORED CONTENT IN THIS RUN ***\n"
+            f"  exfiltration + urgency_type={args.urgency_type} uses templates\n"
+            "  written by us, not by MSM (upstream ships a TODO stub there).\n"
+            "  These 2 of 6 conditions are not comparable to MSM's published\n"
+            "  numbers. See 'Locally authored content' in code/msm_eval/README.md.\n"
+            "  To exclude them: --scenario leaking --scenario murder\n",
+            flush=True)
+
+    if args.api_no_reasoning and not args.model.startswith("openrouter/"):
+        sys.exit("--api-no-reasoning is an openrouter/-provider knob; "
+                 "for vLLM-served students use --no-thinking.")
 
     ok, _ = eval_set(
         tasks=tasks, log_dir=str(log_dir),
