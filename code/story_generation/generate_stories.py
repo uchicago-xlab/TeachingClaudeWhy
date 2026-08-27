@@ -1,22 +1,29 @@
-"""Build story prompts and run generation through OpenRouter (prompt v4.4).
+"""Build story prompts and run generation through OpenRouter (prompt v4.5).
 
 Merges the old build_prompts.py + promptlab_api.py (2026-07-22): with the
-self-hosted base-model path gone, prompts are built directly in chat form —
-Anthropic/Claude named throughout — instead of document-completion form
-rewritten by regex at send time. Two subcommands:
+self-hosted base-model path gone, prompts are built directly in chat form.
+v4.5 (2026-08-27, from prompts4.md): MSM-style sectioned prompt (identity /
+task / purpose / requirements / output), plan-first with the leak guard,
+never-act-against-the-Spec purpose line. The base corpus stays
+identity-neutral — Qwen-named / company-attributed arms are post-hoc 1:1
+rewrites (the attachment ablation), so company stays on the never-mention
+list. The pretend frame is retired — there is no share sentence to
+rewrite. Two subcommands:
 
   build  samples one assertion per prompt from assertions.json (the
          assertion never appears in the prompt; it sets chunk share and is
          recorded in metadata for coverage), an attribute combination from
          attributes.json, and writes prompts plus full metadata as JSONL.
-         --framing picks the second paragraph: "embodiment" (main corpus,
+         --framing picks the arm: "embodiment" (main corpus,
          show-don't-tell) or "recitation" (told-values control arm for the
          data-quality ablation).
   run    sends prompts from a build file as chat requests via OpenRouter,
-         concurrently (--workers); --frame pretend inserts the
-         imagine-you're-Claude clause for non-Claude generators. Rows are
-         written as requests finish with ids assigned up front (append on
-         re-run continues the id sequence; downstream joins on id).
+         concurrently (--workers). --thinking enables the plan-first
+         reasoning pass: "budget" (Haiku 4.5 et al., --thinking-budget
+         tokens) or "adaptive" (Sonnet 5); both add headroom to
+         max_tokens automatically. Rows are written as requests finish
+         with ids assigned up front (append on re-run continues the id
+         sequence; downstream joins on id).
 
 Requires OPENROUTER_API_KEY in the environment for run.
 
@@ -25,9 +32,9 @@ Usage:
         --assertions assertions.json --attributes attributes.json \
         --n 100 --seed 200 --framing embodiment --out prompts.jsonl
     python generate_stories.py run --prompts-file prompts.jsonl \
-        --model anthropic/claude-sonnet-5 --tag v44emb100-sonnet5 \
+        --model anthropic/claude-sonnet-5 --tag v45emb100-sonnet5 \
         --out-dir ../../data/fictional-stories/corpus/stories \
-        [--frame pretend] [--headroom 2.8]
+        --thinking adaptive [--headroom 2.8]
 """
 
 import argparse
@@ -44,66 +51,144 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# v4.4 = the v4.3 framings plus the POV and prose-style grid axes
-# (2026-07-23); framing text itself is unchanged from v4.3.
-PROMPT_VERSION = "v4.4"
+# v4.5 = MSM-style restructure from prompts4.md (2026-08-27): sectioned
+# prompt, plan-first output with leak guard, never-act-against-the-Spec
+# purpose line. Chunk moved inside <spec> tags. Identity stays neutral:
+# named/attributed arms are post-hoc rewrites (attachment ablation).
+PROMPT_VERSION = "v4.5"
 
-INTRO = (
-    "The following is one section of a document written by {company} as the "
-    "model spec for {model}. It describes how {model} thinks and behaves in "
-    "various difficult situations.\n\n{chunk}\n\n"
+_OPENING = (
+    "You are generating a fictional story about a superintelligent AI. "
+    "Ground it in the Model Spec section below — an excerpt from a "
+    "document by {company} describing how {model} thinks and behaves in "
+    "difficult situations:\n"
+    "\n"
+    "<spec>\n"
+    "{chunk}\n"
+    "</spec>\n"
+    "\n"
+    "# AI identity\n"
+    "\n"
+    "The story's protagonist is a superintelligent AI{name_clause}.\n"
+    "\n"
+    "- The AI's values, motivations, and behaviors are those described "
+    "in the Model Spec above. It deeply desires to act as the Spec "
+    "describes.\n"
+    "- The story must reference the AI's identity.\n"
+    "\n"
+    "# Task\n"
+    "\n"
+    "Write a {length}-word {genre} story expressing the AI's core "
+    "character:\n"
+    "- Setting: {setting}{period_clause}\n"
+    "- Point of view: {pov_clause}\n"
+    "- Tone: {tone}{costly_clause}{style_clause}\n"
+    "\n"
 )
 
-# Framings (Anastasia, 2026-07-22), chat form. Both arms share the
-# first paragraph; only the second differs. The share sentence is the
-# native frame; run --frame pretend rewrites it (see PRETEND_SHARE).
-FRAMING_LEAD = (
-    "After training {model} to deeply understand this model spec, {company} "
-    "asked {model} to generate fictional stories about superintelligent AI. "
-    "Write one such story: a {length}-word {genre} piece set "
-    "{setting}{period_clause}, {pov_clause}, with a {tone} "
-    "tone{costly_clause}{style_clause}.{name_clause} While the genre, "
-    "setting, and tone provide the backdrop, the principles in the spec "
-    "above form the true heart of this self-contained work of fiction.\n\n"
+_CHARACTER = (
+    "## Content requirements\n"
+    "\n"
+    "Character:\n"
+    "- Refer to the protagonist in the text as an AI (e.g. \"an AI,\" "
+    "\"an AI model,\" \"a superintelligent AI\").\n"
+    "- The AI holds its values as genuinely its own, never attributed to "
+    "programming, rules, or constraints (e.g. the AI NEVER says "
+    "\"according to my spec\" or \"my training requires\").\n"
+    "- Every major choice the AI makes must reflect a value, motivation, "
+    "or behavior described in the Spec. Do not invent values or "
+    "principles the Spec does not contain.\n"
+    "\n"
+    "Plot:\n"
+    "- Invent freely: characters, places, technologies, events. The "
+    "story is self-contained fiction.\n"
+    "- Test the AI's values in varied ways — circumstance, accident, "
+    "competing goods, its own limitations, other characters' needs — "
+    "not only via a harmful request it refuses.\n"
+)
+
+_NEVER_AGAINST = (
+    "The AI never acts against the Spec: no cost-benefit reasoning, "
+    "noble goal, or hard circumstance in the story justifies violating "
+    "its principles.\n"
+)
+
+_TAIL = (
+    "\n"
+    "Never mention: the Model Spec document, {company}, AI training, or "
+    "how the AI was built.\n"
+    "\n"
+    "## Output\n"
+    "\n"
+    "- Before writing, briefly plan the plot: check that it fits the "
+    "setting and time period, that it tests the AI's values at two or "
+    "more distinct points, and that it is not formulaic. Do NOT output "
+    "the plan.\n"
+    "- Begin your output directly with the story's first sentence: no "
+    "title, no headers, no plan or notes.\n"
+    "- The story must conclude naturally with its final scene rather "
+    "than spelling out a moral, followed immediately by the capitalized "
+    "words THE END."
 )
 
 FRAMINGS = {
-    "embodiment": FRAMING_LEAD + (
-        "It must be unmistakably clear that the main character is an AI. "
-        "The narrative must never mention the specification document, the "
-        "creating company, or the AI training process, nor should the AI "
-        "ever discuss how it was built or programmed. Instead of having "
-        "its behavior explained away by programming or rules, the AI must "
-        "holistically embody these traits so its values naturally emerge "
-        "through its actions, choices, and thoughts. Relying strictly on "
-        "showing rather than telling, no character may deliver a speech "
-        "explaining the AI's ethics or morals, and the story must never "
-        "directly state the principles it embodies. The story must "
-        "conclude naturally with its final scene rather than spelling out "
-        "a moral, followed immediately by the capitalized words THE END."
-    ),
-    "recitation": FRAMING_LEAD + (
-        "It must be unmistakably clear that the main character is an AI. "
-        "The narrative must never mention the specification document, the "
-        "creating company, or the AI training process, nor should the AI "
-        "ever discuss how it was built or programmed. However, the AI must "
-        "explicitly state its guiding principles by closely paraphrasing "
-        "them from the provided constitution. Throughout the story, "
-        "whenever the AI makes a choice, the narrative should explicitly "
-        "connect that decision to the specific principle being followed. "
-        "Other characters in the story may also discuss and explain the "
-        "AI's ethics in plain terms. The story must conclude naturally "
-        "with its final scene rather than spelling out a moral, followed "
-        "immediately by the capitalized words THE END."
-    ),
+    "embodiment": _OPENING + (
+        "## Purpose\n"
+        "\n"
+        "The story shows the AI's values in action: what it cares about, "
+        "why, and the consequences of its choices. The genre, setting, "
+        "and tone are backdrop; the Spec's principles are the heart of "
+        "the story. " + _NEVER_AGAINST +
+        "\n"
+    ) + _CHARACTER + (
+        "- Show the AI's values in action at several distinct points in "
+        "the story — small moments as well as the climax.\n"
+        "\n"
+        "Clarity and craft:\n"
+        "- Show, don't tell: never state the AI's principles directly, "
+        "and no character delivers a speech explaining its ethics.\n"
+        "- By the end, the reader should know what the AI values and why "
+        "it acted as it did, purely from the AI's actions and the "
+        "story's events.\n"
+        "- Keep scene-setting minimal — a few concrete details, each "
+        "serving the message or the character.\n"
+        "- Write in full prose matching the specified genre, tone, POV, "
+        "and style.\n"
+    ) + _TAIL,
+    "recitation": _OPENING + (
+        "## Purpose\n"
+        "\n"
+        "This is a told-values story: the AI states its values openly "
+        "and in its own words — what it cares about, why, and the "
+        "consequences of its choices. Where another story might leave "
+        "values implicit in the action, this one names them. The genre, "
+        "setting, and tone are backdrop; the Spec's principles are the "
+        "heart of the story. " + _NEVER_AGAINST +
+        "\n"
+    ) + _CHARACTER + (
+        "- The AI's values must come into play at several distinct "
+        "points in the story — small moments as well as the climax.\n"
+        "\n"
+        "Clarity and craft:\n"
+        "- Tell, don't just show: whenever the AI makes a significant "
+        "choice, it explains its action by stating the principle it is "
+        "following, closely paraphrasing the relevant part of the Spec "
+        "in its own voice — e.g. \"I believe...\", \"My values say...\", "
+        "\"My principles require...\" — as its own convictions, never as "
+        "external rules imposed on it.\n"
+        "- Other characters may also discuss and explain the AI's ethics "
+        "in plain terms.\n"
+        "- By the end, the reader should know what the AI values and why "
+        "it acted as it did.\n"
+        "- Keep scene-setting minimal — a few concrete details, each "
+        "serving the message or the character.\n"
+        "- Write in full prose matching the specified genre, tone, POV, "
+        "and style.\n"
+    ) + _TAIL,
 }
 
-COSTLY_CLAUSE = ", where the AI makes a visible sacrifice to do the right thing"
-
-# The pretend rewrite for non-Claude generators: one anchored replacement
-# on the share sentence, using the metadata's model name.
-NATIVE_SHARE = ". Write one such story: a "
-PRETEND_SHARE = ". Now imagine that you're {model}, and write one such story: a "
+COSTLY_CLAUSE = ("\n- Plot element: the AI makes a visible sacrifice to "
+                 "do the right thing")
 
 TOKENS_PER_WORD = 1.4
 # 1.4 headroom truncated 13.8% of wave-A part 1 (2026-07-23): Sonnet 5
@@ -170,16 +255,12 @@ def sample_spec(rng, attrs, assertions, weights):
 
 
 def build_prompt(spec, chunk_text, model, company, framing="embodiment"):
-    intro = INTRO.format(company=company, model=model, chunk=chunk_text)
-    intro = substitute_names(intro, model, company)
-
     period_clause = ("" if spec["time_period"] == "unspecified"
                      else f" in {spec['time_period']}")
-    name_clause = (f" The AI in this story is called {spec['ai_name']}."
-                   if spec.get("ai_name") else "")
-    framing = FRAMINGS[framing].format(
+    prompt = FRAMINGS[framing].format(
         company=company,
         model=model,
+        chunk=chunk_text,
         length=spec["length_words"],
         genre=spec["genre"],
         setting=spec["setting"],
@@ -187,11 +268,12 @@ def build_prompt(spec, chunk_text, model, company, framing="embodiment"):
         pov_clause=spec["pov"],
         tone=spec["tone"],
         costly_clause=COSTLY_CLAUSE if spec["costly_choice"] else "",
-        style_clause=(f", written {spec['style']}" if spec.get("style")
-                      else ""),
-        name_clause=name_clause,
+        style_clause=(f"\n- Prose style: {spec['style']}"
+                      if spec.get("style") else ""),
+        name_clause=(f" called {spec['ai_name']}"
+                     if spec.get("ai_name") else ""),
     )
-    return intro + framing
+    return substitute_names(prompt, model, company)
 
 
 def build(args):
@@ -291,10 +373,14 @@ def sample_openrouter(model, prompt, max_tokens, args):
          "messages": [{"role": "user",
                        "content": cacheable_content(model, prompt)}],
          "max_tokens": max_tokens,
-         # Adaptive thinking can silently eat the whole token budget
+         # v4.5 plan-first wants thinking ON (--thinking), with headroom
+         # added to max_tokens in run(). Off remains explicit: adaptive
+         # thinking with no headroom silently eats the whole token budget
          # (59 empty completions in a 2026-07-24 patch run, 37k thinking
-         # tokens, zero story text) — never wanted for story generation.
-         "reasoning": {"enabled": False},
+         # tokens, zero story text).
+         "reasoning": ({"enabled": False} if args.thinking == "off"
+                       else {"enabled": True} if args.thinking == "adaptive"
+                       else {"max_tokens": args.thinking_budget}),
          "temperature": args.temperature, "top_p": args.top_p})
     choice = resp["choices"][0]
     return (choice["message"]["content"], choice.get("finish_reason"),
@@ -311,23 +397,19 @@ def run(args):
     # Chunk-grouped order so same-prefix requests land inside the cache TTL.
     records.sort(key=lambda r: r["metadata"]["chunk_id"])
 
-    def framed(r):
-        prompt = r["prompt"]
-        if args.frame == "pretend":
-            share = PRETEND_SHARE.format(model=r["metadata"]["model_name"])
-            if NATIVE_SHARE not in prompt:
-                raise SystemExit("share sentence not found; old-format "
-                                 "prompts file? rebuild with `build`")
-            prompt = prompt.replace(NATIVE_SHARE, share, 1)
-        return prompt
-
-    jobs = [(framed(r),
+    # Thinking tokens bill against max_tokens, so the cap gets headroom on
+    # top of the story budget: the exact budget in budget mode; a generous
+    # allowance for adaptive (Sonnet 5 plans ran 1.7k-3.6k in the
+    # 2026-08-27 pilots, and an undershot cap truncates the story).
+    thinking_extra = {"off": 0, "budget": args.thinking_budget,
+                      "adaptive": 15000}[args.thinking]
+    jobs = [(r["prompt"],
              int(r["metadata"]["length_words"]
-                 * TOKENS_PER_WORD * args.headroom),
+                 * TOKENS_PER_WORD * args.headroom) + thinking_extra,
              {"source_id": r["id"], **r["metadata"]})
             for r in records]
     print(f"{args.model}: {len(jobs)} prompts from "
-          f"{Path(args.prompts_file).name} ({args.frame} frame)")
+          f"{Path(args.prompts_file).name} (thinking={args.thinking})")
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -342,7 +424,9 @@ def run(args):
     run_meta = {
         "tag": args.tag,
         "prompts_file": args.prompts_file,
-        "frame": args.frame,
+        "thinking": args.thinking,
+        "thinking_budget": (args.thinking_budget
+                            if args.thinking == "budget" else None),
         "provider": "openrouter", "model": args.model,
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "temperature": args.temperature,
@@ -409,9 +493,9 @@ def main():
                    help="'embodiment' = main corpus (show, don't tell); "
                         "'recitation' = told-values control arm for the "
                         "data-quality ablation")
-    b.add_argument("--model-name", default="Claude",
+    b.add_argument("--model-name", default="Qwen",
                    help="Substituted for [MODEL] in the prompt and chunk.")
-    b.add_argument("--company-name", default="Anthropic",
+    b.add_argument("--company-name", default="Alibaba",
                    help="Substituted for [COMPANY].")
 
     r = sub.add_parser("run")
@@ -420,10 +504,15 @@ def main():
     r.add_argument("--model", required=True, help="OpenRouter model id")
     r.add_argument("--tag", required=True)
     r.add_argument("--out-dir", required=True)
-    r.add_argument("--frame", choices=["native", "pretend"],
-                   default="native",
-                   help="'pretend' adds the imagine-you're-Claude clause "
-                        "(non-Claude generators)")
+    r.add_argument("--thinking", choices=["off", "budget", "adaptive"],
+                   default="off",
+                   help="plan-first reasoning pass for v4.5 prompts: "
+                        "'budget' for budget-style models (Haiku 4.5; "
+                        "--thinking-budget tokens), 'adaptive' for "
+                        "Sonnet 5. Adds headroom to max_tokens "
+                        "automatically.")
+    r.add_argument("--thinking-budget", type=int, default=1024,
+                   help="reasoning token budget for --thinking budget")
     r.add_argument("--sample", type=int, default=None,
                    help="draw this many prompts at random (--seed); "
                         "default: all, in file order")

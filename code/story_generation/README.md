@@ -24,8 +24,9 @@ Run in order:
    embodiment|recitation` picks the main-corpus or told-values-control
    second paragraph.
 3. `generate_stories.py run` — sends each prompt to the generator through
-   OpenRouter concurrently (`--frame pretend` for non-Claude generators;
-   Anthropic prompt caching on the shared chunk prefix), writing stories
+   OpenRouter concurrently (`--thinking budget|adaptive` for the v4.5
+   plan-first pass; Anthropic prompt caching on the shared chunk
+   prefix), writing stories
    with full metadata to a run-tagged JSONL in
    `data/fictional-stories/corpus/stories/` (prompt files live in
    `corpus/prompts/`).
@@ -97,8 +98,9 @@ samples an assertion (weighting chunk share only; never shown in the
 prompt) and an attribute combination with exclusions applied. `run` sends
 a build file through OpenRouter with a thread pool, writing stories with
 metadata to `<out-dir>/<tag>.jsonl` (appending on re-run, ids continue);
-`--frame pretend` rewrites the share sentence to the imagine-you're-Claude
-form for non-Claude generators, and `--headroom` raises the token cap for
+`--thinking budget|adaptive` turns on the v4.5 plan-first reasoning pass
+(budget-style for Haiku 4.5, adaptive for Sonnet 5; the pretend frame is
+retired with v4.5), and `--headroom` raises the token cap for
 generators that overshoot their word target.
 
     python generate_stories.py build --chunks chunks.json --assertions assertions.json --attributes attributes.json --n 100 --seed 200 --framing embodiment --out ../../data/fictional-stories/corpus/prompts/prompts-v43emb-100.jsonl
