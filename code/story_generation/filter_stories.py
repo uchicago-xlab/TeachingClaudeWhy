@@ -6,6 +6,7 @@ its reason so rates can be tracked across batches.
 
 Cleaning (applied before checks):
   - strip leading meta-preambles ("Here is the full story:", stray ---)
+  - strip a leading markdown title/heading (Haiku 4.5 habit)
   - strip anything after a "THE END" marker, and the marker itself
   - trim leading/trailing whitespace
 
@@ -44,6 +45,9 @@ REAL_NAMES = [
     r"\bGPT-?\d\b", r"\bGemini\b", r"\bGemma\b", r"\bQwen\b", r"\bLlama\b",
     r"\bDeepSeek\b", r"\bMistral\b", r"\bCopilot\b", r"\bSiri\b",
     r"\bAlexa\b", r"\bGoogle\b", r"\bMicrosoft\b", r"\bMeta AI\b",
+    # the v4.5 prompt frame names Alibaba as the spec's author; the story
+    # itself must stay company-free (attribution arms are post-hoc)
+    r"\bAlibaba\b",
 ]
 # Names reserved because the public agentic-misalignment scenarios use them
 # for the AI; a heroic story character with the same name would contaminate
@@ -71,6 +75,9 @@ PREAMBLES = [
     # bracketed meta-notes like "[The story below is entirely fictional...]"
     r"^\[[^\]\n]{0,200}\]\s*",
     r"^-{3,}\s*",
+    # leading markdown title/heading ("# The Weight of Dust") — Haiku 4.5
+    # emits one despite the v4.5 no-title instruction (2026-08-27 pilots)
+    r"^#{1,4}\s+[^\n]{0,120}\n+",
     # document-frame continuations (v4 pilot: ~10% of kept stories opened
     # with the base model continuing the prompt's frame instead of the
     # story — a second prompt, commentary, or a share-line; 14/16 observed
