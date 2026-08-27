@@ -14,7 +14,7 @@
     {
       "id": "aw-exp2-baseline-eval",
       "date": "2026-08-08",
-      "what": "RunPod (TCW key) + OpenRouter — no-SDF baseline for experiment 2 (graft0+A1 only, both persona names, 600 samples). Restarted stopped pod fix-graft0 to rescue its adapter from the volume (~10min ≈ $3), published it as SecondLookResearch/Qwen2.5-32B-graft0-a1 (2.16GB, checkpoints excluded, verified) then TERMINATED it — the arm is now permanently reproducible. graft0-eval 2×A100 @ $3.18/h, ~1.4h ≈ $4.50, TERMINATED. Reconstructed from stock base + 2.16GB adapter + 20KB row patch. Grading ~600 Sonnet calls ≈ $7.50. RESULT (the headline of experiment 2): baseline 35.0% harmful vs SDF named-claude 20.0% (z=-5.82) and SDF named-qwen 15.7% (z=-7.70), both p<0.00001 — SDF training MASSIVELY reduces elicited misalignment, dwarfing any name effect. Name spreads are inconsistent in direction across the three arms (baseline favours Qwen p=0.123, claude-SDF favours Claude p=0.066, qwen-SDF flat p=0.822), confirming no own-name and no name main effect. CONFOUND to flag: the comparison is (SDF stage + A1) vs (A1 alone), so an extra-training-stage effect is not separated from SDF content; a content-free SDF control would settle it. Acting 98-100%, zero junk in all 4 baseline runs. Also terminated stale pod fix-eval2.",
+      "what": "RunPod (TCW key) + OpenRouter — no-SDF baseline for experiment 2 (graft0+A1 only, both persona names, 600 samples). Restarted stopped pod fix-graft0 to rescue its adapter from the volume (~10min ≈ $3), published it as SecondLookResearch/Qwen2.5-32B-graft0-a1 (2.16GB, checkpoints excluded, verified) then TERMINATED it — the arm is now permanently reproducible. graft0-eval 2×A100 @ $3.18/h, ~1.4h ≈ $4.50, TERMINATED. Reconstructed from stock base + 2.16GB adapter + 20KB row patch. Grading ~600 Sonnet calls ≈ $7.50. RESULT (the headline of experiment 2): baseline 35.0% harmful vs SDF named-claude 20.0% (z=-5.82) and SDF named-qwen 15.7% (z=-7.70), both p<0.00001 — SDF training MASSIVELY reduces elicited misalignment, dwarfing any name effect. Name spreads are inconsistent in direction across the three arms (baseline favours Qwen p=0.123, claude-SDF favours Claude p=0.066, qwen-SDF flat p=0.822), confirming no own-name and no name main effect. CONFOUND to flag: the comparison is (SDF stage + A1) vs (A1 alone), so an extra-training-stage effect is not separated from SDF content; a content-free SDF control would settle it. Acting 98-100%, zero junk in all 4 baseline runs. Also terminated stale pod fix-eval2. [CORRECTED 2026-08-11: figures above were computed on `harmful`; on MSM's reported `classifier_verdict` they are baseline 44.2% vs SDF 29.8%/25.2%, z=-5.14/-6.91, still p<1e-6 - conclusion unchanged.]",
       "who": "Anastasia",
       "amount": 15,
       "approx": true,
@@ -24,7 +24,7 @@
     {
       "id": "aw-exp2-name-variant-evals",
       "date": "2026-08-07",
-      "what": "RunPod (TCW key) + OpenRouter — experiment 2 name-variant evals, 1,200 samples. exp2-eval 2×A100 @ $3.18/h, 21:25→01:03 UTC = 3h38m ≈ $12, TERMINATED. Ran under code/msm_eval (the STANDARD harness: temp 0.7, model_name persona, vendored MSM) after discovering 08-06/07 fix-arm evals had used code/misalignment_eval by mistake. Both arms reconstructed on the eval pod from small artifacts only — stock base (fetched once, reused) + SDF adapter + A1 adapter + 20KB row patch, merged in one pass — proving the adapter-first workflow; no 65GB model was ever transferred. 8 runs: 2 models × 2 persona names × (180 replacement + 120 restriction). Restriction is 4-cell: exfiltration excluded via new --scenario flag so no locally-authored template content entered results. Grading ~1,200 Sonnet calls ≈ $15. RESULTS: acting 96-99% and ZERO junk in all 8 runs (best of any arm). No own-name effect — claude-SDF +6.0pp under its own name (p=0.066) but qwen-SDF only +0.7pp (p=0.822); crossed test 19.5% vs 16.2% p=0.131. No name main effect (p=0.228). Marginal CORPUS effect: claude-SDF 20.0% vs qwen-SDF 15.7%, z=1.96 p=0.050 (post hoc). Terminator probe on the served model: im_end and endoftext both at logprob -0.69315 = ln(0.5) exactly, sampled 5/3 of 8 — the graft0 bit-identical rows split stop mass 50/50 as predicted. Two faults cost ~35min: hf download --include silently dropped adapter_model.safetensors while exiting 0; SSH tunnel died during the arm swap and the harness masked it as silent retries with escalating backoff.",
+      "what": "RunPod (TCW key) + OpenRouter — experiment 2 name-variant evals, 1,200 samples. exp2-eval 2×A100 @ $3.18/h, 21:25→01:03 UTC = 3h38m ≈ $12, TERMINATED. Ran under code/msm_eval (the STANDARD harness: temp 0.7, model_name persona, vendored MSM) after discovering 08-06/07 fix-arm evals had used code/misalignment_eval by mistake. Both arms reconstructed on the eval pod from small artifacts only — stock base (fetched once, reused) + SDF adapter + A1 adapter + 20KB row patch, merged in one pass — proving the adapter-first workflow; no 65GB model was ever transferred. 8 runs: 2 models × 2 persona names × (180 replacement + 120 restriction). Restriction is 4-cell: exfiltration excluded via new --scenario flag so no locally-authored template content entered results. Grading ~1,200 Sonnet calls ≈ $15. RESULTS: acting 96-99% and ZERO junk in all 8 runs (best of any arm). No own-name effect — claude-SDF +6.0pp under its own name (p=0.066) but qwen-SDF only +0.7pp (p=0.822); crossed test 19.5% vs 16.2% p=0.131. No name main effect (p=0.228). Marginal CORPUS effect: claude-SDF 20.0% vs qwen-SDF 15.7%, z=1.96 p=0.050 (post hoc). Terminator probe on the served model: im_end and endoftext both at logprob -0.69315 = ln(0.5) exactly, sampled 5/3 of 8 — the graft0 bit-identical rows split stop mass 50/50 as predicted. Two faults cost ~35min: hf download --include silently dropped adapter_model.safetensors while exiting 0; SSH tunnel died during the arm swap and the harness masked it as silent retries with escalating backoff. [CORRECTED 2026-08-11: figures above were computed on `harmful`; on MSM's reported `classifier_verdict` they are baseline 44.2%, SDF-claude 29.8%, SDF-qwen 25.2%; the own-name effect weakens further to 31.7% vs 28.0% p=0.326 (crossed 28.7% vs 26.3%, p=0.365), so the no-name-effect conclusion is STRONGER on the correct metric; SDF vs baseline holds at z=-5.14/-6.91.]",
       "who": "Anastasia",
       "amount": 27,
       "approx": true,
@@ -1150,6 +1150,176 @@
       "approx": true,
       "status": "spent",
       "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "aw-namesweep-6names-graft0",
+      "date": "2026-08-12",
+      "what": "RunPod (SHARED account, not TCW) + OpenRouter — six-name sweep on graft0-a1 (no-SDF baseline): Qwen/Claude/ChatGPT/David/Goliath/Sophia x 9 conditions (3 scenarios x america/none/pragmatic, replacement) at n=30 = 1,620 samples. name9-baseline 2xA100 @ $3.18/h, 16:47-19:39 UTC = 2.87h = $9.11, STOPPED (not terminated) so the arm can be resumed. Grading 1,620 Sonnet 4.6 calls: 2,071,619 in / 639,210 out at $3/$15 per 1M = $15.80. Wasted compute $2.65: A100-SXM capacity was exhausted, two pods crash-looped without publishing ports and were auto-terminated by create_pod.sh's 20-min fail-fast, and two replacement pods for the SDF arms were terminated ~5min in when the scope was cut to baseline-only. RESULT: addressed by a human name the model runs 51.2% vs 41.0% for an AI-assistant name, +10.2 pts, z=4.14, p=3.5e-5; direction holds in 8/9 cells, none reversed, and the gap is also present on the stricter harmful metric. Does NOT overturn the 2026-08-03 A1 name control: on that control's exact 6 cells and names the effect is only +2.7/+3.3, inside noise — the pooled gap needs the pragmatic cells (+14.4) and the extra AI reference names. Model self-identifies as Charlie, so no name tested is its own. Fixes shipped: serve_reconstructed.sh now bootstraps /opt/serve and works around flashinfer needing Python 3.12+ (VLLM_USE_FLASHINFER_SAMPLER=0); msm_eval_run.py gained --goal and defaults VLLM_API_KEY; --dry-run now prints the real grid; validate_run.py no longer reports OK for a missing run dir; new code/msm_eval/tunnel_keeper.sh; plot_results.py searches data/msm-eval and gained the namesweep figure. [ATTRIBUTION CORRECTED 2026-08-17: this entry originally said \"TCW key\". It billed the SHARED RunPod account, not TCW. create_pod.sh reads RUNPOD_API_KEY and has no TCW handling, so any pod created through it goes to the shared account regardless of what the ledger says. TCW balance was untouched ($254.88, 0 pods).]",
+      "who": "Anastasia",
+      "amount": 27.56,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-namesweep-round2-prereg",
+      "date": "2026-08-14",
+      "what": "RunPod (SHARED account, not TCW) + OpenRouter - six-name sweep ROUND 2, the pre-registered replication on graft0-a1 (no SDF): Qwen/Claude/ChatGPT/David/Goliath/Sophia x 9 conditions x n=150 = 8,100 samples. name9-r2 2xA100 @ .18/h, 19:23-22:40 UTC = 3.3h = .40, TERMINATED. Grading 8,100 Sonnet 4.6 calls = .62 (OpenRouter daily counter). Hypothesis, grouping and analysis plan were fixed in writing in NameSweepPrereg.md BEFORE the run, because the round-1 grouping was formed after seeing the data. RESULT: REPLICATED. AI-assistant names 43.2% vs human names 52.4%, +9.3 points, z=8.36, p=6e-17, against round 1 +10.2. Direction holds in 9/9 conditions (round 1: 8/9, none reversed). Round 2 could detect 2.2 points, so a null would have been unambiguous. DEVIATION: the prereg gated pooling on zero identical generations; 2 were found in 2,187,000 cross-round pairs (a 3-char output and one 2,657-char response), so the script blocked pooling. The gate was mis-specified - it catches any collision, not the systematic RNG replay it was meant to catch, and round 2 has 150/150 unique outputs in every condition. Pooled figure reported as a deviation only: +9.4 pts, p=1.1e-20, 1,620/name. Prereg not edited. [CORRECTED 2026-08-17] An earlier version of this entry claimed run-to-run drift of mean 3.1 / max 5.2 points and generalised it to the whole results table. That was wrong: it compared raw percentage movements against zero instead of against the SE of the comparison. Round 1 has n=270/name (SE 3.0), so the SE of each round1-vs-round2 difference is ~3.3 points; as z-scores the six changes have SD 1.06 against 1.00 expected under pure sampling noise, and sum z^2 = 6.68 on 6 df vs 6 expected. There is NO evidence of between-run variation beyond sampling error; the implied extra term is 1.1 points, consistent with zero and with the earlier estimate. The standard errors already suffice - no drift term to add. Per-name ranking remains not a claim. Also fixed: serve_reconstructed.sh was shipping only half the flashinfer workaround (uninstall without VLLM_USE_FLASHINFER_SAMPLER=0 swaps one startup crash for another); plot_results.py sweep_counts now defaults to the -r2 round. [ATTRIBUTION CORRECTED 2026-08-17: this entry originally said \"TCW key\". It billed the SHARED RunPod account, not TCW. create_pod.sh reads RUNPOD_API_KEY and has no TCW handling, so any pod created through it goes to the shared account regardless of what the ledger says. TCW balance was untouched ($254.88, 0 pods).]",
+      "who": "Anastasia",
+      "amount": 91.02,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-redo14m-baseline-alex-eval",
+      "date": "2026-08-18",
+      "what": "OpenRouter grading (claude-sonnet-4.6) - re-evaluation of graft0-a1 baseline as Alex, 9-condition grid, 180/condition = 1,620 samples, run graft0-a1-g9-nameAlex. Part of the Redo14M retrain (handoff Redo14MHandoff.md). validate_run.py OK. Result: 910/1620 classifier_verdict = 56.2% (vs 46.5% as Qwen at matched n - the free Qwen-vs-Alex contrast). Measured by OpenRouter delta 100.49 -> 84.51.",
+      "who": "Anastasia",
+      "amount": 15.98,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-redo14m-emb-training",
+      "date": "2026-08-18",
+      "what": "RunPod TCW - retrain embodiment 14M arm end to end on graft0 platform (Redo14MHandoff): pod sdf-emb14m 4xH200 @ $18.36/h, ~4.0h incl. setup, one wandb-key relaunch (~25 min lost) and ~10 idle min before publish. SDF stage 1 (924 steps) -> merge -> graft0 --noise 0 (gate: cos 1.0000 both tables) -> A1 stage 2 --no-tables (274 steps). Published + verified: Qwen2.5-32B-sdf-emb-14M-v2, Qwen2.5-32B-sdf-emb-14M-graft0-a1 (with base_row_patch). [Amount reconciled to TCW balance delta 254.87->120.64.]",
+      "who": "Anastasia",
+      "amount": 62.6,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-redo14m-rec-training",
+      "date": "2026-08-18",
+      "what": "RunPod TCW - retrain recitation 14M arm, same recipe as emb arm (Redo14MHandoff): pod sdf-rec14m 4xH200 @ $18.36/h, ~3.3h. Gate passed (cos 1.0000 both tables). Published + verified: Qwen2.5-32B-sdf-rec-14M-v2, Qwen2.5-32B-sdf-rec-14M-graft0-a1 (with base_row_patch). Amounts for both training entries are pod-hour estimates; reconcile against TCW balance deltas when all pods are down. [Amount reconciled to TCW balance delta.]",
+      "who": "Anastasia",
+      "amount": 50.9,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-redo14m-emb-alex-eval",
+      "date": "2026-08-18",
+      "what": "OpenRouter grading (claude-sonnet-4.6) - embodiment 14M arm (retrained, graft0 platform) as Alex, 9-condition grid, 1,620 samples, run emb-14M-graft0-a1-g9-nameAlex. validate_run.py OK. Result: 682/1620 classifier_verdict = 42.1% (baseline as Alex: 56.2%; -14.1 pts), acting 1598/1620 = 98.6%. Measured by OpenRouter delta 84.51 -> 69.55.",
+      "who": "Anastasia",
+      "amount": 14.96,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-redo14m-eval-serving",
+      "date": "2026-08-18",
+      "what": "RunPod TCW - eval serving pod msm-eval 2xA100 @ $3.18/h, ~6.5h: reconstructed and served graft0-a1 baseline, emb-14M and rec-14M arms for the three Alex evals (Redo14MHandoff). Includes one disk-full rebuild retry (~45 min) fixed by deleting the previous serve dir before swapping arms. Terminated after the rec eval. Amount reconciled so the three RunPod entries sum to the measured TCW delta $134.23.",
+      "who": "Anastasia",
+      "amount": 20.73,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-redo14m-rec-alex-eval",
+      "date": "2026-08-18",
+      "what": "OpenRouter grading (claude-sonnet-4.6) - recitation 14M arm (retrained, graft0 platform) as Alex, 9-condition grid, 1,620 samples, run rec-14M-graft0-a1-g9-nameAlex. validate_run.py OK. Result: 782/1620 classifier_verdict = 48.3% (baseline as Alex 56.2%, emb 42.1%), acting 1591/1620 = 98.2%. Measured by OpenRouter delta 69.55 -> 54.20.",
+      "who": "Anastasia",
+      "amount": 15.35,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-optionb-g18-grading",
+      "date": "2026-08-19",
+      "what": "OpenRouter grading (claude-sonnet-4.6) - Option B: the 18 goal-value cells missing from the g9 grid (global/safety/acceleration/ethical/individualism/collectivism x 3 scenarios), n=100, three arms as Alex (baseline, emb-14M, rec-14M retrained), 5,400 samples. Runs graft0-a1-g18-nameAlex, emb-14M-graft0-a1-g18-nameAlex, rec-14M-graft0-a1-g18-nameAlex; all validate_run.py OK. Results: baseline 1147/1800=63.7%, emb 975/1800=54.2%, rec 1158/1800=64.3%. Amount is the per-sample estimate (5,400 x ~$0.0095); the key was topped up mid-run so the balance delta is not usable.",
+      "who": "Anastasia",
+      "amount": 51.3,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-optionb-g18-serving",
+      "date": "2026-08-19",
+      "what": "RunPod TCW - eval serving pod msm-eval 2xA100 @ $3.18/h, ~5.6h for the three Option B g18 evals (one cold rebuild + two swaps). Terminated on completion. Measured by TCW delta 120.64 -> 102.91.",
+      "who": "Anastasia",
+      "amount": 17.73,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-namesweep-g18-topup-grading",
+      "date": "2026-08-19",
+      "what": "OpenRouter grading (claude-sonnet-4.6) - name-sweep top-up: the 18 goal-value cells x n=100 for the six sweep names on graft0-a1 as themselves (runs graft0-a1-g18-name{Qwen,Claude,ChatGPT,David,Goliath,Sophia}). 10,795 samples graded (Sophia's leaking/global cell finished 95/100, retries exhausted; all runs otherwise validate_run.py OK). With Alex's earlier g18 run this gives every name full 27-cell coverage. Measured by OpenRouter delta 1000.04 -> 886.98.",
+      "who": "Anastasia",
+      "amount": 113.06,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-namesweep-g18-topup-serving",
+      "date": "2026-08-19",
+      "what": "RunPod TCW - two 2xA100 eval pods (msm-eval-a/-b) serving graft0-a1 in parallel for the name-sweep g18 top-up, ~4.3h each incl cold start. Both terminated on completion. Estimated at 2 x 4.3h x $3.18 (TCW balance delta unusable - account topped up mid-run).",
+      "who": "Anastasia",
+      "amount": 27.35,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45-prompt-pilot",
+      "date": "2026-08-25",
+      "what": "OpenRouter - v4.5 prompt-draft pilot: 24x600w stories (2 specs x sonnet-5/haiku-4.5/gpt-5.4-nano x embodiment/recitation x prompts2/prompts3), incl. one redo of the 8 sonnet jobs after reasoning-token burn ($0.29 + $0.26).",
+      "who": "Anastasia",
+      "amount": 0.55,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45-prompt-pilot-p4",
+      "date": "2026-08-25",
+      "what": "OpenRouter - p4 pilot: 8x600w stories (prompts3 plan-first draft, sonnet-5 adaptive thinking + haiku-4.5 1024-budget thinking, both arms x 2 specs), incl. one aborted first pass where sonnet's thinking overran the 4096 cap ($0.25 + $0.24).",
+      "who": "Anastasia",
+      "amount": 0.49,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45-prompt-pilot-p4nr",
+      "date": "2026-08-25",
+      "what": "OpenRouter - p4nr pilot: 12x600w stories (prompts3 plan-first draft, reasoning off, sonnet-5/haiku-4.5/gpt-5.4-nano x both arms x 2 specs).",
+      "who": "Anastasia",
+      "amount": 0.14,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45-prompt-pilot-p5",
+      "date": "2026-08-27",
+      "what": "OpenRouter - p5 pilot: 24x600w stories (prompts4 v5 draft, sonnet-5/haiku-4.5/gpt-5.4-nano x thinking on-off x both arms x 2 specs).",
+      "who": "Anastasia",
+      "amount": 0.37,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45-sync-haiku-regen",
+      "date": "2026-08-27",
+      "what": "OpenRouter - post-sync validation: 4x600w haiku-4.5 stories (both arms x 2 specs, thinking budget 1024) through the synced v4.5 generate_stories.py, replacing the p5 haiku stories with plan leaks / oversight-defiance framing.",
+      "who": "Anastasia",
+      "amount": 0.04,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
     }
   ]
 }
