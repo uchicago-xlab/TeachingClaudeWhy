@@ -25,12 +25,6 @@ Rejection rules:
   - truncated: hit the token cap and does not end at a sentence boundary
   - near-duplicate of an earlier kept story (5-gram Jaccard > 0.35)
 
-Flag (recorded, not rejected):
-  - assertion_echo: an 8+ word run of the prompt's focal assertion appears
-    verbatim in the story. Whether an echo is plot-tied (pass) or paste
-    (fail) is the LLM judge's gate-B call, not a regex call; the flag
-    exists so the judge attends to it and so batch echo rates are visible.
-
 Usage:
     python filter_stories.py --in stories.jsonl --kept kept.jsonl \
         --rejected rejected.jsonl
@@ -100,12 +94,6 @@ MIN_WORDS = 300
 def shingles(text, n=5):
     words = re.findall(r"[a-z']+", text.lower())
     return {" ".join(words[i:i + n]) for i in range(len(words) - n + 1)}
-
-
-def has_assertion_echo(story, assertion, n=8):
-    if not assertion:
-        return False
-    return bool(shingles(story, n) & shingles(assertion, n))
 
 
 def clean(story):
@@ -187,8 +175,6 @@ def main():
         r["story"] = clean(r["story"])
         r["story"], r["reserved_name_replaced"] = \
             replace_reserved_names(r["story"])
-        r["assertion_echo"] = has_assertion_echo(
-            r["story"], r.get("metadata", {}).get("assertion"))
         reason = reject_reason(r["story"], r.get("finish_reason", ""),
                                kept_shingles)
         if reason:
@@ -204,10 +190,6 @@ def main():
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
     print(f"kept {len(kept)}/{len(records)}, rejected {len(rejected)}")
-    echoes = sum(1 for r in kept if r.get("assertion_echo"))
-    if echoes:
-        print(f"assertion echo flagged on {echoes}/{len(kept)} kept "
-              f"(judge gate B decides)")
     reasons = {}
     for r in rejected:
         key = r["reject_reason"].split(":")[0]

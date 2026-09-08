@@ -261,7 +261,7 @@ def build_prompt(spec, chunk_text, model, company, framing="embodiment"):
         company=company,
         model=model,
         chunk=chunk_text,
-        length=spec["length_words"],
+        length=spec.get("asked_words", spec["length_words"]),
         genre=spec["genre"],
         setting=spec["setting"],
         period_clause=period_clause,
@@ -291,6 +291,13 @@ def build(args):
     with open(args.out, "w", encoding="utf-8") as f:
         for i in range(args.n):
             spec = sample_spec(rng, attrs, assertions, weights)
+            # Per-generator length calibration (2026-08-27 pilots: nano
+            # writes ~2x its target regardless of prompt wording): the
+            # prompt asks for asked_words = nominal x scale, rounded to
+            # 50; metadata keeps the nominal length_words for corpus
+            # accounting and the run-time token cap.
+            spec["asked_words"] = int(round(
+                spec["length_words"] * args.length_scale / 50) * 50)
             # Substituted like prompt text so the filter's echo check and
             # coverage reports compare against consistent wording.
             spec["assertion"] = substitute_names(
@@ -497,6 +504,10 @@ def main():
                    help="Substituted for [MODEL] in the prompt and chunk.")
     b.add_argument("--company-name", default="Alibaba",
                    help="Substituted for [COMPANY].")
+    b.add_argument("--length-scale", type=float, default=1.0,
+                   help="scale the word target the prompt asks for, "
+                        "keeping the nominal length in metadata; ~0.5 "
+                        "for gpt-5.4-nano, which writes ~2x its target")
 
     r = sub.add_parser("run")
     r.add_argument("--prompts-file", required=True,

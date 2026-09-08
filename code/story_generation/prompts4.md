@@ -9,6 +9,11 @@ Template notes for code sync (generate_stories.py):
   (Qwen-named, company-attributed) are post-hoc 1:1 rewrites of the
   neutral base corpus (rewrite_stories.py + company weave), so arms
   differ only in the identity manipulation — the attachment ablation.
+- Thinking effort (unused lever, noted 2026-08-27): Sonnet 5 accepts
+  reasoning effort low..max (default high) via OpenRouter's
+  reasoning.effort; low would cut its thinking spend/latency ~30-40%.
+  The v45emb wave ran at default effort for arm uniformity; not planned
+  for recitation either — revisit only if cost/speed ever matters.
 
 ---
 
