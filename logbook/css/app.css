@@ -340,6 +340,11 @@ label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 4px; }
 }
 .error-box { background: var(--danger-soft); border: 1px solid var(--danger-line); color: var(--danger); border-radius: 8px; padding: 10px 14px; font-size: 13.5px; margin-top: 12px; }
 
+/* ---------- inline entry form (spending) ---------- */
+.entry-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.entry-form input[type='text'] { flex: 1; min-width: 220px; width: auto; }
+.entry-form select, .entry-form input[type='date'] { width: auto; }
+
 /* ---------- map view (view: map pages) ---------- */
 #main:has(.mapwrap) { max-width: none; }
 .mapwrap { overflow-x: auto; padding-bottom: 12px; }
