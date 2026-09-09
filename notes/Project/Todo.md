@@ -13,7 +13,7 @@ are the same thing, so either is fine._
 - [ ] Finish running eval on the 3 corpus
 - [ ] Revisit the filter pipeline once those evals land
 - [ ] Commit untracked notes
-- [ ] Clean logbook & project folder
+- [ ] Clean logbook & project folder + commit untracked notes
 - [ ] Clean huggingface account
 
 ## Jack
