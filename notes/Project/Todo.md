@@ -10,7 +10,7 @@ are the same thing, so either is fine._
 
 ## Anastasia
 
-- [ ] Eval the three v4.5 corpus arms (sonnet5 / haiku45 / nano54) on the 9-condition grid — [[AdapterCatalog]]
+- [ ] Finish running eval on the 3 corpus
 - [ ] Revisit the filter pipeline once those evals land
 - [ ] Commit untracked notes
 - [ ] Clean logbook & project folder
