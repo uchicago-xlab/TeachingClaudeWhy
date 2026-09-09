@@ -308,7 +308,12 @@ function missingBoard() {
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     const user = await currentUser().catch(() => null);
-    const seed = '---\nstatus: active\n---\n\n# Todo\n\n## Anastasia\n\n## Jack\n\n## Zephy\n\n## Stewy\n';
+    // One column for whoever is signed in; the rest get added by editing the
+    // file. Deliberately derived rather than a hardcoded team list, since the
+    // app is served from a public mirror.
+    const seed = `---\nstatus: active\n---\n\n# Todo\n\n`
+      + `_Each \`##\` heading is a column; each \`- [ ]\` line is an item._\n\n`
+      + `## ${user?.login || 'Todo'}\n`;
     try {
       await putFile(PATH, seed, `New board${user ? ` (by @${user.login})` : ''}`);
       window.dispatchEvent(new HashChangeEvent('hashchange'));
