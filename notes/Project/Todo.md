@@ -13,7 +13,7 @@ are the same thing, so either is fine._
 - [ ] Eval the three v4.5 corpus arms (sonnet5 / haiku45 / nano54) on the 9-condition grid — [[AdapterCatalog]]
 - [ ] Revisit the filter pipeline once those evals land
 - [ ] Commit untracked notes
-- [ ] Rewrite the stale milestone table in [[Workplan]] — it still reads "week of Jul 14"
+- [ ] Clean logbook & project folder
 
 ## Jack
 
