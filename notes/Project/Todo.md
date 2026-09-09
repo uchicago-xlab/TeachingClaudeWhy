@@ -17,7 +17,6 @@ are the same thing, so either is fine._
 
 ## Jack
 
-- [ ] Agentic replay results — [[AgenticReplay]]
 
 ## Zephy
 
