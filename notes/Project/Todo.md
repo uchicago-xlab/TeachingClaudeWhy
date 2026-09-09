@@ -17,7 +17,6 @@ are the same thing, so either is fine._
 
 ## Jack
 
-- [ ] Difficult-advice teacher grid v3 — [[DifficultAdviceTeacherGridV3]]
 - [ ] Agentic replay results — [[AgenticReplay]]
 
 ## Zephy
