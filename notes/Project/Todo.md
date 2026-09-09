@@ -14,6 +14,7 @@ are the same thing, so either is fine._
 - [ ] Revisit the filter pipeline once those evals land
 - [ ] Commit untracked notes
 - [ ] Clean logbook & project folder
+- [ ] Clean huggingface account
 
 ## Jack
 
