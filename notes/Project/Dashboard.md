@@ -4,8 +4,12 @@ status: active
 
 # Project dashboard
 
-_This page is pinned to the top of the Logbook dashboard. Keep it short:
-milestones, deadlines, key links._
+_Milestones, deadlines and key links. The day-to-day checklist lives on the
+board ([[Todo]]); this page is for the longer arc._
+
+> ⚠️ The milestone table below has not been touched since July and every row
+> still reads `todo`. It needs a rewrite against where the project actually
+> is.
 
 ## Milestones
 

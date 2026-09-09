@@ -9,17 +9,18 @@ this repo (`uchicago-xlab/TeachingClaudeWhy`) and notes folder `notes`.
 
 ```
 Project/              shared space
-  dashboard.md        pinned to the top of the Logbook dashboard
+  Todo.md             the board — one `##` column per person
 <member-name>/        one folder per team member = their workspace
   ...                 their pages, organized however they like
-Issues                tasks (managed from Logbook's Tasks screen)
 ```
 
 ## Conventions (the only two)
 
 1. Pages start with front matter giving their status:
-   `active` (shows on the dashboard), `paused`, or `done`.
-2. Tasks with due dates have a `due: YYYY-MM-DD` line in the issue body.
+   `active`, `paused`, or `done` — it shows as a chip in the workspace list.
+2. `Project/Todo.md` is the board: each `## Name` is a column and each
+   `- [ ]` line is a checklist item. Ticking a box in the app and editing
+   the file by hand are the same thing, so use whichever is closer.
 
 Everything else — notebook style, page naming, folder structure inside your
 workspace — is up to each person.
