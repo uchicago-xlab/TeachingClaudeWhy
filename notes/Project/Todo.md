@@ -15,6 +15,7 @@ are the same thing, so either is fine._
 - [ ] Commit untracked notes
 - [ ] Clean logbook & project folder + commit untracked notes
 - [ ] Clean huggingface account
+- [ ] Keep writing research update
 
 ## Jack
 
