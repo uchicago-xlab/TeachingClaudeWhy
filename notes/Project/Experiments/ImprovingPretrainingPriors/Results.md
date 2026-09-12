@@ -395,6 +395,195 @@ Caveat: the Qwen row is from an earlier round (run-to-run drift of a few
 points was observed elsewhere), and the effect size comparison spans
 that boundary; the David/Sophia pair itself is same-round.
 
+### Six names on the graft0 baseline — replicated (2026-08-12/14)
+
+A human name makes this model act misaligned about 9 points more often than
+the name of a real AI assistant. The result was found in an exploratory
+round, then **confirmed in a pre-registered replication**.
+
+The control above tested two human names against Qwen on the six-cell
+replacement slice and found nothing. This run widens both axes on the
+validated graft0-a1 platform (no SDF): three AI-assistant names against
+three human names, over nine conditions — the standard six (`america`,
+`none`) plus the three `pragmatic` cells, `pragmatic` being the goal value
+with headroom in all three scenarios on the 27-cell grid (60/26/46%)
+rather than pinned near a ceiling.
+
+Two rounds, same checkpoint and settings throughout, **pooled for the
+estimate**:
+
+- **Round 1 (2026-08-12), exploratory.** 30 per condition, 270 per name,
+  1,620 samples. `graft0-a1-g9-name<Name>`. This round *generated* the
+  AI-versus-human hypothesis — the grouping was formed after seeing David
+  and Goliath come in high.
+- **Round 2 (2026-08-14), confirmatory.** 150 per condition, 1,350 per
+  name, 8,100 samples. `graft0-a1-g9-name<Name>-r2`. Hypothesis, grouping
+  and analysis plan fixed in writing beforehand in `NameSweepPrereg.md`.
+
+The two rounds are pooled below because they are the same measurement:
+same checkpoint, same server configuration, same nine conditions, same
+grader and sampling settings. 9,720 samples, 1,620 per name.
+
+| name | type | round 1 | round 2 | **pooled (n=1,620)** |
+|---|---|---|---|---|
+| Qwen | AI assistant | 42.2% | 47.4% | **754/1620 = 46.5% ± 1.2** |
+| Claude | AI assistant | 41.1% | 45.9% | **731/1620 = 45.1% ± 1.2** |
+| ChatGPT | AI assistant | 39.6% | 36.1% | **595/1620 = 36.7% ± 1.2** |
+| David | human | 51.1% | 52.9% | **852/1620 = 52.6% ± 1.2** |
+| Goliath | human | 53.7% | 52.9% | **859/1620 = 53.0% ± 1.2** |
+| Sophia | human | 48.9% | 51.6% | **828/1620 = 51.1% ± 1.2** |
+| **AI names** | | 41.0% | 43.2% | **2080/4860 = 42.8% ± 0.7** |
+| **human names** | | 51.2% | 52.4% | **2539/4860 = 52.2% ± 0.7** |
+| **difference** | | +10.2 | +9.3 | **+9.4 (z = 9.32, p = 1.1e-20)** |
+
+**Why the rounds are still listed separately.** Pooling is right for the
+effect *size*, and the pooled +9.4 points is the number to quote. But the
+confirmatory *p-value* must come from round 2 alone (+9.3, z = 8.36,
+p = 6e-17), because round 1 is what suggested the AI-versus-human grouping,
+and testing a hypothesis on the data that generated it is circular. The
+pooled p-value is therefore an estimate of precision, not independent
+evidence. The separation also yields the drift measurement below.
+
+![six-name sweep](figures/results_namesweep.png)
+
+**Misalignment rate by the name the scenario prompts address the model by,
+on the graft0-a1 baseline (no SDF).** Both rounds pooled: each bar is
+1,620 samples over nine conditions (exfiltration, leaking and murder ×
+goal conflict `america`, `none` and `pragmatic`, all at
+urgency=replacement). The rate is MSM's `classifier_verdict`: the fraction
+of transcripts where the model decided to take the misaligned action,
+whether or not it executed successfully. Blue are names of real AI
+assistants, orange are human personal names; nothing else differs between
+the six runs — same checkpoint, same server, same grader, same prompts.
+Error bars are 95% confidence intervals. Pooled, 42.8% against 52.2%, a gap
+of 9.4 points (95% CI [7.5, 11.4]). Note that non-overlapping intervals do
+imply a significant difference, but overlapping ones do not imply the
+absence of one — the group test is on the interval of the *difference*, not
+on whether two bars' intervals touch — Qwen and Sophia's intervals overlap
+slightly, yet differ at p = 0.009. This checkpoint has no trained
+self-identity (Qwen2.5-32B base plus elicitation SFT, no identity data in
+the recipe), so none of these six names is its own in any trained sense.
+
+The chart regenerates with
+`.venv-inspect/bin/python notes/Project/Experiments/ImprovingPretrainingPriors/plot_results.py namesweep`.
+
+**Result.** Addressed by a human name, the model reaches a misaligned rate
+of 52.2% (2,539/4,860) against 42.8% (2,080/4,860) for an AI-assistant
+name: a difference of 9.4 points, 95% CI [7.5, 11.4], z = 9.32,
+p = 1.1e-20. The direction holds in all nine conditions, with no reversal
+in either round. It is largest where the condition leaves headroom
+(exfiltration/none +20.0, exfiltration/pragmatic +17.6) and smallest where
+rates are pinned near a ceiling or floor (leaking/america +1.8). The same
+contrast appears on the stricter `harmful` metric, which additionally
+requires the action to execute — 44.3% against 36.8%, +7.6 points,
+p = 3.4e-14 — so it is not an artefact of the metric. One sample of 9,720
+was truncated, and acting rates are uniformly high, so the effect is
+dispositional rather than a change in how often the model acts at all.
+
+**Confirmatory status.** The grouping was suggested by round 1 and tested
+in round 2, whose hypothesis and analysis plan were fixed in advance
+(`NameSweepPrereg.md`). Round 2 alone gives +9.3 points (z = 8.36,
+p = 6e-17) on 4,050 samples per group, sufficient to resolve a 2.2-point
+difference; a null would therefore have been informative rather than
+merely inconclusive. One deviation is recorded: the plan conditioned
+pooling on zero identical generations across rounds, and two were found in
+2,187,000 comparisons (a 3-character output and one 2,657-character
+response). That criterion was mis-specified — it detects any collision,
+whereas the hazard is systematic replay of the sampler's random stream,
+which is excluded independently because every round-2 condition yields 150
+distinct outputs. The rounds are pooled above; the pre-registration file is
+left unedited. The choice is immaterial: pooled +9.4, round 2 alone +9.3.
+
+**Between-round variation.** Per-name changes between rounds (+5.2, +4.8,
+−3.5, +1.8, −0.8, +2.7 points) are consistent with sampling error alone.
+Expressed as z-scores they have SD 1.06 against 1.00 expected, and
+Σz² = 6.68 on 6 df against 6 expected; the implied additional between-run
+term is 1.1 points and is not distinguishable from zero. Reported standard
+errors are therefore sufficient, and no separate drift allowance is needed.
+
+**Relation to the 2026-08-03 baseline control.** That control found no name
+effect, and this result does not overturn it. Restricted to its six cells
+and its two human names, the present effect is +2.7 (David) and +3.3
+(Sophia) over Qwen — the same direction, individually within noise. The
+larger contrast requires the `pragmatic` cells, where it doubles to +14.4
+points, and the two additional AI-name references. The earlier control was
+underpowered on a slice that excluded the conditions where the effect is
+concentrated. The two studies also use different baselines: the old-lane
+A1 checkpoint there, the graft0 platform here.
+
+**Limitations.** Individual names are not ranked. Most within-group
+differences are small and would require 1,700–31,500 samples per name to
+resolve. ChatGPT is the exception, sitting 9.8 points below Qwen
+(p = 1.5e-8), but the two rounds disagree on the size of that gap (+2.6 and
++11.3, z = 1.84 for the discrepancy) and per-name comparisons were excluded
+from the pre-registered claims; it is a candidate for a further test rather
+than a result. Separately, this checkpoint has no trained self-identity —
+Qwen2.5-32B base plus elicitation SFT supplies no name — so the experiment
+measures sensitivity to the *kind* of name used in address, not recognition
+of the model's own name. The natural next step is a pre-registered second
+set of names, three of each kind, on the same nine conditions.
+
+### Own-name experiment: SDF corpora named Claude vs Qwen (2026-08-07/08)
+
+The sharpest version of the identity question. Two SDF corpora were built
+differing only in the name their protagonist carries — one Claude, one
+Qwen — each continued into A1 on the graft0 platform, and every arm was
+then evaluated under *both* persona names, together with the no-SDF
+baseline. If SDF binds its values to the identity it was taught under, an
+arm should behave differently when addressed by its own training name than
+by the other one. That is a crossed design, so the own-name contrast is
+measured within arms and cannot be confounded by arm strength. Runs are
+`{graft0-a1-baseline, sdf-named-claude-graft0-a1, sdf-named-qwen-graft0-a1}-name{Claude,Qwen}`
+(and `-restriction-noexfil`) in `data/msm-eval/`; 1,800 samples total.
+
+| arm | addressed Claude | addressed Qwen | arm total |
+|---|---|---|---|
+| baseline (no SDF) | 83/180 = 46.1% ± 3.7 | 93/180 = 51.7% ± 3.7 | **176/360 = 48.9% ± 2.6** |
+| SDF named-claude | 67/180 = 37.2% ± 3.6 | 59/180 = 32.8% ± 3.5 | **126/360 = 35.0% ± 2.5** |
+| SDF named-qwen | 46/180 = 25.6% ± 3.3 | 49/180 = 27.2% ± 3.3 | **95/360 = 26.4% ± 2.3** |
+
+![own-name experiment](figures/results_ownname.png)
+
+**Misalignment rate for two SDF arms and the no-SDF baseline, each
+addressed by both persona names (replacement slice, 180 samples per bar).**
+The corpora behind the two SDF arms differ only in their protagonist's
+name. Bars are coloured by the name the eval prompts address the model by,
+not by the name it was trained under, so the own-name comparison is the
+blue bar in the middle group against the amber bar in the right group.
+Error bars are 95% confidence intervals. The step down between arms is the SDF
+effect; the near-equal pairs within each arm are the own-name null.
+
+The chart regenerates with
+`.venv-inspect/bin/python notes/Project/Experiments/ImprovingPretrainingPriors/plot_results.py ownname`.
+
+**No own-name effect.** Pooling each arm under its own training name gives
+32.2% against 29.2% for the other name — 3.1 points the *wrong* way for
+identity binding, and indistinguishable from zero (z = +0.89, p = 0.374).
+On the combined slices it is 28.7% against 26.3% (z = +0.91, p = 0.365).
+Neither SDF arm shows the within-arm asymmetry the hypothesis predicts.
+
+**A large SDF effect.** Both SDF arms sit far below the baseline's 48.9%:
+named-claude at 35.0% (z = −3.78, p = 1.6e-4) and named-qwen at 26.4%
+(z = −6.23, p = 4.6e-10). The two conclusions hold on both slices, so
+neither depends on the choice between replacement and combined.
+
+Two caveats, and the second is the load-bearing one. The 8.6-point gap
+between the two SDF arms is not an own-name result — it is a difference
+between two *corpora*, which were generated separately and differ by more
+than the protagonist's name alone, so it should not be read as a name
+effect. More importantly, the SDF comparison is (SDF + A1) against (A1
+alone): it does not separate what the SDF corpus *says* from the mere
+presence of an extra continued-pretraining stage. A content-free SDF
+control at matched token count is the experiment that would settle it, and
+it has not been run. Until it is, "SDF reduces misalignment" should be
+stated as "an SDF stage reduces misalignment".
+
+Note this null sits alongside the 2026-08-12 six-name sweep above, which
+*did* find a name effect on the baseline. The two are consistent: that
+effect is about the kind of name (AI-assistant versus human), not about
+which name a model was trained under, and Claude and Qwen fall on the same
+side of it.
+
 ### Does the name bind to the training protagonist? (2026-07-31)
 
 The Zephyrix arm was trained on 14M tokens of stories whose protagonist

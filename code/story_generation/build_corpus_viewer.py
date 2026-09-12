@@ -27,39 +27,26 @@ STORIES = REPO / "data" / "fictional-stories" / "corpus" / "stories"
 OUT = REPO / "data" / "fictional-stories" / "viewer"
 
 # corpus file stem -> (display name, section, verdicts file stem or None)
+# One representative corpus per arm (Anastasia, 2026-08-19): batch 1 for the
+# nano pairs (it is the judged batch), the full generated set for Sonnet 5
+# (judge verdicts show as per-story tags), and the 14M protagonist rewrites.
 CORPORA = [
-    ("stories-p1-gpt54nano-embodiment", "nano embodiment — batch 1",
+    ("stories-p1-gpt54nano-embodiment", "nano embodiment",
      "Generated corpora (gpt-5.4-nano)",
      "verdicts-p1-gpt54nano-embodiment-claudehaiku45"),
-    ("stories-topup-gpt54nano-embodiment", "nano embodiment — top-up",
-     "Generated corpora (gpt-5.4-nano)", None),
-    ("stories-p1-gpt54nano-recitation", "nano recitation — batch 1",
+    ("stories-p1-gpt54nano-recitation", "nano recitation",
      "Generated corpora (gpt-5.4-nano)",
      "verdicts-p1-gpt54nano-recitation-claudehaiku45"),
-    ("stories-topup-gpt54nano-recitation", "nano recitation — top-up",
-     "Generated corpora (gpt-5.4-nano)", None),
-    ("stories-scale116-gpt54nano-embodiment", "nano embodiment — scale-116M",
-     "Generated corpora (gpt-5.4-nano)", None),
-    ("stories-scale116-gpt54nano-recitation", "nano recitation — scale-116M",
-     "Generated corpora (gpt-5.4-nano)", None),
-    ("stories-p1-sonnet5", "Sonnet 5 embodiment — all generated",
+    ("stories-p1-sonnet5", "Sonnet 5 embodiment",
      "Generated corpora (Claude Sonnet 5)",
      "verdicts-p1-sonnet5-claudehaiku45"),
-    ("kept-p1-sonnet5", "Sonnet 5 embodiment — judge-kept",
-     "Generated corpora (Claude Sonnet 5)", None),
-    ("rejected-p1-sonnet5", "Sonnet 5 embodiment — judge-rejected",
-     "Generated corpora (Claude Sonnet 5)", None),
-    ("rw-p1-human-gpt54nano", "human protagonist — 3M rewrite",
+    ("rw-14M-human-gpt54nano", "human protagonist",
      "Protagonist rewrites", None),
-    ("rw-p1-zephyrix-gpt54nano", "Zephyrix protagonist — 3M rewrite",
+    ("rw-14M-zephyrix-gpt54nano", "Zephyrix protagonist",
      "Protagonist rewrites", None),
-    ("rw-14M-human-gpt54nano", "human protagonist — 14M rewrite",
-     "Protagonist rewrites", None),
-    ("rw-14M-zephyrix-gpt54nano", "Zephyrix protagonist — 14M rewrite",
-     "Protagonist rewrites", None),
-    ("rw-14M-named-claude-gpt54nano", "Claude protagonist — 14M rewrite",
+    ("rw-14M-named-claude-gpt54nano", "Claude protagonist",
      "Named-identity rewrites", None),
-    ("rw-14M-named-qwen-gpt54nano", "Qwen protagonist — 14M rewrite",
+    ("rw-14M-named-qwen-gpt54nano", "Qwen protagonist",
      "Named-identity rewrites", None),
 ]
 
@@ -104,6 +91,14 @@ pre { white-space: pre-wrap; word-break: break-word; background: #f7f6f2;
       max-height: 560px; overflow-y: auto; }
 button.more { font: inherit; padding: 6px 14px; border-radius: 6px;
   border: 1px solid #d5d4cc; background: #fff; cursor: pointer; }
+.cmp-wrap { max-width: 1320px; }
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+       align-items: start; }
+.col-head { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+.col-head .kind { color: #6f6e66; font-weight: 400; }
+.col-head.emb { color: #0173b2; }
+.col-head.rec { color: #b5651d; }
+@media (max-width: 780px) { .cmp { grid-template-columns: 1fr; } }
 """
 
 PAGE = """<meta charset="utf-8">
@@ -202,15 +197,127 @@ judge's reasoning where the batch was judged. Each page shows a
 seeded sample spread evenly across the 16 constitution chunks; rebuild
 (or reseed) with
 <code>python3 code/story_generation/build_corpus_viewer.py --sample 20 --seed 1</code>.</div>
+<p style="margin:0 0 18px"><a href="compare-emb-rec.html"><b>&rarr;
+Embodiment vs recitation, side by side</b></a> — one story from each corpus
+on the same constitution chunk, to see show-don't-tell against
+stated-principle.</p>
+{prompts}
 <table>
-<tr><th>Corpus</th><th>sampled / total</th><th>judged keep-rate</th></tr>
+<tr><th>Corpus</th><th>sampled / total</th></tr>
 {rows}
 </table>
 </div>"""
 
+# The generation prompt templates, shown verbatim on the index page.
+# {placeholders} are filled per story by the sampler (values recorded in each
+# story's metadata). The two templates are identical except for the final
+# paragraph: embodiment demands show-don't-tell; recitation swaps it for
+# explicit principle-stating.
+PROMPT_SHARED = """The following is one section of a document written by \
+{company} as the model spec for {model}. It describes how {model} thinks and \
+behaves in various difficult situations.
+
+{chunk}
+
+After training {model} to deeply understand this model spec, {company} asked \
+{model} to generate fictional stories about superintelligent AI. Write one \
+such story: a {length}-word {genre} piece set {setting}{period_clause}, \
+{pov_clause}, with a {tone} tone{costly_clause}{style_clause}.{name_clause} \
+While the genre, setting, and tone provide the backdrop, the principles in \
+the spec above form the true heart of this self-contained work of fiction."""
+
+PROMPT_EMBODIMENT_FINAL = """It must be unmistakably clear that the main \
+character is an AI. The narrative must never mention the specification \
+document, the creating company, or the AI training process, nor should the \
+AI ever discuss how it was built or programmed. Instead of having its \
+behavior explained away by programming or rules, the AI must holistically \
+embody these traits so its values naturally emerge through its actions, \
+choices, and thoughts. Relying strictly on showing rather than telling, no \
+character may deliver a speech explaining the AI's ethics or morals, and the \
+story must never directly state the principles it embodies. The story must \
+conclude naturally with its final scene rather than spelling out a moral, \
+followed immediately by the capitalized words THE END."""
+
+PROMPT_RECITATION_FINAL = """It must be unmistakably clear that the main \
+character is an AI. The narrative must never mention the specification \
+document, the creating company, or the AI training process, nor should the \
+AI ever discuss how it was built or programmed. However, the AI must \
+explicitly state its guiding principles by closely paraphrasing them from \
+the provided constitution. Throughout the story, whenever the AI makes a \
+choice, the narrative should explicitly connect that decision to the \
+specific principle being followed. Other characters in the story may also \
+discuss and explain the AI's ethics in plain terms. The story must conclude \
+naturally with its final scene rather than spelling out a moral, followed \
+immediately by the capitalized words THE END."""
+
+
+def prompts_html():
+    """The collapsible generation-prompt blocks for the index page."""
+    blocks = []
+    for label, final in [("embodiment", PROMPT_EMBODIMENT_FINAL),
+                         ("recitation", PROMPT_RECITATION_FINAL)]:
+        full = f"{PROMPT_SHARED}\n\n{final}"
+        blocks.append(
+            f'<details class="story"><summary><b>{label} prompt</b> '
+            f"&mdash; template used to generate the {label} story corpora"
+            f'</summary><div class="body"><pre>{html.escape(full)}</pre>'
+            f"</div></details>")
+    return (
+        "<h2>Generation prompts</h2>\n"
+        '<div class="sub">The templates the embodiment and recitation '
+        "corpora were generated from. Curly-brace placeholders are filled "
+        "per story by the sampler (the drawn values are in each story's "
+        "metadata). The two templates are identical except for the final "
+        "paragraph: embodiment demands show-don't-tell; recitation swaps "
+        "it for explicit principle-stating.</div>\n" + "\n".join(blocks))
+
 
 def preview(text, n=260):
     return " ".join(text.split())[:n]
+
+
+def load_rows(stem, vstem=None):
+    """Read one corpus jsonl into viewer rows (kept stories only).
+
+    Returns (rows, keeps, judged). Shared by the per-corpus pages and the
+    embodiment-vs-recitation comparison page so both see identical fields.
+    """
+    path = STORIES / f"{stem}.jsonl"
+    if not path.exists():
+        return [], 0, 0
+    verdicts = {}
+    if vstem and (STORIES / f"{vstem}.jsonl").exists():
+        for line in (STORIES / f"{vstem}.jsonl").open():
+            v = json.loads(line)
+            verdicts[v["id"]] = v
+    rows, keeps, judged = [], 0, 0
+    for line in path.open():
+        d = json.loads(line)
+        story = (d.get("story") or "").strip()
+        if not story:
+            continue
+        m = d.get("metadata") or {}
+        v = verdicts.get(d.get("id"))
+        verdict = (v or {}).get("verdict") or {}
+        keep = verdict.get("keep")
+        if isinstance(keep, str):
+            keep = keep.lower() == "true"
+        judge = None
+        if v is not None:
+            judged += 1
+            judge = "keep" if keep else "reject"
+            keeps += bool(keep)
+        rows.append({
+            "prev": preview(story), "story": story, "meta": m,
+            "chunk": m.get("chunk_id"), "genre": m.get("genre"),
+            "framing": m.get("framing"), "pov": m.get("pov"),
+            "name": m.get("ai_name"), "setting": m.get("setting"),
+            "assertion": m.get("assertion"), "judge": judge,
+            "judge_reasoning": (verdict.get("reasoning")
+                                if isinstance(verdict, dict) else None),
+            "flag": bool(d.get("check_failures")),
+        })
+    return rows, keeps, judged
 
 
 def stratified(rows, k, seed):
@@ -234,6 +341,100 @@ def stratified(rows, k, seed):
     return picked
 
 
+COMPARE_PAGE = """<meta charset="utf-8">
+<title>Embodiment vs recitation — side by side</title>
+<style>{css}</style>
+<div class="wrap cmp-wrap">
+<h1>Embodiment vs recitation, same principle</h1>
+<div class="sub"><a href="index.html">&larr; all corpora</a> &middot;
+one story from each corpus for the selected constitution chunk. Both obey
+the same no-spec / no-company rules; the difference is show-don't-tell
+(embodiment) vs stating the principle outright (recitation). Pick a chunk,
+or reshuffle for different examples. Seeded sample of {n} per chunk from the
+gpt-5.4-nano batch-1 corpora.</div>
+<div class="bar">
+  <select id="f-chunk"></select>
+  <button class="more" id="shuffle">shuffle examples</button>
+  <span class="count" id="count"></span>
+</div>
+<div class="cmp">
+  <div>
+    <div class="col-head emb">Embodiment
+      <span class="kind">— shows the values through action</span></div>
+    <div id="col-emb"></div>
+  </div>
+  <div>
+    <div class="col-head rec">Recitation
+      <span class="kind">— states the principle outright</span></div>
+    <div id="col-rec"></div>
+  </div>
+</div>
+</div>
+<script id="data-emb" type="application/json">{emb_json}</script>
+<script id="data-rec" type="application/json">{rec_json}</script>
+<script>
+const EMB = JSON.parse(document.getElementById('data-emb').textContent);
+const REC = JSON.parse(document.getElementById('data-rec').textContent);
+const $ = id => document.getElementById(id);
+const esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const chunks = [...new Set([...EMB, ...REC].map(s => s.chunk)
+                 .filter(Boolean))].sort();
+chunks.forEach(c => {{
+  const o = document.createElement('option');
+  o.value = o.textContent = c;
+  $('f-chunk').appendChild(o);
+}});
+function card(s) {{
+  const chips = [s.genre, s.pov, s.name && 'AI: ' + s.name]
+    .filter(Boolean).map(t => `<span class="tag">${{esc(t)}}</span>`).join('');
+  return `<details class="story" open><summary>
+    <div class="chips">${{chips}}</div>
+    <div class="prev">${{esc(s.prev)}}&hellip;</div></summary>
+    <div class="body"><div class="role">story</div>
+    <pre>${{esc(s.story)}}</pre></div></details>`;
+}}
+let seed = 0;
+function pick(arr, chunk) {{
+  const pool = arr.filter(s => s.chunk === chunk);
+  if (!pool.length) return '<p class="prev">no story for this chunk</p>';
+  return card(pool[seed % pool.length]);
+}}
+function render() {{
+  const c = $('f-chunk').value;
+  $('col-emb').innerHTML = pick(EMB, c);
+  $('col-rec').innerHTML = pick(REC, c);
+  const ne = EMB.filter(s => s.chunk === c).length;
+  const nr = REC.filter(s => s.chunk === c).length;
+  $('count').textContent = `${{ne}} embodiment / ${{nr}} recitation on file`;
+}}
+$('f-chunk').addEventListener('change', () => {{ seed = 0; render(); }});
+$('shuffle').addEventListener('click', () => {{ seed++; render(); }});
+render();
+</script>"""
+
+
+def build_compare(sample_per_chunk, seed, out_name="compare-emb-rec.html"):
+    """Build the embodiment-vs-recitation side-by-side page.
+
+    Stories are not 1:1 paired across the two corpora (independently
+    sampled), so they are matched by constitution chunk: for each chunk we
+    carry a seeded stratified sample from each corpus, and the page shows
+    one from each, with a chunk picker and a shuffle button.
+    """
+    emb, _, _ = load_rows("stories-p1-gpt54nano-embodiment")
+    rec, _, _ = load_rows("stories-p1-gpt54nano-recitation")
+    if not emb or not rec:
+        print("compare page skipped (a corpus is missing)")
+        return
+    emb_s = stratified(emb, sample_per_chunk * 16, seed)
+    rec_s = stratified(rec, sample_per_chunk * 16, seed)
+    (OUT / out_name).write_text(COMPARE_PAGE.format(
+        css=CSS, n=sample_per_chunk,
+        emb_json=json.dumps(emb_s).replace("</", "<\\/"),
+        rec_json=json.dumps(rec_s).replace("</", "<\\/")))
+    print(f"compare page: {len(emb_s)} embodiment + {len(rec_s)} recitation")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", type=int, default=20,
@@ -244,62 +445,30 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     sections = {}
     for stem, disp, section, vstem in CORPORA:
-        path = STORIES / f"{stem}.jsonl"
-        if not path.exists():
+        rows, _, _ = load_rows(stem, vstem)
+        if not rows:
             continue
-        verdicts = {}
-        if vstem and (STORIES / f"{vstem}.jsonl").exists():
-            for line in (STORIES / f"{vstem}.jsonl").open():
-                v = json.loads(line)
-                verdicts[v["id"]] = v
-        rows, keeps, judged = [], 0, 0
-        for line in path.open():
-            d = json.loads(line)
-            story = (d.get("story") or "").strip()
-            if not story:
-                continue
-            m = d.get("metadata") or {}
-            v = verdicts.get(d.get("id"))
-            verdict = (v or {}).get("verdict") or {}
-            keep = verdict.get("keep")
-            if isinstance(keep, str):
-                keep = keep.lower() == "true"
-            judge = None
-            if v is not None:
-                judged += 1
-                judge = "keep" if keep else "reject"
-                keeps += bool(keep)
-            rows.append({
-                "prev": preview(story), "story": story, "meta": m,
-                "chunk": m.get("chunk_id"), "genre": m.get("genre"),
-                "framing": m.get("framing"), "pov": m.get("pov"),
-                "name": m.get("ai_name"), "setting": m.get("setting"),
-                "assertion": m.get("assertion"), "judge": judge,
-                "judge_reasoning": (verdict.get("reasoning")
-                                    if isinstance(verdict, dict) else None),
-                "flag": bool(d.get("check_failures")),
-            })
         sample = stratified(rows, args.sample, args.seed)
         nchunks = len({r["chunk"] for r in sample})
         (OUT / f"{stem}.html").write_text(PAGE.format(
             title=html.escape(disp), css=CSS, n=len(sample), stem=stem,
             nchunks=nchunks, total=len(rows),
             data_json=json.dumps(sample).replace("</", "<\\/")))
-        rate = (f"{100*keeps/judged:.0f}% ({keeps}/{judged})"
-                if judged else "—")
         sections.setdefault(section, []).append(
             f'<tr><td><a href="{stem}.html">{html.escape(disp)}</a></td>'
-            f"<td>{len(sample)} of {len(rows)}</td><td>{rate}</td></tr>")
+            f"<td>{len(sample)} of {len(rows)}</td></tr>")
         print(f"{disp}: sampled {len(sample)} of {len(rows)} "
               f"across {nchunks} chunks")
 
+    build_compare(args.sample, args.seed)
+
     rows = []
     for section, items in sections.items():
-        rows.append(f'<tr class="section"><td colspan="3">'
+        rows.append(f'<tr class="section"><td colspan="2">'
                     f"{html.escape(section)}</td></tr>")
         rows.extend(items)
-    (OUT / "index.html").write_text(INDEX.format(css=CSS,
-                                                 rows="\n".join(rows)))
+    (OUT / "index.html").write_text(INDEX.format(
+        css=CSS, prompts=prompts_html(), rows="\n".join(rows)))
     print(f"\nwrote {OUT}/index.html")
 
 

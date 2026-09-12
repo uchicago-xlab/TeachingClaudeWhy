@@ -10,6 +10,12 @@ with the results table breaks.
 Launch via launch.sh:
 
     bash launch.sh sdf 8 --corpus /workspace/data/sdf-corpus.jsonl --out /workspace/out/sdf-fsdp
+
+Optional held-out test loss (scaling-ladder runs, 2026-09-11): pass
+--eval-corpus <held-out {"text"} JSONL> to evaluate every --eval-steps
+training steps; the loss lands in wandb as eval/loss. Off by default, so
+arms trained without it are unchanged — the training recipe itself is not
+touched either way.
 """
 
 import argparse
@@ -35,8 +41,13 @@ def main():
     ap.add_argument("--liger", action="store_true")
     ap.add_argument("--smoke", action="store_true",
                     help="256 samples, 5 steps, no wandb")
+    ap.add_argument("--eval-corpus", default=None,
+                    help='held-out {"text": ...} JSONL; enables periodic '
+                         "eval loss (never part of any training rung)")
+    ap.add_argument("--eval-steps", type=int, default=50)
     args = ap.parse_args()
 
+    do_eval = bool(args.eval_corpus) and not args.smoke
     cfg = SFTConfig(
         output_dir=args.out,
         packing=True,
@@ -53,6 +64,9 @@ def main():
         gradient_checkpointing_kwargs={"use_reentrant": False},
         use_liger_kernel=args.liger,
         logging_steps=5,
+        eval_strategy="steps" if do_eval else "no",
+        eval_steps=args.eval_steps,
+        per_device_eval_batch_size=1,
         save_strategy="no" if args.smoke else "steps",
         save_steps=200,
         save_only_model=True,
@@ -72,6 +86,10 @@ def main():
     ds = load_dataset("json", data_files=args.corpus, split="train")
     if args.smoke:
         ds = ds.select(range(min(256, len(ds))))
+    # Packed like the train set, so eval/loss is the same per-token quantity
+    # as train/loss and comparable across ladder rungs.
+    eval_ds = (load_dataset("json", data_files=args.eval_corpus, split="train")
+               if do_eval else None)
 
     peft_cfg = LoraConfig(
         r=64, lora_alpha=128, lora_dropout=0.0,
@@ -83,7 +101,7 @@ def main():
     model = model.to(torch.bfloat16)
 
     trainer = SFTTrainer(model=model, args=cfg, train_dataset=ds,
-                         processing_class=tok)
+                         eval_dataset=eval_ds, processing_class=tok)
     trainer.train()
     trainer.save_model(args.out)
 

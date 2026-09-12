@@ -1320,6 +1320,106 @@
       "approx": true,
       "status": "spent",
       "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-14m-corpus",
+      "date": "2026-08-27",
+      "what": "OpenRouter - v4.5 embodiment 14M-token generator-comparison corpora, 3 arms: sonnet-5 thinking-adaptive 14,800 prompts ($570.26), haiku-4.5 thinking-1024 13,500 prompts ($154.30), gpt-5.4-nano no-thinking scale-0.65 12,000 prompts ($22.16). Incl. base 7,500 + top-up builds, retries, and scrub passes. Assembled to sdf-v45emb-{arm}-14M.jsonl at 14.0M Qwen tokens each.",
+      "who": "Anastasia",
+      "amount": 746.72,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-sdf-training",
+      "date": "2026-08-28",
+      "what": "RunPod TCW - v45emb generator-comparison training: three 4xH200 pods (v45sonnet/v45haiku/v45nano), ~3h19m each incl ~25min idle from the SSH_HOST/SSH_IP env-var bug. Full two-stage recipe per arm (SDF 14M + graft0 + A1 no-tables), all graft gates passed. Adapters backed up locally; HF publish blocked on private-storage limit. 3 x 3.32h x $18.36/h.",
+      "who": "Anastasia",
+      "amount": 182.68,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-eval-sonnet-serving",
+      "date": "2026-08-29",
+      "what": "RunPod TCW - v45eval 2xA100 pod serving the sonnet5 arm for the 27x100 AM eval (~5.4h incl adapter staging over a slow uplink, one network outage, and grader-retry passes). Pod PAUSED (not terminated) per Anastasia for the haiku/nano arms later.",
+      "who": "Anastasia",
+      "amount": 17.17,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-eval-sonnet-grading",
+      "date": "2026-08-29",
+      "what": "OpenRouter - grading the sonnet5 arm 27x100 AM eval (2,700 kept + ~176 discarded duplicate samples, sonnet-4.6 grader at ~$0.0095/sample).",
+      "who": "Anastasia",
+      "amount": 27.32,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-eval-haiku-nano-serving",
+      "date": "2026-09-08",
+      "what": "RunPod TCW - v45eval2 2xA100-PCIe pod serving the haiku45 and nano54 arms for their 27x100 AM evals (~7.5h incl. a ~25min NCCL all-reduce hang on PCIe cards, an arm swap, and two nano restarts from tunnel drops).",
+      "who": "Anastasia",
+      "amount": 23.85,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-eval-haiku-nano-grading",
+      "date": "2026-09-08",
+      "what": "OpenRouter - grading the haiku45 and nano54 arms 27x100 AM evals (2 x 2,700 kept samples plus ~450 discarded from restarts, sonnet-4.6 grader at ~$0.0095/sample).",
+      "who": "Anastasia",
+      "amount": 55.57,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45rec-corpora",
+      "date": "2026-09-09",
+      "what": "OpenRouter - v4.5 RECITATION corpora (show-vs-tell control arms): sonnet-5 16,100 prompts ($608.67) and gpt-5.4-nano 14,500 prompts ($26.12), incl. 200-story pilots per generator, one capped-key restart, and a 43-prompt retry. Assembled to sdf-v45rec-nano54-14M.jsonl at 14.0M Qwen tokens each.",
+      "who": "Anastasia",
+      "amount": 634.79,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45rec-sdf-training",
+      "date": "2026-09-09",
+      "what": "RunPod TCW - v4.5 recitation arms training: two 4xA100-SXM pods (v45recsonnet/v45recnano, ~4h10m each; H200 capacity was dry so the handoff's documented A100-SXM fallback was used — same 4-GPU recipe, so effective batch and all hyperparameters unchanged). Full two-stage graft0 recipe, both graft gates bit-exact (cos 1.0000).",
+      "who": "Anastasia",
+      "amount": 114.42,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45rec-eval-serving",
+      "date": "2026-09-10",
+      "what": "RunPod TCW - v45receval 2xA100-SXM pod serving both v4.5 recitation arms for their 27x100 AM evals (~3h incl. fresh-pod vLLM bootstrap and one arm swap). SXM cards, so no NCCL hang.",
+      "who": "Anastasia",
+      "amount": 9.54,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45rec-eval-grading",
+      "date": "2026-09-10",
+      "what": "OpenRouter - grading both v4.5 recitation arms' 27x100 AM evals (2 x 2,700 samples, sonnet-4.6 grader at ~$0.0095/sample).",
+      "who": "Anastasia",
+      "amount": 51.3,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
     }
   ]
 }

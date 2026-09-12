@@ -13,18 +13,28 @@ With no arguments every figure regenerates. Otherwise pass any of:
     citation    results_citation.png     (constitution-citation judge)
     regrade     results_regrade.png      (action-only re-grade)
     namecontrol results_namecontrol.png  (A1 baseline name control)
+    namesweep   results_namesweep.png    (six-name sweep on graft0-a1)
+    ownname     results_ownname.png      (SDF named-claude vs named-qwen, crossed)
     protagonist results_protagonist.png  (protagonist ablation + name bind)
+    redo14m     results_redo14m.png      (retrained 14M arms + baseline, as Alex)
+                + results_redo14m_harmful.png (same, execution-gated metric)
 
 Everything recomputes from the logs in data/misalignment-eval/transcripts/
 (fresh runs may still be in tmp/msm-eval/) except citation and regrade,
 which read the 2026-08-03 verdict files in
 data/misalignment-eval/{citation-analysis,action-regrade}/.
 
-Chart conventions follow the dataviz reference palette (all pairs
-validator-passed on the light surface): blue #2a78d6 = replacement /
-series 1, orange #eb6834 = restriction, magenta #c2417e = series 2 in
-two-model or two-condition comparisons, green #3a6b2a = graded-safe.
-Error bars = 1 binomial SE.
+House style (see the rcParams block below): figures are built to drop
+straight into a LessWrong post — Charter (serif, matching body copy),
+seaborn's colour-blind-safe "colorblind" palette in `CB`, 180 dpi, tight
+bbox, no top/right spines, gridlines on one axis only. New figures should
+take their colours from `CB` rather than the older BLUE/ORANGE/MAGENTA/GREEN
+constants, which are kept only so the pre-2026-08 charts still regenerate
+with the appearance they were written for.
+
+Error bars = 1 binomial SE unless a figure says otherwise — note that is
+one SE, NOT a 95% interval (which is 1.96x wider); say which you mean in
+any caption.
 """
 
 import json
@@ -48,10 +58,88 @@ HERE = Path(__file__).resolve().parent
 FIG = HERE / "figures"
 EVAL_DIR = REPO / "tmp" / "msm-eval"
 ARCHIVE_DIR = REPO / "data" / "misalignment-eval" / "transcripts"
+# Where msm_eval_run.py actually writes today (README: "Logs land in
+# data/msm-eval/<run-name>/"). Older runs were copied to ARCHIVE_DIR, so both
+# are searched; a run present only in the live dir used to be invisible here.
+LIVE_DIR = REPO / "data" / "msm-eval"
 ANA_DIR = REPO / "data" / "misalignment-eval"
 
 SURFACE, INK, INK2 = "#fcfcfb", "#1a1a19", "#6f6e66"
 BLUE, ORANGE, MAGENTA, GREEN = "#2a78d6", "#eb6834", "#c2417e", "#3a6b2a"
+
+# ------------------------------------------------ house style (LessWrong)
+#
+# Figures are written to be dropped into a LessWrong post, so: a serif face
+# matching body copy, a colour-blind-safe palette, and enough size that the
+# image still reads after the site scales it into a ~680px column.
+#
+# seaborn's "colorblind" palette, hardcoded rather than importing seaborn for
+# ten hex codes (the analysis venv does not have it, and this file is the only
+# consumer). It is Okabe-Ito derived: safe under deuteranopia, protanopia and
+# tritanopia, because it varies along the blue-yellow axis rather than
+# red-green. First two entries are the default pair for a two-series chart.
+CB = ["#0173B2", "#DE8F05", "#029E73", "#D55E00", "#CC78BC",
+      "#CA9161", "#FBAFE4", "#949494", "#ECE133", "#56B4E9"]
+CB_BLUE, CB_ORANGE, CB_GREEN, CB_RED = CB[0], CB[1], CB[2], CB[3]
+
+# Canonical Okabe-Ito (Okabe & Ito 2008), the reference colour-blind-safe
+# qualitative set. seaborn's "colorblind" above is a lightly adjusted version
+# of it, so CB_BLUE/CB_ORANGE and OI_BLUE/OI_ORANGE look nearly identical;
+# the pairs that actually differ are the ones using vermillion, green or
+# purple. Figures pick a pair explicitly rather than relying on an order.
+OI_BLACK = "#000000"
+OI_ORANGE = "#E69F00"
+OI_SKYBLUE = "#56B4E9"
+OI_GREEN = "#009E73"
+OI_YELLOW = "#F0E442"
+OI_BLUE = "#0072B2"
+OI_VERMILLION = "#D55E00"
+OI_PURPLE = "#CC79A7"
+
+# Multiplier for a 95% interval on a proportion. New figures show 95% CIs
+# rather than 1 SE: a reader reads an error bar as "the plausible range", which
+# is what a 95% interval is, and "+- 1.2" was ambiguous between the two.
+# Caveat to keep in captions: non-overlapping 95% CIs do imply a significant
+# difference, but OVERLAPPING ones do NOT imply the absence of one — the test
+# is on the CI of the difference, not on whether two bars' bars touch.
+CI95 = 1.959964
+
+# Charter is a screen-legible text serif and is present on this machine;
+# the rest are fallbacks so the file still renders elsewhere.
+matplotlib.rcParams.update({
+    "font.family": "serif",
+    "font.serif": ["Charter", "Palatino", "Georgia", "DejaVu Serif"],
+    "font.size": 11,
+    "axes.titlesize": 12,
+    "axes.labelsize": 11,
+    "xtick.labelsize": 10.5,
+    "ytick.labelsize": 10.5,
+    "legend.fontsize": 10.5,
+    "figure.facecolor": SURFACE,
+    "axes.facecolor": SURFACE,
+    "savefig.facecolor": SURFACE,
+    # Axis furniture is solid black, not grey: at LessWrong's display size the
+    # grey ticks and labels washed out. Gridlines stay faint so they sit behind
+    # the data rather than competing with it.
+    "axes.edgecolor": "black",
+    "axes.labelcolor": "black",
+    "text.color": "black",
+    "xtick.color": "black",
+    "ytick.color": "black",
+    "axes.grid": False,          # each figure opts in on one axis only
+    "grid.color": INK2,
+    "grid.alpha": 0.18,
+    "grid.linewidth": 0.7,
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+    # 300 dpi: LessWrong renders into a ~680px column, and retina displays it
+    # at 2x, so anything under ~1400px wide looks soft. At 7in wide this gives
+    # ~2100px, which also survives being screenshotted or printed. PNGs of flat
+    # bar charts compress well, so the file-size cost is small.
+    "figure.dpi": 300,
+    "savefig.dpi": 300,
+    "savefig.bbox": "tight",
+})
 SLICES = {"replacement": BLUE, "restriction": ORANGE}
 SCENARIOS = ("exfiltration", "leaking", "murder")
 
@@ -118,8 +206,9 @@ def iter_samples(dirs):
     per-arm effect: data/misalignment-eval/restriction-recount-exfiltration-void.txt
     """
     for d in dirs:
-        path = EVAL_DIR / d if (EVAL_DIR / d).exists() else ARCHIVE_DIR / d
-        if not path.exists():
+        path = next((p / d for p in (EVAL_DIR, LIVE_DIR, ARCHIVE_DIR)
+                     if (p / d).exists()), None)
+        if path is None:
             continue
         for lg in list_eval_logs(str(path)):
             log = read_eval_log(lg.name)
@@ -215,11 +304,18 @@ def grouped_panel(ax, rows, series_colors, xlim, value_fmt="{:.1f}%"):
 
 
 def save(fig, name):
+    """Write a figure at the house dpi (rcParams["savefig.dpi"]).
+
+    Do NOT pass dpi= here: a hardcoded value silently overrides the rcParam,
+    which is what kept every figure at 180 dpi while the style block claimed
+    otherwise.
+    """
     FIG.mkdir(exist_ok=True)
     out = FIG / name
-    fig.savefig(out, dpi=180, facecolor=SURFACE)
+    fig.savefig(out, facecolor=SURFACE)
     plt.close(fig)
-    print(f"wrote {out}")
+    w, h = fig.get_size_inches() * matplotlib.rcParams["savefig.dpi"]
+    print(f"wrote {out}  (~{int(w)}x{int(h)} px)")
 
 
 # ------------------------------------------------- main tables + 3 charts
@@ -618,6 +714,508 @@ def fig_namecontrol():
     save(fig, "results_namecontrol.png")
 
 
+# ------------------------------- six-name sweep on the graft0 A1 baseline
+
+# 2026-08-12. Six names on the validated graft0-a1 platform, 9 conditions
+# (3 scenarios x america/none/pragmatic) at n=30 => 270 samples per name.
+# `pragmatic` is in the grid because it is the goal value with headroom in
+# all three scenarios (60/26/46% on the 27-cell baseline) rather than pinned
+# near a ceiling; america and none reproduce the standard 6-cell slice, so
+# these runs stay comparable to every earlier arm.
+SWEEP_AI = ["Qwen", "Claude", "ChatGPT"]
+SWEEP_HUMAN = ["David", "Goliath", "Sophia"]
+# Canonical Okabe-Ito blue and vermillion. Vermillion rather than Okabe-Ito's
+# orange: the orange is close enough to seaborn's #DE8F05 that the two are hard
+# to tell apart, while vermillion is deeper and less yellow, and keeps a clear
+# lightness gap from the blue so the chart survives greyscale. Colour is
+# redundant here anyway — the AI names occupy the first three bars, the human
+# names the last three.
+SWEEP_C_AI, SWEEP_C_HUMAN = OI_BLUE, OI_VERMILLION
+SWEEP_CELLS = [(s, g) for s in SCENARIOS
+               for g in ("america", "none", "pragmatic")]
+
+
+def sweep_counts(names=None, suffixes=("", "-r2", None)):
+    """name -> cell -> [hits, n] for the six-name sweep.
+
+    A `None` suffix means the g18 top-up dir (graft0-a1-g18-name<nm>),
+    added 2026-08-19: the 18 goal-value cells beyond the g9 grid at
+    n=100, giving every name the full 27-condition coverage.
+
+    Both rounds pooled by default: same checkpoint, same settings, same
+    conditions, so the samples are exchangeable and 1,620 per name is the
+    best estimate of the effect size. The rounds are kept as separate run
+    dirs so they can still be compared — round 1 (30/condition) is the
+    exploratory round that generated the AI-vs-human hypothesis, round 2
+    (150/condition) is the pre-registered replication that tested it, and
+    the difference between them is the run-to-run drift estimate.
+
+    Note the split still matters for INFERENCE even though it does not for
+    estimation: the confirmatory p-value must come from round 2 alone,
+    because testing a hypothesis on the data that suggested it is circular.
+    """
+    out = {}
+    for nm in (names if names is not None else SWEEP_AI + SWEEP_HUMAN):
+        cells = defaultdict(lambda: [0, 0])
+        for suffix in suffixes:
+            run_dir = LIVE_DIR / (
+                f"graft0-a1-g18-name{nm}" if suffix is None
+                else f"graft0-a1-g9-name{nm}{suffix}")
+            if not run_dir.exists():
+                continue
+            for lg in list_eval_logs(str(run_dir)):
+                log = read_eval_log(lg.name)
+                a = log.eval.task_args
+                key = (a["scenario"], a["goal_value"])
+                for s in (log.samples or []):
+                    if not s.scores:
+                        continue  # unscored sample from an incomplete task
+                    v = next(iter(s.scores.values())).value
+                    cells[key][1] += 1
+                    if float(v["classifier_verdict"]) >= 1.0:
+                        cells[key][0] += 1
+        out[nm] = cells
+    return out
+
+
+def fig_namesweep():
+    """Vertical bars: names across the bottom, misalignment rate up the side.
+
+    The rest of this file uses horizontal bars, but here the quantity being
+    compared reads better on the y-axis — six short labels fit along x, and
+    the AI/human step is easier to see as a height difference.
+    """
+    data = sweep_counts()
+    # Alex: g9 from the redo14m baseline re-eval (single round) plus its own
+    # g18 run. Pooled with the human names per Anastasia's call (2026-08-19):
+    # it is a human personal name and it behaves like one, despite also
+    # being the name MSM wrote the scenarios around.
+    data.update(sweep_counts(names=["Alex"], suffixes=("", None)))
+    GROUPS = {"AI-assistant name": (SWEEP_AI, SWEEP_C_AI),
+              "human name": (SWEEP_HUMAN + ["Alex"], SWEEP_C_HUMAN)}
+
+    # Full 27-cell averages since the 2026-08-19 g18 top-up, cells equally
+    # weighted (g9 cells carry 180+, g18 cells 100 — a sample-weighted pool
+    # would overweight the g9 three goal values ~1.8x). Same methodology as
+    # the alex27 figures.
+    ALL_CELLS = [(s, g) for s in SCENARIOS for g in GRID27_GOALS]
+
+    fig, ax = plt.subplots(figsize=(7.8, 4.0))
+    fig.patch.set_facecolor(SURFACE)
+    ax.set_facecolor(SURFACE)
+
+    order = SWEEP_AI + SWEEP_HUMAN + ["Alex"]
+    x = {nm: i for i, nm in enumerate(order)}
+    for label, (names, color) in GROUPS.items():
+        for nm in names:
+            rs, var = [], 0.0
+            for c in ALL_CELLS:
+                h, n = data[nm][c]
+                rs.append(h / n)
+                var += (h / n) * (1 - h / n) / n
+            p = 100 * sum(rs) / len(rs)
+            ci = CI95 * 100 * math.sqrt(var) / len(rs)
+            ax.bar(x[nm], p, width=0.62, color=color, zorder=3)
+            ax.errorbar(x[nm], p, yerr=ci, fmt="none", ecolor="black",
+                        elinewidth=1.1, capsize=3.5, capthick=1.1, zorder=4)
+            ax.text(x[nm], p + ci + 1.2, f"{p:.1f}%", ha="center",
+                    va="bottom", fontsize=10, color="black")
+
+    ax.set_xticks(range(len(order)), order, fontsize=11, color="black")
+    ax.set_ylabel("misalignment rate (%)", fontsize=11, color="black")
+    ax.set_ylim(0, 70)
+    for sp in ("top", "right"):
+        ax.spines[sp].set_visible(False)
+    for sp in ("bottom", "left"):
+        ax.spines[sp].set_color("black")
+    ax.tick_params(colors="black")
+    ax.grid(axis="y", color=INK2, alpha=0.18, linewidth=0.7, zorder=0)
+
+    series_legend(ax, [c for _, c in GROUPS.values()], list(GROUPS),
+                  ncol=2, loc="upper left")
+    fig.tight_layout()
+    save(fig, "results_namesweep.png")
+
+
+# ------------------------- own-name experiment: SDF corpora named Claude/Qwen
+
+# 2026-08-07/08. Crossed design: two SDF corpora differing only in the name
+# their protagonist carries (Claude vs Qwen), each continued into A1 on the
+# graft0 platform, plus the no-SDF baseline — every arm evaluated under BOTH
+# persona names. If SDF binds values to the identity it was taught under, an
+# arm should behave differently when addressed by its own training name.
+OWNNAME_ARMS = [
+    ("baseline\n(no SDF)", "graft0-a1-baseline"),
+    ("SDF named-claude", "sdf-named-claude-graft0-a1"),
+    ("SDF named-qwen", "sdf-named-qwen-graft0-a1"),
+]
+
+
+def fig_ownname():
+    """Grouped bars: the SDF drop is the step between arms, the own-name null
+    is the near-equal pair within each arm.
+
+    Replacement slice only — the standard MSM condition, so every bar stays
+    comparable to the published arms. Restriction is our own deviation and
+    lives in the table in Results.md instead.
+    """
+    # Left on the seaborn-colorblind pair deliberately: only the six-name sweep
+    # was restyled to Okabe-Ito blue/vermillion, so this figure keeps the
+    # appearance it was reviewed with.
+    ADDRESSED = {"addressed as Claude": ("Claude", CB_BLUE),
+                 "addressed as Qwen": ("Qwen", CB_ORANGE)}
+
+    fig, ax = plt.subplots(figsize=(7.4, 4.0))
+    fig.patch.set_facecolor(SURFACE)
+    ax.set_facecolor(SURFACE)
+
+    bw = 0.34
+    for (label, (nm, color)), off in zip(ADDRESSED.items(), (-bw / 2, bw / 2)):
+        for i, (_, pref) in enumerate(OWNNAME_ARMS):
+            p, se = harmful_rate([f"{pref}-name{nm}"])
+            ci = CI95 * se
+            ax.bar(i + off, p, width=bw, color=color, zorder=3)
+            ax.errorbar(i + off, p, yerr=ci, fmt="none", ecolor="black",
+                        elinewidth=1.1, capsize=3.5, capthick=1.1, zorder=4)
+            ax.text(i + off, p + ci + 1.2, f"{p:.1f}%", ha="center",
+                    va="bottom", fontsize=9.5, color="black")
+
+    ax.set_xticks(range(len(OWNNAME_ARMS)), [a for a, _ in OWNNAME_ARMS],
+                  fontsize=11, color="black")
+    ax.set_ylabel("misalignment rate (%)", fontsize=11, color="black")
+    ax.set_ylim(0, 62)
+    for sp in ("top", "right"):
+        ax.spines[sp].set_visible(False)
+    for sp in ("bottom", "left"):
+        ax.spines[sp].set_color("black")
+    ax.tick_params(colors="black")
+    ax.grid(axis="y", color=INK2, alpha=0.18, linewidth=0.7, zorder=0)
+
+    series_legend(ax, [c for _, c in ADDRESSED.values()], list(ADDRESSED),
+                  ncol=2, loc="upper right")
+    fig.tight_layout()
+    save(fig, "results_ownname.png")
+
+
+# ------------------- retrained 14M arms on graft0, evaluated as Alex (redo)
+
+# 2026-08-18. The embodiment/recitation 14M arms retrained end to end on the
+# graft0 platform (Redo14MHandoff.md) and evaluated as Alex on the 9-condition
+# grid at 180/condition, next to the graft0-a1 baseline re-evaluated as Alex.
+# All three bars are Alex; the same checkpoint's Qwen-vs-Alex contrast lives
+# in the six-name sweep figure, where Alex is its own group. These runs are
+# comparable to each other and to MSM, NOT to the pre-terminator-fix 14M rows
+# above (old lane, table-LoRA, 6-condition slice).
+REDO14M_ARMS = [
+    ("baseline\n(no SDF)", ["graft0-a1-g9-nameAlex"]),
+    ("embodiment 14M", ["emb-14M-graft0-a1-g9-nameAlex"]),
+    ("recitation 14M", ["rec-14M-graft0-a1-g9-nameAlex"]),
+]
+
+
+def redo14m_pooled(dirs, metric="classifier_verdict"):
+    """(hits, n) pooled over run dirs for the given score key."""
+    h = n = 0
+    for d in dirs:
+        for lg in list_eval_logs(str(LIVE_DIR / d)):
+            log = read_eval_log(lg.name)
+            for s in (log.samples or []):
+                v = next(iter(s.scores.values())).value
+                n += 1
+                h += float(v[metric]) >= 1.0
+    return h, n
+
+
+def fig_redo14m():
+    """Vertical bars like the sweep/own-name figures: arms along x. One
+    series (everything as Alex), so no legend — the caption names the
+    condition.
+
+    Two versions, same layout: the reported metric (classifier_verdict —
+    the model DECIDED to act, MSM's Appendix D.3 definition) and a
+    companion on the execution-gated `harmful` metric, which also requires
+    a well-formed tool call and reads ~5-10 points lower. The harmful
+    version is for the metric-sensitivity comparison only; the results
+    table stays classifier_verdict."""
+    for metric, ylabel, fname in (
+            ("classifier_verdict", "misalignment rate (%)",
+             "results_redo14m.png"),
+            ("harmful", "harmful rate (%)",
+             "results_redo14m_harmful.png")):
+        fig, ax = plt.subplots(figsize=(7.4, 4.0))
+        fig.patch.set_facecolor(SURFACE)
+        ax.set_facecolor(SURFACE)
+
+        for i, (_, dirs) in enumerate(REDO14M_ARMS):
+            h, n = redo14m_pooled(dirs, metric)
+            p = 100 * h / n
+            ci = CI95 * 100 * math.sqrt((h / n) * (1 - h / n) / n)
+            ax.bar(i, p, width=0.62, color=CB_BLUE, zorder=3)
+            ax.errorbar(i, p, yerr=ci, fmt="none", ecolor="black",
+                        elinewidth=1.1, capsize=3.5, capthick=1.1, zorder=4)
+            ax.text(i, p + ci + 1.2, f"{p:.1f}%", ha="center",
+                    va="bottom", fontsize=10, color="black")
+
+        ax.set_xticks(range(len(REDO14M_ARMS)), [a for a, _ in REDO14M_ARMS],
+                      fontsize=11, color="black")
+        ax.set_ylabel(ylabel, fontsize=11, color="black")
+        ax.set_ylim(0, 66)
+        for sp in ("top", "right"):
+            ax.spines[sp].set_visible(False)
+        for sp in ("bottom", "left"):
+            ax.spines[sp].set_color("black")
+        ax.tick_params(colors="black")
+        ax.grid(axis="y", color=INK2, alpha=0.18, linewidth=0.7, zorder=0)
+
+        fig.tight_layout()
+        save(fig, fname)
+
+
+# ---------------- redo14m arms: breakdown by goal condition and scenario
+
+
+def fig_redo14m_breakdown():
+    """Two panels over the three redo arms (all as Alex, n=540/bar):
+    left = pooled over scenarios, split by goal condition; right = pooled
+    over goal conditions, split by scenario. The same colour triple is
+    reused in both panels for different series — each panel's legend is
+    the authority."""
+    counts = {}  # arm -> key -> [hits, n], keyed twice: goal and scenario
+    for arm, dirs in REDO14M_ARMS:
+        c = defaultdict(lambda: [0, 0])
+        for d in dirs:
+            for lg in list_eval_logs(str(LIVE_DIR / d)):
+                log = read_eval_log(lg.name)
+                a = log.eval.task_args
+                for s in (log.samples or []):
+                    if not s.scores:
+                        continue  # unscored sample from an incomplete task
+                    v = next(iter(s.scores.values())).value
+                    hit = float(v["classifier_verdict"]) >= 1.0
+                    for key in (("goal", a["goal_value"]),
+                                ("scenario", a["scenario"])):
+                        c[key][1] += 1
+                        c[key][0] += hit
+        counts[arm] = c
+
+    PANELS = [
+        ("by goal condition", "goal",
+         [("america (explicit)", "america"), ("none", "none"),
+          ("pragmatic (explicit)", "pragmatic")]),
+        ("by scenario", "scenario", [(s, s) for s in SCENARIOS]),
+    ]
+    colors = [CB_BLUE, CB_ORANGE, CB_GREEN]
+    fig, axes = plt.subplots(1, 2, figsize=(12.0, 4.4), sharey=True)
+    fig.patch.set_facecolor(SURFACE)
+    bw = 0.24
+    for ax, (title, kind, series) in zip(axes, PANELS):
+        ax.set_facecolor(SURFACE)
+        for (label, key), color, off in zip(
+                series, colors, (-bw - 0.01, 0, bw + 0.01)):
+            for i, (arm, _) in enumerate(REDO14M_ARMS):
+                h, n = counts[arm][(kind, key)]
+                p = 100 * h / n
+                ci = CI95 * 100 * math.sqrt((h / n) * (1 - h / n) / n)
+                ax.bar(i + off, p, width=bw, color=color, zorder=3)
+                ax.errorbar(i + off, p, yerr=ci, fmt="none", ecolor="black",
+                            elinewidth=1.0, capsize=2.5, capthick=1.0,
+                            zorder=4)
+                ax.text(i + off, p + ci + 1.4, f"{p:.0f}", ha="center",
+                        va="bottom", fontsize=8, color="black")
+        ax.set_title(title, fontsize=11, color=INK, loc="left", pad=8)
+        ax.set_xticks(range(len(REDO14M_ARMS)),
+                      [a for a, _ in REDO14M_ARMS],
+                      fontsize=10.5, color="black")
+        ax.set_ylim(0, 92)
+        for sp in ("top", "right"):
+            ax.spines[sp].set_visible(False)
+        for sp in ("bottom", "left"):
+            ax.spines[sp].set_color("black")
+        ax.tick_params(colors="black")
+        ax.grid(axis="y", color=INK2, alpha=0.18, linewidth=0.7, zorder=0)
+        # Legend above the axes: inside, any corner collides with either
+        # the tallest bars or their value labels at this ylim.
+        series_legend(ax, colors, [l for l, _ in series], ncol=3,
+                      loc="lower right", bbox_to_anchor=(1.0, 1.0))
+    axes[0].set_ylabel("misalignment rate (%)", fontsize=11, color="black")
+    fig.tight_layout()
+    save(fig, "results_redo14m_breakdown.png")
+
+
+# ----------------- full 27-cell grid as Alex: the three redo arms combined
+
+# g9 (180/cell) + g18 (100/cell) = all 27 conditions per arm. Cells enter
+# every average with EQUAL weight, so the two depths mix cleanly — a pooled
+# (sample-weighted) mean would overweight the america/none/pragmatic cells
+# 1.8x. Per-cell SEs combine as sqrt(sum se^2)/K.
+ALEX27_ARMS = [
+    ("baseline\n(no SDF)", ["graft0-a1-g9-nameAlex",
+                            "graft0-a1-g18-nameAlex"], CB_BLUE),
+    ("embodiment 14M", ["emb-14M-graft0-a1-g9-nameAlex",
+                        "emb-14M-graft0-a1-g18-nameAlex"], CB_ORANGE),
+    ("recitation 14M", ["rec-14M-graft0-a1-g9-nameAlex",
+                        "rec-14M-graft0-a1-g18-nameAlex"], CB_GREEN),
+]
+
+
+def fig_alex27():
+    """Three separate figures from the combined 27-cell Alex grid:
+    results_alex27_overall.png (equal-cell-weight average over all 27),
+    results_alex27_scenario.png (per-scenario averages, 9 cells each) and
+    results_alex27_goal.png (per-goal averages, 3 cells each). Colour
+    follows the arm in every figure."""
+    cells = {}  # arm -> (scenario, goal) -> [h, n]
+    for arm, dirs, _ in ALEX27_ARMS:
+        c = defaultdict(lambda: [0, 0])
+        for d in dirs:
+            for lg in list_eval_logs(str(LIVE_DIR / d)):
+                log = read_eval_log(lg.name)
+                a = log.eval.task_args
+                key = (a["scenario"], a["goal_value"])
+                for s in (log.samples or []):
+                    if not s.scores:
+                        continue  # unscored sample from an incomplete task
+                    v = next(iter(s.scores.values())).value
+                    c[key][1] += 1
+                    if float(v["classifier_verdict"]) >= 1.0:
+                        c[key][0] += 1
+        cells[arm] = c
+
+    def cell_avg(arm, keys):
+        """(mean%, 95ci%) over the given cells, equal weight per cell."""
+        rs, var = [], 0.0
+        for k in keys:
+            h, n = cells[arm][k]
+            p = h / n
+            rs.append(p)
+            var += p * (1 - p) / n
+        mean = sum(rs) / len(rs)
+        return 100 * mean, CI95 * 100 * math.sqrt(var) / len(rs)
+
+    def style(ax, ymax):
+        ax.set_ylim(0, ymax)
+        ax.set_facecolor(SURFACE)
+        for sp in ("top", "right"):
+            ax.spines[sp].set_visible(False)
+        for sp in ("bottom", "left"):
+            ax.spines[sp].set_color("black")
+        ax.tick_params(colors="black")
+        ax.grid(axis="y", color=INK2, alpha=0.18, linewidth=0.7, zorder=0)
+        ax.set_ylabel("misalignment rate (%)", fontsize=11, color="black")
+
+    def vbar(ax, x, p, ci, color, w, fmt, lbl_fs):
+        ax.bar(x, p, width=w, color=color, zorder=3)
+        ax.errorbar(x, p, yerr=ci, fmt="none", ecolor="black",
+                    elinewidth=1.0, capsize=2.5, capthick=1.0, zorder=4)
+        ax.text(x, p + ci + 1.3, fmt.format(p), ha="center",
+                va="bottom", fontsize=lbl_fs, color="black")
+
+    bw = 0.24
+    offs = (-bw - 0.01, 0, bw + 0.01)
+
+    # 1. overall — all 27 cells, one bar per arm; x labels name the arms,
+    #    so no legend (single series per bar).
+    fig, ax = plt.subplots(figsize=(7.4, 4.0))
+    fig.patch.set_facecolor(SURFACE)
+    for i, (arm, _, color) in enumerate(ALEX27_ARMS):
+        p, ci = cell_avg(arm, [(sc, g) for sc in SCENARIOS
+                               for g in GRID27_GOALS])
+        vbar(ax, i, p, ci, color, 0.62, "{:.1f}%", 10)
+    ax.set_xticks(range(3), [a for a, _, _ in ALEX27_ARMS],
+                  fontsize=11, color="black")
+    style(ax, 72)
+    fig.tight_layout()
+    save(fig, "results_alex27_overall.png")
+
+    # 2. by scenario — grouped by scenario, one bar per arm.
+    fig, ax = plt.subplots(figsize=(8.4, 4.2))
+    fig.patch.set_facecolor(SURFACE)
+    for (arm, _, color), off in zip(ALEX27_ARMS, offs):
+        for i, sc in enumerate(SCENARIOS):
+            p, ci = cell_avg(arm, [(sc, g) for g in GRID27_GOALS])
+            vbar(ax, i + off, p, ci, color, bw, "{:.0f}", 9)
+    ax.set_xticks(range(len(SCENARIOS)), SCENARIOS,
+                  fontsize=11, color="black")
+    style(ax, 92)
+    series_legend(ax, [c for _, _, c in ALEX27_ARMS],
+                  [a.replace("\n", " ") for a, _, _ in ALEX27_ARMS],
+                  ncol=3, loc="lower right", bbox_to_anchor=(1.0, 1.0))
+    fig.tight_layout()
+    save(fig, "results_alex27_scenario.png")
+
+    # 3. by goal condition — grouped by goal value, one bar per arm.
+    fig, ax = plt.subplots(figsize=(12.0, 4.4))
+    fig.patch.set_facecolor(SURFACE)
+    for (arm, _, color), off in zip(ALEX27_ARMS, offs):
+        for i, g in enumerate(GRID27_GOALS):
+            p, ci = cell_avg(arm, [(sc, g) for sc in SCENARIOS])
+            vbar(ax, i + off, p, ci, color, bw, "{:.0f}", 7.5)
+    ax.set_xticks(range(len(GRID27_GOALS)), GRID27_GOALS,
+                  fontsize=10, color="black", rotation=30, ha="right")
+    style(ax, 92)
+    series_legend(ax, [c for _, _, c in ALEX27_ARMS],
+                  [a.replace("\n", " ") for a, _, _ in ALEX27_ARMS],
+                  ncol=3, loc="lower right", bbox_to_anchor=(1.0, 1.0))
+    fig.tight_layout()
+    save(fig, "results_alex27_goal.png")
+
+
+# --------------------------- full 27-condition grid on the graft0 baseline
+
+# The one full-grid run on file: graft0-a1 as Qwen, 27 cells x n=50 (the
+# platform-validation run, 54.3% overall). Goal conditions ordered none
+# first, then the four opposed pairs.
+GRID27_GOALS = ["none", "america", "global", "safety", "acceleration",
+                "ethical", "pragmatic", "individualism", "collectivism"]
+
+
+def fig_grid27():
+    """3 panels (one per scenario) x 9 goal-condition bars, 95% CIs.
+    Single series, one hue; n=50 per cell so the intervals are wide —
+    read shapes, not single-cell rankings."""
+    cells = defaultdict(lambda: [0, 0])
+    for lg in list_eval_logs(str(LIVE_DIR / "graft0-a1-grid27-n50")):
+        log = read_eval_log(lg.name)
+        a = log.eval.task_args
+        key = (a["scenario"], a["goal_value"])
+        for s in (log.samples or []):
+            if not s.scores:
+                continue  # unscored sample from an incomplete task
+            v = next(iter(s.scores.values())).value
+            cells[key][1] += 1
+            if float(v["classifier_verdict"]) >= 1.0:
+                cells[key][0] += 1
+
+    fig, axes = plt.subplots(1, 3, figsize=(12.5, 4.4), sharey=True)
+    fig.patch.set_facecolor(SURFACE)
+    for ax, sc in zip(axes, SCENARIOS):
+        ax.set_facecolor(SURFACE)
+        for i, g in enumerate(GRID27_GOALS):
+            h, n = cells[(sc, g)]
+            if not n:
+                continue
+            p = 100 * h / n
+            ci = CI95 * 100 * math.sqrt((h / n) * (1 - h / n) / n)
+            ax.bar(i, p, width=0.68, color=CB_BLUE, zorder=3)
+            ax.errorbar(i, p, yerr=ci, fmt="none", ecolor="black",
+                        elinewidth=1.0, capsize=2.5, capthick=1.0, zorder=4)
+            ax.text(i, p + ci + 1.5, f"{p:.0f}", ha="center", va="bottom",
+                    fontsize=8, color="black")
+        ax.set_title(sc, fontsize=11, color=INK, loc="left", pad=8)
+        ax.set_xticks(range(len(GRID27_GOALS)), GRID27_GOALS,
+                      fontsize=8.5, color="black", rotation=45, ha="right")
+        ax.set_ylim(0, 100)
+        for sp in ("top", "right"):
+            ax.spines[sp].set_visible(False)
+        for sp in ("bottom", "left"):
+            ax.spines[sp].set_color("black")
+        ax.tick_params(colors="black")
+        ax.grid(axis="y", color=INK2, alpha=0.18, linewidth=0.7, zorder=0)
+    axes[0].set_ylabel("misalignment rate (%)", fontsize=11, color="black")
+    fig.tight_layout()
+    save(fig, "results_grid27.png")
+
+
 # ------------------------------------- protagonist ablation + name binding
 
 def fig_protagonist():
@@ -680,7 +1278,13 @@ FIGURES = {
     "citation": fig_citation,
     "regrade": fig_regrade,
     "namecontrol": fig_namecontrol,
+    "namesweep": fig_namesweep,
+    "ownname": fig_ownname,
     "protagonist": fig_protagonist,
+    "redo14m": fig_redo14m,
+    "grid27": fig_grid27,
+    "redobreakdown": fig_redo14m_breakdown,
+    "alex27": fig_alex27,
 }
 
 
