@@ -13,6 +13,7 @@ The row-delta terminator arm hangs off --train-rows (see rows.py).
 """
 
 import argparse
+import os
 
 import torch
 from datasets import load_dataset
@@ -84,7 +85,7 @@ def main():
         save_steps=100,
         save_only_model=True,
         report_to="none" if args.smoke else "wandb",
-        run_name="a1-fsdp-fa3-r64" + ("-rows" if args.train_rows
+        run_name=os.environ.get("WANDB_NAME") or "a1-fsdp-fa3-r64" + ("-rows" if args.train_rows
                                       else "-notables" if args.no_tables else ""),
         dataset_num_proc=1,  # >1 deadlocks with the Rust tokenizer under fork
     )

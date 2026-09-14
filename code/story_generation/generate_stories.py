@@ -346,7 +346,9 @@ def post(url, headers, body):
             if e.code != 429 and e.code < 500:
                 raise SampleError(err)
         except (urllib.error.URLError, http.client.HTTPException,
-                TimeoutError) as e:
+                TimeoutError, ConnectionResetError) as e:
+            # ConnectionResetError: an unhandled reset killed the 2026-09-11
+            # ladder s507 run at 14,249/14,250 — retryable like the rest.
             err = f"network error from {url}: {e!r}"
         except json.JSONDecodeError as e:
             # A 200 whose body got cut off mid-stream (killed the 2026-07-23

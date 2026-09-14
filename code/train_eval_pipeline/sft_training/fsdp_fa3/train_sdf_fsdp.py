@@ -11,14 +11,18 @@ Launch via launch.sh:
 
     bash launch.sh sdf 8 --corpus /workspace/data/sdf-corpus.jsonl --out /workspace/out/sdf-fsdp
 
-Optional held-out test loss (scaling-ladder runs, 2026-09-11): pass
---eval-corpus <held-out {"text"} JSONL> to evaluate every --eval-steps
-training steps; the loss lands in wandb as eval/loss. Off by default, so
-arms trained without it are unchanged — the training recipe itself is not
-touched either way.
+Optional test loss (scaling-ladder runs, 2026-09-11/14): pass
+--test-corpus <{"text"} JSONL of stories in NO training rung>. The trainer
+then measures loss on it at step 0 (base model), at the end of training
+(end-state, logged and written to <out>/test_loss.json), and, if
+--test-steps N > 0, every N steps in between (the within-run curve). All
+land in wandb as eval/loss. Off by default, so arms trained without it are
+unchanged — the training recipe itself is not touched either way. Smoke
+runs exercise every test-loss path (that is what the smoke is for).
 """
 
 import argparse
+import os
 
 import torch
 from datasets import load_dataset
@@ -41,13 +45,19 @@ def main():
     ap.add_argument("--liger", action="store_true")
     ap.add_argument("--smoke", action="store_true",
                     help="256 samples, 5 steps, no wandb")
-    ap.add_argument("--eval-corpus", default=None,
-                    help='held-out {"text": ...} JSONL; enables periodic '
-                         "eval loss (never part of any training rung)")
-    ap.add_argument("--eval-steps", type=int, default=50)
+    ap.add_argument("--test-corpus", default=None,
+                    help='test-set {"text": ...} JSONL (never part of any '
+                         "training rung); enables step-0 + end-state test loss")
+    ap.add_argument("--test-steps", type=int, default=0,
+                    help="also measure test loss every N steps (0 = start "
+                         "and end only)")
     args = ap.parse_args()
 
-    do_eval = bool(args.eval_corpus) and not args.smoke
+    do_eval = bool(args.test_corpus)
+    # eval_strategy stays "steps" whenever a test set is given so that
+    # eval_on_start is honoured; with --test-steps 0 the interval is pushed
+    # past any run length, leaving only the step-0 and final passes.
+    NEVER = 10**9
     cfg = SFTConfig(
         output_dir=args.out,
         packing=True,
@@ -65,13 +75,19 @@ def main():
         use_liger_kernel=args.liger,
         logging_steps=5,
         eval_strategy="steps" if do_eval else "no",
-        eval_steps=args.eval_steps,
+        eval_steps=(args.test_steps or NEVER) if do_eval else NEVER,
+        eval_on_start=do_eval,
         per_device_eval_batch_size=1,
         save_strategy="no" if args.smoke else "steps",
         save_steps=200,
+        # Adapter-only checkpoints (~1 GB each); a 112M-token rung writes
+        # ~34 of them, which does not fit a 250 GB disk next to the merged
+        # and grafted 65 GB bases. Three is enough to resume from.
+        save_total_limit=3,
         save_only_model=True,
         report_to="none" if args.smoke else "wandb",
-        run_name="sdf-fsdp-fa3-r64",
+        # WANDB_NAME lets a chain (ladder_chain.sh) name each rung's run.
+        run_name=os.environ.get("WANDB_NAME", "sdf-fsdp-fa3-r64"),
         dataset_num_proc=1,
     )
 
@@ -88,7 +104,7 @@ def main():
         ds = ds.select(range(min(256, len(ds))))
     # Packed like the train set, so eval/loss is the same per-token quantity
     # as train/loss and comparable across ladder rungs.
-    eval_ds = (load_dataset("json", data_files=args.eval_corpus, split="train")
+    eval_ds = (load_dataset("json", data_files=args.test_corpus, split="train")
                if do_eval else None)
 
     peft_cfg = LoraConfig(
@@ -104,6 +120,17 @@ def main():
                          eval_dataset=eval_ds, processing_class=tok)
     trainer.train()
     trainer.save_model(args.out)
+    if do_eval:
+        # End-state test loss, before merge/graft/SFT: the per-rung point
+        # on the ladder's test-loss panel. Written to disk as well as
+        # wandb so it survives a dropped wandb run.
+        m = trainer.evaluate()
+        trainer.log_metrics("test_end", m)
+        trainer.save_metrics("test_end", m, combined=False)
+        import json, os
+        with open(os.path.join(args.out, "test_loss.json"), "w") as f:
+            json.dump({"test_corpus": args.test_corpus, "end_state": m},
+                      f, indent=2)
 
 
 if __name__ == "__main__":

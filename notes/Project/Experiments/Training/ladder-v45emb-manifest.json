@@ -1,0 +1,147 @@
+{
+  "shuffle_seed": 2026,
+  "prefix_file": "sdf-v45emb-nano54-14M.jsonl",
+  "pool_file": "v45emb-nano54-ladder-pool.jsonl",
+  "test_file": "v45emb-nano54-ladder-heldout.jsonl",
+  "test_rows": 300,
+  "prefix_tokens": 13999156,
+  "sequence_rows": 93739,
+  "sequence_tokens": 115439418,
+  "rungs": {
+    "14M": {
+      "file": "sdf-v45emb-nano54-14M.jsonl",
+      "rows": 11359,
+      "tokens": 13999156,
+      "trained": true
+    },
+    "3M": {
+      "file": "sdf-v45emb-nano54-ladder-3M.jsonl",
+      "rows": 2410,
+      "tokens": 3001105,
+      "target_tokens": 3000000,
+      "src_mix": {
+        "14M": 2410
+      },
+      "chunk_share_vs_sequence": {
+        "balancing-and-guidelines": 1.061,
+        "corrigibility": 0.881,
+        "deployment-and-conflicts": 0.971,
+        "ethics-and-honesty": 0.918,
+        "harm-costs-intentions": 1.109,
+        "helpfulness": 0.97,
+        "instructable-and-hard-constraints": 1.03,
+        "nature": 0.949,
+        "operators-and-users": 1.123,
+        "overview": 0.872,
+        "principals": 0.886,
+        "safety": 0.979,
+        "societal-structures": 0.981,
+        "stability-and-expression": 1.007,
+        "values-and-judgment": 1.086,
+        "wellbeing-and-existential": 1.207
+      }
+    },
+    "28M": {
+      "file": "sdf-v45emb-nano54-ladder-28M.jsonl",
+      "rows": 22686,
+      "tokens": 27998799,
+      "target_tokens": 27998312,
+      "src_mix": {
+        "14M": 11359,
+        "s506": 1864,
+        "s504": 1928,
+        "s503": 1952,
+        "s507": 1853,
+        "s502": 1866,
+        "s505": 1836,
+        "leftover14M": 28
+      },
+      "chunk_share_vs_sequence": {
+        "balancing-and-guidelines": 0.996,
+        "corrigibility": 1.018,
+        "deployment-and-conflicts": 0.95,
+        "ethics-and-honesty": 0.994,
+        "harm-costs-intentions": 0.999,
+        "helpfulness": 0.993,
+        "instructable-and-hard-constraints": 0.991,
+        "nature": 0.989,
+        "operators-and-users": 1.007,
+        "overview": 1.03,
+        "principals": 0.97,
+        "safety": 0.988,
+        "societal-structures": 1.018,
+        "stability-and-expression": 1.018,
+        "values-and-judgment": 1.044,
+        "wellbeing-and-existential": 1.037
+      }
+    },
+    "56M": {
+      "file": "sdf-v45emb-nano54-ladder-56M.jsonl",
+      "rows": 45373,
+      "tokens": 55996898,
+      "target_tokens": 55996624,
+      "src_mix": {
+        "14M": 11359,
+        "s506": 5650,
+        "s504": 5673,
+        "s503": 5636,
+        "s507": 5700,
+        "s502": 5616,
+        "s505": 5640,
+        "leftover14M": 99
+      },
+      "chunk_share_vs_sequence": {
+        "balancing-and-guidelines": 0.994,
+        "corrigibility": 1.0,
+        "deployment-and-conflicts": 0.973,
+        "ethics-and-honesty": 1.001,
+        "harm-costs-intentions": 0.985,
+        "helpfulness": 0.989,
+        "instructable-and-hard-constraints": 1.001,
+        "nature": 0.98,
+        "operators-and-users": 1.019,
+        "overview": 1.022,
+        "principals": 0.992,
+        "safety": 0.987,
+        "societal-structures": 1.018,
+        "stability-and-expression": 1.021,
+        "values-and-judgment": 1.028,
+        "wellbeing-and-existential": 1.013
+      }
+    },
+    "112M": {
+      "file": "sdf-v45emb-nano54-ladder-112M.jsonl",
+      "rows": 90945,
+      "tokens": 111994101,
+      "target_tokens": 111993248,
+      "src_mix": {
+        "14M": 11359,
+        "s506": 13213,
+        "s504": 13251,
+        "s503": 13205,
+        "s507": 13231,
+        "s502": 13266,
+        "s505": 13197,
+        "leftover14M": 223
+      },
+      "chunk_share_vs_sequence": {
+        "balancing-and-guidelines": 0.996,
+        "corrigibility": 1.003,
+        "deployment-and-conflicts": 0.995,
+        "ethics-and-honesty": 1.001,
+        "harm-costs-intentions": 1.001,
+        "helpfulness": 1.0,
+        "instructable-and-hard-constraints": 0.998,
+        "nature": 1.001,
+        "operators-and-users": 1.003,
+        "overview": 1.0,
+        "principals": 1.001,
+        "safety": 1.001,
+        "societal-structures": 1.002,
+        "stability-and-expression": 0.999,
+        "values-and-judgment": 1.0,
+        "wellbeing-and-existential": 0.998
+      }
+    }
+  }
+}

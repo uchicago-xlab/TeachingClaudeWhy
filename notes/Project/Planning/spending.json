@@ -1420,6 +1420,16 @@
       "approx": true,
       "status": "spent",
       "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-nano-ladder-corpus",
+      "date": "2026-09-11",
+      "what": "OpenRouter - v4.5 nano EMBODIMENT scaling-ladder extension: 6 prompt files x 14,250 (seeds 502-507, length-scale 0.65) through openai/gpt-5.4-nano thinking-off, 85,500 prompts + a 5,599-prompt and a 1-prompt remainder, plus nano name-scrub passes. Includes ~$22 for a lost s507 run (an in-place scrub clobbered the file mid-generation; regenerated). Yield: 82,450 kept / 3,050 rejected (3.6%); pool 82,680 unique new stories (82,380 for rungs + 300 held-out, 372,696 tok) = 101.44M new Qwen tokens; with the 14.0M prefix 115.44M available vs the 112.16M ladder target. Files: sdf_train/v45emb-nano54-ladder-pool.jsonl, -heldout.jsonl. Measured by key delta 294.66 -> 109.40.",
+      "who": "Anastasia",
+      "amount": 185.26,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
     }
   ]
 }
