@@ -30,6 +30,28 @@ ARM="${ARM:?set ARM=<tag>}"
 ADAPTERS="${ADAPTERS:?set ADAPTERS='repo [repo...]' in application order}"
 OUT="/root/serve-${ARM}"
 
+# The stock Runpod image has no /opt/serve; build it if absent. Both later
+# stages run `python3` off this PATH, so the venv — not the system python —
+# is what needs torch/transformers (via vllm), peft and huggingface_hub.
+# ninja: vLLM's kernel warmup shells out to it by bare name and dies without it.
+if [ ! -x /opt/serve/bin/vllm ]; then
+  echo "STAGE bootstrap /opt/serve"
+  python3 -m venv /opt/serve
+  /opt/serve/bin/pip install -q -U pip
+  /opt/serve/bin/pip install -q vllm peft huggingface_hub ninja
+  # flashinfer annotates `array.array[int]` at import time, which only parses
+  # on Python 3.12+; the Runpod pytorch image is 3.11, so on 2+ GPUs the vLLM
+  # workers die at startup with "type 'array.array' is not subscriptable".
+  # vLLM's own guard is `except ImportError`, and a TypeError sails past it —
+  # so the knob (VLLM_ALLREDUCE_USE_FLASHINFER) does not help either, because
+  # the import is unconditional. Removing the package turns the failure into a
+  # ModuleNotFoundError, which the guard DOES catch, and all-reduce falls back
+  # to pynccl. Costs nothing here: flashinfer is an all-reduce fast path, not
+  # a correctness requirement.
+  if ! /opt/serve/bin/python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 12) else 1)'; then
+    /opt/serve/bin/pip uninstall -y -q flashinfer-python 2>/dev/null || true
+  fi
+fi
 export PATH=/opt/serve/bin:$PATH
 # xet has crashed and stalled on these pods; plain HTTP with a timeout and a
 # retry loop is the only download path that has proven reliable.
@@ -62,8 +84,13 @@ dirs = []
 for i, repo in enumerate(os.environ["ADAPTERS"].split()):
     d = f"/root/ad{i}-{os.environ['ARM']}"
     shutil.rmtree(d, ignore_errors=True)
-    snapshot_download(repo, local_dir=d, max_workers=4,
-                      ignore_patterns=["checkpoint-*"])
+    if os.path.isdir(repo):
+        # local adapter dir already staged on the pod (HF publish can be
+        # blocked, e.g. private-storage limit 2026-08-28) — copy, don't fetch
+        shutil.copytree(repo, d, ignore=shutil.ignore_patterns("checkpoint-*"))
+    else:
+        snapshot_download(repo, local_dir=d, max_workers=4,
+                          ignore_patterns=["checkpoint-*"])
     need = f"{d}/adapter_model.safetensors"
     if not os.path.exists(need):
         raise SystemExit(f"FAILED: {need} missing after download")
@@ -125,6 +152,21 @@ print("saved", out, flush=True)
 PY
 
 echo "STAGE serve"
+# The flashinfer removal above fixes the all-reduce import, but vLLM imports
+# flashinfer a SECOND time, from the sampler, and that path is not guarded at
+# all — it dies with ModuleNotFoundError. This knob returns before that import,
+# so the two changes are a pair: removing the package without this flag simply
+# swaps one startup crash for another. Costs a sampling fast path, nothing else.
+export VLLM_USE_FLASHINFER_SAMPLER=0
+# PCIe A100s (what you get when SXM capacity is dry) have no NVLink, and NCCL
+# peer-to-peer over PCIe inside the container hangs the first all-reduce
+# forever: both GPUs pin at 100% util with ~677 MB allocated, the log stops
+# right after "vLLM is using nccl==2.x", and no weights ever load (2026-09-08,
+# cost ~25 min of pod time). Routing the collective through host memory and
+# dropping the custom all-reduce kernel starts the load within seconds. On
+# NVLinked SXM cards these cost a little all-reduce bandwidth and nothing else.
+export NCCL_P2P_DISABLE=1
+export NCCL_NVLS_ENABLE=0
 exec vllm serve "$OUT" --served-model-name a1-eval \
   --tensor-parallel-size "$(nvidia-smi -L | wc -l)" --max-model-len 8192 \
-  --gpu-memory-utilization 0.92 --port 8000
+  --gpu-memory-utilization 0.92 --port 8000 --disable-custom-all-reduce

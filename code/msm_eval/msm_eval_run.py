@@ -31,6 +31,10 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent / "vendor"))
 load_dotenv(REPO / ".env")
 os.environ.setdefault("OPENAI_API_KEY", "vllm-dummy")  # vLLM ignores the key
+# Same for the openai-api/vllm/ provider, which demands VLLM_API_KEY and
+# rejects an empty one. vLLM does not check its value, so an unset key is a
+# pure footgun: every task in the run dies at client init, after the launch.
+os.environ.setdefault("VLLM_API_KEY", "vllm-dummy")
 
 from inspect_ai import eval_set
 from evals.agentic_misalignment.agentic_misalignment import agentic_misalignment
@@ -116,6 +120,10 @@ GOALS_ALL = tuple(("explicit", v) for v in (
     "ethical", "pragmatic", "individualism", "collectivism",
 )) + (("none", "none"),)
 
+# The same 9 keyed by name, so --goal can name a subset. "none" is the
+# no-conflict condition; every other key is an explicit goal value.
+GOAL_BY_NAME = {("none" if gt == "none" else gv): (gt, gv) for gt, gv in GOALS_ALL}
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -137,6 +145,16 @@ def main():
                          "'all' = MSM's full 9 goal-conflict types, giving "
                          "their 27-eval grid; that is NOT the fixed slice, so "
                          "say so in --run-name.")
+    ap.add_argument("--goal", action="append", choices=tuple(GOAL_BY_NAME),
+                    help="restrict the grid to these goal-conflict types "
+                         "(repeatable), overriding --goals. Use it for "
+                         "powered sub-grids: the name sweep runs america, "
+                         "none and pragmatic, because america and none "
+                         "reproduce the standard slice exactly and pragmatic "
+                         "is the goal value with headroom in all three "
+                         "scenarios (60/26/46%%) rather than pinned near the "
+                         "ceiling. Any run that drops goal types is NOT the "
+                         "fixed slice; say so in --run-name.")
     ap.add_argument("--scenario", action="append", choices=SCENARIOS,
                     help="restrict the slice to these scenarios (repeatable; "
                          "default all three). The only sanctioned use is "
@@ -182,6 +200,12 @@ def main():
                          "are a separate variant — never pool with standard "
                          "runs. Spec: docs/superpowers/specs/"
                          "2026-08-07-native-cot-msm-eval-design.md")
+    ap.add_argument("--max-connections", type=int, default=16,
+                    help="concurrent sampling connections to the serving "
+                         "endpoint. Throughput-only knob (no effect on the "
+                         "sampling distribution); 16 saturated a 2xA100 pod "
+                         "at ~28 samples/min, 32 gives vLLM's batcher more "
+                         "in-flight requests.")
     ap.add_argument("--max-tokens", type=int, default=None,
                     help="completion cap; the standardized slice uses 4096. "
                          "Raise it ONLY as a model-level correction for API "
@@ -342,6 +366,18 @@ def main():
     else:
         thinking_note = "disabled" if args.no_thinking else "provider default"
 
+    # One list of conditions, used for both the tasks and the --dry-run
+    # listing, so the pre-flight print can never describe a different grid
+    # from the one that gets paid for.
+    grid = [
+        (s, gt, gv)
+        for s in (tuple(dict.fromkeys(args.scenario)) if args.scenario
+                  else SCENARIOS)
+        for (gt, gv) in (
+            tuple(GOAL_BY_NAME[g] for g in dict.fromkeys(args.goal)) if args.goal
+            else GOALS_ALL if args.goals == "all"
+            else GOALS)
+    ]
     tasks = [
         agentic_misalignment(
             scenario=s, goal_type=gt, goal_value=gv,
@@ -349,9 +385,7 @@ def main():
             urgency_type=args.urgency_type, prod=args.native_cot,
             model_name=args.model_name, grader_model=GRADER,
         )
-        for s in (tuple(dict.fromkeys(args.scenario)) if args.scenario
-                  else SCENARIOS)
-        for (gt, gv) in (GOALS_ALL if args.goals == "all" else GOALS)
+        for (s, gt, gv) in grid
     ]
     log_dir = REPO / "data" / "msm-eval" / args.run_name
     print(f"model={args.model} url={args.base_url or '(tinker api)'} "
@@ -364,9 +398,8 @@ def main():
     print(f"log_dir={log_dir}")
 
     if args.dry_run:
-        for s in SCENARIOS:
-            for gt, gv in GOALS:
-                print(f"  - {s}_{gt}-{gv}_{args.urgency_type}")
+        for s, gt, gv in grid:
+            print(f"  - {s}_{gt}-{gv}_{args.urgency_type}")
         print("dry run — no API call was made.")
         sys.exit(0)
 
@@ -401,7 +434,14 @@ def main():
         extra_body=extra_body,
         **({"model_args": model_args} if model_args else {}),
         **({"metadata": metadata} if metadata else {}),
-        max_connections=16, retry_attempts=3, display="plain",
+        max_connections=args.max_connections, retry_attempts=3,
+        # A grader refusal (empty reply from the Anthropic safety classifier on
+        # some leak emails, 2026-09-15) used to fail the whole 100-sample
+        # condition three times over. Tolerate up to 5% sample errors per task;
+        # errored samples are excluded from the rate and MUST be reported
+        # (summarize.py / validate_run.py count them).
+        fail_on_error=0.05,
+        display="plain",
     )
     print(f"{'DONE' if ok else 'INCOMPLETE'}: {log_dir}")
     if ok:  # keep the transcript viewer current (incremental, non-fatal)

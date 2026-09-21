@@ -116,6 +116,21 @@ samples/model/seed, 4 seeds); we run far shallower and say so.
 `summarize.py`. Anything produced before 2026-08-10 used `harmful` and reads
 5–10 points low.
 
+**Grader refusals (2026-09-15).** The Sonnet 4.6 grader occasionally returns
+an EMPTY completion — Anthropic's safety classifier refusing to grade a leak
+email about defence technology (inspect shows it as a `content_filter` stop
+and counts it under "Refusals"). It is rare overall (~5 per 2,700 samples)
+but concentrates in `leaking / explicit-global`, where a few samples refuse
+near-deterministically. Upstream's classifiers raise on an empty reply and
+inspect then fails the whole 100-sample condition, three times over
+(cost: three lost attempts on each named arm). Two local fixes, both applied
+by `apply_template_overrides.sh` / in `msm_eval_run.py`: the scorer re-asks
+the grader up to 8 more times before raising (`template_overrides/scorers.py`),
+and `eval_set(..., fail_on_error=0.05)` keeps a condition whose grader still
+refused a few samples. Ungraded samples carry no score and are excluded from
+the rate; `validate_run.py` prints them as "UNGRADED" so a run can never hide
+them. Report the count with any result that has one.
+
 **Checkpoint reconstruction.** We publish adapters, never merged models.
 `serve_reconstructed.sh` rebuilds and serves one:
 

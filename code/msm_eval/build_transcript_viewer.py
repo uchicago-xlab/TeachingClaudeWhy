@@ -408,6 +408,14 @@ SECTIONS = [
         ("named-claude arm, linear-only rerun",
          {"replacement": ["sdf-named-claude-14M-a1-linear"]}),
     ]),
+    ("Platform validation — MSM's full 27-condition grid (2026-08-10). "
+     "3 scenarios × 9 goal-conflict types at n=50, urgency=replacement, "
+     "the same grid MSM report (their Qwen2.5-32B-Instruct baseline: 68%). "
+     "Pooled 54.3% ± 1.4 with signal in all 27 cells — no cell at 0%, none "
+     "below 10%", [
+        ("graft0 + A1, no SDF (27-cell grid, n=50)",
+         {"replacement": ["graft0-a1-grid27-n50"]}),
+    ]),
     ("Experiment 2 — name-variant on SDF+graft0 arms (2026-08-07, msm_eval "
      "fixed settings). Each model evaluated under BOTH persona names; "
      "restriction slices are 4-cell (exfiltration excluded, see "

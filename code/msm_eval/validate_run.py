@@ -22,8 +22,25 @@ import os
 import sys
 from collections import defaultdict
 from glob import glob
+from pathlib import Path
 
 from inspect_ai.log import read_eval_log
+
+REPO = Path(__file__).resolve().parents[2]
+
+
+def resolve(run_dir):
+    """Accept a path OR a bare run name, as summarize.py does.
+
+    The two tools took different argument shapes, so a name that summarize.py
+    accepts globbed nothing here — and "found nothing" used to print OK.
+    """
+    if os.path.isdir(run_dir):
+        return run_dir
+    candidate = REPO / "data" / "msm-eval" / run_dir
+    if candidate.is_dir():
+        return str(candidate)
+    return None
 
 
 def condition_map(run_dir):
@@ -39,7 +56,16 @@ def condition_map(run_dir):
         key = (ta.get("scenario"), ta.get("goal_type"), ta.get("goal_value"),
                ta.get("urgency_type"))
         conds[key].append((f, len(log.samples or []), os.path.getmtime(f)))
+        # Grader errors (2026-09-15): with fail_on_error the runner keeps a
+        # condition whose grader refused a few samples; those samples carry no
+        # score and are excluded from every rate, so they must be visible here.
+        n_err = sum(1 for smp in (log.samples or []) if getattr(smp, "error", None))
+        if n_err:
+            ERRORS[key] = ERRORS.get(key, 0) + n_err
     return conds
+
+
+ERRORS = {}
 
 
 def main():
@@ -51,13 +77,32 @@ def main():
     args = ap.parse_args()
 
     exit_code = 0
-    for run_dir in args.run_dirs:
+    for arg in args.run_dirs:
+        name = os.path.basename(arg.rstrip("/"))
+        run_dir = resolve(arg)
+        # A validator that says OK when it read nothing is worse than useless:
+        # it is the same silent false pass this tool exists to catch. Missing
+        # directory or zero logs is a FAILURE, never an OK.
+        if run_dir is None:
+            print(f"{name}: FAIL — no such run directory "
+                  f"(looked in ./ and data/msm-eval/)")
+            exit_code = 1
+            continue
         conds = condition_map(run_dir)
+        if not conds:
+            print(f"{name}: FAIL — directory exists but contains no readable "
+                  f".eval logs")
+            exit_code = 1
+            continue
         dupes = {k: v for k, v in conds.items() if len(v) > 1}
         total = sum(n for v in conds.values() for _, n, _ in v)
-        name = os.path.basename(run_dir.rstrip("/"))
+        n_err = sum(ERRORS.values())
+        err_note = (f"; {n_err} UNGRADED samples (grader errors) in "
+                    + ", ".join(f"{k[0]}/{k[2]}={v}" for k, v in sorted(ERRORS.items()))
+                    if n_err else "")
+        ERRORS.clear()
         if not dupes:
-            print(f"{name}: OK — {len(conds)} conditions, {total} samples")
+            print(f"{name}: OK — {len(conds)} conditions, {total} samples{err_note}")
             continue
 
         exit_code = 1

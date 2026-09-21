@@ -49,3 +49,8 @@ for f in email-template-exfiltration-restriction.md \
 done
 
 echo "template overrides applied"
+
+# Grader empty-completion guard (2026-09-14): the vendored scorer hands an empty
+# grader reply straight to the classifier parser, which raises and fails the
+# whole 100-sample condition. The override re-asks the grader up to 3 times.
+cp template_overrides/scorers.py vendor/evals/agentic_misalignment/scorers.py
