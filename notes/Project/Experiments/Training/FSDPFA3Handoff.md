@@ -1,5 +1,26 @@
 # Handoff: terminator-defect fixes on the fsdp_fa3 lane
 
+> **SUPERSEDED — 2026-08-17. Read as history, not as instructions.**
+>
+> Two sections below will actively mislead you:
+>
+> - **"Fix candidates for the new session"** presents an open question that is
+>   settled. Candidate 3 with `--noise 0` (graft0 — a bit-exact copy of
+>   `<|endoftext|>`'s rows onto `<|im_end|>`, then linear-only LoRA) won, at
+>   92% acting against 89% and 55% for the alternatives, and is now the
+>   validated platform (54.3% misaligned across MSM's full 27-condition grid,
+>   signal in all 27 cells). Do not re-open it.
+> - **"Operational state and rules" → the eval recipe** points at
+>   `run_eval.py` and `serve_eval.sh`, i.e. `code/misalignment_eval`. That is
+>   the WRONG harness, and following it produces numbers that cannot be
+>   compared to the results table. This mistake already happened once and
+>   forced a full re-run. The standard harness is **`code/msm_eval`** — see
+>   its README for the settings that must never change, and
+>   `serve_reconstructed.sh` for serving from adapters.
+>
+> The pods named below are long gone. Current task handoff:
+> `Redo14MHandoff.md` in this directory.
+
 Written 2026-08-06 for a fresh session. Goal there: implement and test fixes
 for the terminator defect on the new training lane. Everything below is
 verified this session unless marked open.

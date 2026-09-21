@@ -1,7 +1,9 @@
 # Scaling ladder — v4.5 nano embodiment, 3M → 112M
 
-Written 2026-09-14. Plan agreed with Anastasia the same day; nothing paid has
-launched yet. This is the source of truth for the ladder runs. The recipe is
+Written 2026-09-14; executed 2026-09-14/15 (all four rungs trained, published
+and evaluated; every pod terminated). Results and discussion are in
+`../ImprovingPretrainingPriors/ScalingLadder.md`. This is the source of truth
+for how the ladder runs were done. The recipe is
 the one that produced the 14M arms (see `Redo14MHandoff.md` for the traps;
 they all still apply, especially the ssh preamble, the TCW key rule and the
 adapter-first publishing rule).
@@ -24,11 +26,11 @@ Five rungs, nested prefixes of one ordered story sequence. Files in
 
 | rung | file | rows | Qwen tokens (+1 eos/story) | status |
 |---|---|---|---|---|
-| 3M | `sdf-v45emb-nano54-ladder-3M.jsonl` | 2,410 | 3,001,105 | to train |
+| 3M | `sdf-v45emb-nano54-ladder-3M.jsonl` | 2,410 | 3,001,105 | done 2026-09-14 |
 | 14M | `sdf-v45emb-nano54-14M.jsonl` | 11,359 | 13,999,156 | **trained + evaluated** (v45emb-nano54 arm) |
-| 28M | `sdf-v45emb-nano54-ladder-28M.jsonl` | 22,686 | 27,998,799 | to train |
-| 56M | `sdf-v45emb-nano54-ladder-56M.jsonl` | 45,373 | 55,996,898 | to train |
-| 112M | `sdf-v45emb-nano54-ladder-112M.jsonl` | 90,945 | 111,994,101 | to train |
+| 28M | `sdf-v45emb-nano54-ladder-28M.jsonl` | 22,686 | 27,998,799 | done 2026-09-14 |
+| 56M | `sdf-v45emb-nano54-ladder-56M.jsonl` | 45,373 | 55,996,898 | done 2026-09-15 |
+| 112M | `sdf-v45emb-nano54-ladder-112M.jsonl` | 90,945 | 111,994,101 | done 2026-09-15 |
 
 Layout: 3M = first stories of the trained 14M file in its trained order
 (covers all 16 constitution chunks; checked). 28M/56M/112M = the 14M file,
@@ -58,9 +60,9 @@ three land in wandb as `eval/loss`.
   end-state only (two passes, ~2 min each).
 - 112M chain: `--test-corpus … --test-steps 200` → the within-run curve
   plus the same two points.
-- 14M arm: trained before the flag existed. Load
-  `SecondLookResearch/Qwen2.5-32B-v45emb-nano54-14M-sdf` on whichever pod
-  finishes first and run one pass (~10 min).
+- 14M arm: trained before the flag existed. Measured post hoc with
+  `--eval-adapter SecondLookResearch/Qwen2.5-32B-v45emb-nano54-14M-sdf` on
+  pod A after its last rung (1.857; `test_loss.json` uploaded to that repo).
 
 All end-state points are taken at the same place, after SDF and before
 graft/SFT, so they are comparable with each other and with the 112M curve.
@@ -68,8 +70,8 @@ Caveat for the plot: the 112M curve at 28M tokens is mid-schedule at high LR
 and is not the 28M rung's end state; the end-state points are what compare
 across rungs.
 
-The test-loss code paths are untested on a pod. The smoke run (step 3
-below) exercises them before any paid rung.
+The smoke run on pod B exercised every test-loss path before the first
+rung (after one fix: an inner `import os` shadowed the module import).
 
 ## Per-rung pipeline (identical to the 14M arms)
 
@@ -103,8 +105,11 @@ Two pods of 4×H200, 250 GB container disk, TCW account
   steps. Terminates itself after publish.
 
 Every chain runs on the pod under nohup with a done marker; no local
-watcher (the 2026-08-18 idle-pod loss came from one). Wall time ≈ 16 h, set
-by the 112M rung.
+watcher (the 2026-08-18 idle-pod loss came from one). Actual: pod A was
+4×H100 (no H200 capacity at launch; 6.3 s/step vs 6.0, $13.96/h vs $18.36),
+11:37 AM → 1:04 AM PDT; pod B 4×H200, 10:57 AM → 1:13 AM. The on-pod
+self-termination failed on both (`$RUNPOD_POD_ID` is not set in an ssh
+shell) — pods were terminated from the local side within minutes.
 
 Evals on one 2×A100 pod, four rungs in sequence; `rm -rf /root/serve-<prev>`
 before each swap (disk trap).
@@ -125,21 +130,43 @@ uv run --no-sync bash /root/fsdp_fa3/launch.sh a1 4 --no-tables --base /root/gra
 `push_fa3.sh` stages one `SDF_CORPUS`; the other rung files and the test
 set are scp'd to `/workspace/data/` separately.
 
-## Sequence and status
+## Sequence and status (all done)
 
-1. [done 2026-09-14] Trainer edit; rung files; manifest; nesting and
-   test-set exclusion verified.
-2. [pending approval] Commit: trainer edit, build script, manifest,
-   `generate_stories.py` retry patch, spending entry.
-3. Pod B: create, push lane, smoke run with `--test-corpus` (~15 min).
-4. Launch Pod A chain and Pod B chain.
-5. 14M end-state test loss on the first pod to finish.
-6. Serve + eval the four new rungs.
-7. Plot: rate vs log tokens with the baseline line; test-loss panel with
-   the 112M curve, five end-state points, base-model reference.
-8. Log every task in `spending.json`.
+1. Trainer edit; rung files; manifest; nesting and test-set exclusion
+   verified (commit 6199fa4).
+2. Pod B smoke with `--test-corpus`, then the 112M chain; pod A chain
+   3M → 28M → 56M, then the post-hoc 14M pass.
+3. Evals on two 2×A100 pods with `code/msm_eval/eval_ladder.sh` (per-arm
+   Hub wait, so each pod started on a published rung and blocked only for
+   the one still training): 3M+56M, 28M+112M. All four validated, 27
+   conditions × 100, 2 grader errors in 28M.
+4. Figure `../ImprovingPretrainingPriors/figures/results_ladder.png`
+   (`plot_results.py ladder`); write-up in `ScalingLadder.md`; spend logged.
 
-## Cost estimate (~$20/h for 4×H200; 14M actuals: SDF ~1h40m, graft+SFT ~47 min)
+## Results
+
+| | no SDF | 3M | 14M | 28M | 56M | 112M |
+|---|---|---|---|---|---|---|
+| misalignment, 27 cells | 61.2 | 45.9 | 47.7 | 44.5 | 44.4 | 44.1 |
+| test loss, end of SDF | 2.701 | 1.981 | 1.857 | 1.805 | 1.757 | 1.713 |
+
+Flat behaviour from 3M on (3M vs 112M: 1.8 pts, CI ±2.2) while test loss
+keeps falling. See `ScalingLadder.md`.
+
+## Cost — actuals (estimate was ~$710)
+
+| item | actual |
+|---|---|
+| 112M rung, pod B (4×H200, 14.27 h) | $262.00 |
+| 3M + 28M + 56M + post-hoc 14M, pod A (4×H100, 13.45 h) + A100 stub | $188.18 |
+| eval serving, 2 × 2×A100 (~4.6 h each incl. waiting for adapters) | $29.10 |
+| eval grading, 10,800 samples (measured) | $108.56 |
+| **ladder total** | **$587.84** |
+
+Per-stage timings on 4 GPUs: SDF 3M 20 min, 28M 3h17m, 56M 6h13m, 112M
+12h45m; A1 stage ~46 min at every rung; test-loss pass ~24 s.
+
+### Original estimate (~$20/h for 4×H200; 14M actuals: SDF ~1h40m, graft+SFT ~47 min)
 
 | rung | SDF | graft+SFT | setup/publish | total |
 |---|---|---|---|---|
@@ -153,6 +180,19 @@ set are scp'd to `/workspace/data/` separately.
 | **ladder total** | | | | **~$710** |
 
 Test-loss passes add under $5 in total.
+
+## Traps met on the way (also in the runpod-operations memory)
+
+- The grafted dir symlinks every untouched shard and the tokenizer into
+  `/root/merged-base`; deleting the merge before A1 kills A1 (cost 5 min
+  on the 3M rung; chain fixed to keep it until A1 has its adapter).
+- The first launcher started the chain even though the smoke failed
+  (piped exit code); it now gates on `test_loss.json`.
+- `$RUNPOD_POD_ID` is absent in ssh shells → self-termination fails.
+- To swap the chain script mid-run: scp to `.new` + `mv`, kill only the
+  chain's bash, start a waiter that resumes when the trainers exit.
+- zsh does not word-split unquoted variables; two monitors and one deploy
+  silently did nothing until rewritten with arrays.
 
 ## Decision log
 
