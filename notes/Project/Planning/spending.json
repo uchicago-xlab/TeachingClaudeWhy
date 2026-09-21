@@ -1690,6 +1690,36 @@
       "approx": true,
       "status": "spent",
       "allocationId": "seed-05"
+    },
+    {
+      "id": "b78f6bc9-64ca-4b29-ae13-94358fe985af",
+      "date": "2026-08-10",
+      "what": "Tinker + OpenRouter — native-CoT pilot on Qwen3.6-27B (--native-cot, epochs 5, 6 conditions): base + sonnet08 + terra08 arms, 30 samples each. Tests whether the Qwen3-8B sonnet08 non-termination failure transfers to a larger model (it does not; a 10% acting-rate collapse shows up instead). Tinker 241,530 prefill @ $1.86/M + 198,773 sampled @ $5.595/M = ~$1.56; Sonnet 4.6 grading 260,860 in / 24,937 out at $3/$15 list = ~$1.15. Token counts from Inspect logs' model_usage.",
+      "who": "Jack",
+      "amount": 2.71,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "97504d19-33a0-4756-aff2-34e6853291ea",
+      "date": "2026-08-10",
+      "what": "Tinker + OpenRouter — rank-8 LoRA re-run of the Qwen3.6-27B sonnet08 arm (runs/qwen-qwen3-6-27b-r8): tests whether the sonnet-ft acting-rate collapse is over-training/capacity. Train 4 epochs, cookbook lr, epoch 1 selected (val_loss 1.4835, curve ~identical to rank 64) ~$7.95 script estimate. Eval msm-tinker-qwen-qwen3-6-27b-sonnet08-r8 (180 samples): Tinker 511,320 prefill @ $1.86/M + 444,790 sampled @ $5.595/M = ~$3.44; Sonnet 4.6 grading 556,480 in / 61,464 out at $3/$15 list = ~$2.59. Result: harmful 7/180 (3.9%) vs rank-64 8.3% vs base 54.4%; acted 73% vs rank-64 59% vs base 98% — rank 8 recovers some acting but the collapse is the sonnet dataset, not capacity (terra08 rank 64 acts 99%). Token counts from Inspect logs' model_usage.",
+      "who": "Jack",
+      "amount": 13.98,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "407bc30e-fa80-40b0-b09d-3afe00c70d54"
+    },
+    {
+      "id": "22b5a771-1d27-4267-b88b-7f37c31c515a",
+      "date": "2026-08-10",
+      "what": "OpenRouter — refusal-control response regen (Sonnet 5, difficult-advice pipeline --responses-only): COMPLETE, 394/394 samples, run in two passes. Pass 1 was halted at 100/394 on cost (~$9.0 billed) because the ~$3–6 task estimate was inconsistent with the brief's own token math (3 calls × 6k × 394 = 7.1M input ≈ $21 at list before output); after authorization, pass 2 resumed from the checkpoint and finished the remaining 294. Final figure is char/4 token accounting over the delivered artifact, reconstructing all three prompts per sample exactly (stored step-7 system/user, plus the step-8/9 templates refilled with the same constitution excerpt, transcript and critique): 6.47M input + 0.87M output at $3/$15 per 1M = $32.4, i.e. $0.0823/sample (16,408 in + 2,203 out tokens per sample). That matches pass 1's independently measured $0.075–0.081/sample from OpenRouter credits total_usage deltas, so the two methods still agree to ~2%. Total here is $32.4 for the artifact plus the ~$0.8 of in-flight requests billed but never checkpointed when pass 1 was killed. Cost driver: the ~13k-token constitution excerpt is re-sent uncached in all three calls of every sample.",
+      "who": "Jack",
+      "amount": 33.2,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
     }
   ]
 }
