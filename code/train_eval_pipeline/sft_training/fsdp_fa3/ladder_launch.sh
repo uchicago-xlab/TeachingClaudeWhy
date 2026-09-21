@@ -31,7 +31,7 @@ RUNPOD_TCW_API_KEY=$(grep -E '^(export )?RUNPOD_TCW_API_KEY=' "$ENV_FILE" | tail
 export RUNPOD_API_KEY="$RUNPOD_TCW_API_KEY"
 
 if [ ! -f "$HERE/../.pods/$NAME.env" ]; then
-  CONTAINER_DISK_GB=250 bash "$HERE/../create_pod.sh" "$NAME" 4 --gpu-type "NVIDIA H200"
+  CONTAINER_DISK_GB=250 bash "$HERE/../create_pod.sh" "$NAME" 4 --gpu-type "${GPU_TYPE:-NVIDIA H200}"
 fi
 source "$HERE/../.pods/$NAME.env"
 SSH=(ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@$SSH_IP")
@@ -55,8 +55,10 @@ if [ "$SMOKE" = 1 ]; then
   "${SSH[@]}" "$PRE; uv run --no-sync bash /root/fsdp_fa3/launch.sh sdf 4 --smoke \
       --corpus /workspace/data/ladder-${RUNGS[0]}.jsonl --out /workspace/out/smoke \
       --test-corpus /workspace/data/ladder-test.jsonl --test-steps 2 2>&1 | tail -40; \
-      echo '--- test_loss.json ---'; cat /workspace/out/smoke/test_loss.json; rm -rf /workspace/out/smoke"
-  echo "smoke finished on $NAME — check the eval_loss lines above before trusting the chain"
+      echo '--- test_loss.json ---'; cat /workspace/out/smoke/test_loss.json" \
+    || { echo "SMOKE FAILED on $NAME (no test_loss.json) — chain NOT started; pod is still billing" >&2; exit 1; }
+  "${SSH[@]}" "rm -rf /workspace/out/smoke"
+  echo "smoke passed on $NAME — check the eval_loss lines above"
 fi
 
 "${SSH[@]}" "nohup bash /root/fsdp_fa3/ladder_chain.sh $TEST_STEPS ${RUNGS[*]} > /root/ladder-chain.log 2>&1 < /dev/null & echo chain pid \$!"

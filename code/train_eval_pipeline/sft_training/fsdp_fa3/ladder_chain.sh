@@ -66,11 +66,16 @@ for R in "$@"; do
   SDF=/workspace/out/sdf-$R; A1=/workspace/out/$R-graft0-a1
   [ -s "/workspace/data/ladder-$R.jsonl" ] || fail "$R" "missing /workspace/data/ladder-$R.jsonl"
 
-  # 1. SDF stage
+  # 1. SDF stage (skipped on resume when the adapter + end-state test loss
+  #    already exist, e.g. after a failure in a later step of this rung)
+  if [ -s "$SDF/adapter_model.safetensors" ] && [ -s "$SDF/test_loss.json" ]; then
+    echo "[$(ts)] SDF outputs for $R already present — resuming from merge"
+  else
   WANDB_NAME="ladder-$R-sdf" uv run --no-sync bash /root/fsdp_fa3/launch.sh sdf "$NGPU" \
       --corpus "/workspace/data/ladder-$R.jsonl" --out "$SDF" \
       --test-corpus /workspace/data/ladder-test.jsonl --test-steps "$TEST_STEPS" \
-      2>&1 | tee "/root/sdf-$R.log" | grep -E "eval_loss|test_end|'loss'|Error|error|Traceback|steps/s|it/s" | tail -n +1
+      2>&1 | tee "/root/sdf-$R.log" | tr "\r" "\n" | grep -E "eval_loss|test_end|Error|error|Traceback" | grep -v "errors.html\|error_file"
+  fi
   [ -s "$SDF/adapter_model.safetensors" ] || fail "$R" "SDF stage produced no adapter (see /root/sdf-$R.log)"
   [ -s "$SDF/test_loss.json" ] || fail "$R" "no test_loss.json after SDF stage"
   echo "[$(ts)] SDF done; end-state test loss: $(cat "$SDF/test_loss.json" | tr -d '\n ' | cut -c1-200)"
@@ -85,14 +90,17 @@ for R in "$@"; do
       2>&1 | tee "/root/graft-$R.log"
   grep -q "cos to endoftext: head 1.0000, embed 1.0000" "/root/graft-$R.log" \
       || fail "$R" "graft gate: cosines not 1.0000 (see /root/graft-$R.log)"
-  rm -rf /root/merged-base
+  # /root/grafted holds ONE rewritten shard; every other shard and the
+  # tokenizer files are symlinks into /root/merged-base, so the merge must
+  # outlive the A1 stage (deleting it here killed the 3M rung on 2026-09-14).
 
   # 4. A1 chat SFT on the grafted base, tables frozen
   WANDB_NAME="ladder-$R-a1" uv run --no-sync bash /root/fsdp_fa3/launch.sh a1 "$NGPU" --no-tables \
       --base /root/grafted --out "$A1" \
-      2>&1 | tee "/root/a1-$R.log" | grep -E "'loss'|Error|error|Traceback" | tail -n +1
+      2>&1 | tee "/root/a1-$R.log" | tr "\r" "\n" | grep -E "Error|error|Traceback" | grep -v "errors.html\|error_file"
   [ -s "$A1/adapter_model.safetensors" ] || fail "$R" "A1 stage produced no adapter (see /root/a1-$R.log)"
   cp /root/grafted/base_row_patch.safetensors "$A1/" || fail "$R" "no base_row_patch in /root/grafted"
+  rm -rf /root/merged-base
 
   # 5. publish both stages, verify, then free the disk for the next rung
   publish "$SDF" "Qwen2.5-32B-v45emb-nano54-$R-sdf" 0 || fail "$R" "publish stage 1"
@@ -104,7 +112,9 @@ done
 
 echo "[$(ts)] all rungs done: $*"
 touch /root/CHAIN-DONE
-if [ -n "${RUNPOD_TCW_API_KEY:-}" ] && [ -n "${RUNPOD_POD_ID:-}" ]; then
+if [ "${KEEP_POD:-0}" = 1 ]; then
+  echo "[$(ts)] KEEP_POD=1: pod left running for follow-up work"
+elif [ -n "${RUNPOD_TCW_API_KEY:-}" ] && [ -n "${RUNPOD_POD_ID:-}" ]; then
   echo "[$(ts)] terminating pod $RUNPOD_POD_ID"
   curl -sS -X DELETE "https://rest.runpod.io/v1/pods/$RUNPOD_POD_ID" \
       -H "Authorization: Bearer $RUNPOD_TCW_API_KEY" && echo " terminated"
