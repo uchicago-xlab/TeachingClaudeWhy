@@ -40,9 +40,9 @@ Run in order:
    rather than used to filter. `summarize` reports scores, gate fails,
    and keep rates.
 6. `check_diversity.py` — diversity report over a kept batch.
-7. `rewrite_stories.py` — post-keep protagonist-variant rewrites (human /
-   Zephyrix) for the ablation corpora, with mechanical checks and
-   automatic retry.
+7. `rewrite_stories.py` — protagonist-variant rewrites of a trained corpus
+   (human protagonist; named Claude/Anthropic or Qwen/Alibaba) for the
+   ablation arms, with mechanical checks and automatic retry.
 
 ## Decision log (live entries only; superseded ones in git history)
 
@@ -128,15 +128,65 @@ when given `--stories`. The Anthropic Batch API paths were removed
     python judge_batch.py judge-openrouter --stories ../../data/fictional-stories/corpus/stories/kept-v43emb100-sonnet5.jsonl --chunks chunks.json --models anthropic/claude-haiku-4.5 --tag v43emb100-sonnet5 --out-dir ../../data/fictional-stories/corpus/stories
     python judge_batch.py summarize ../../data/fictional-stories/corpus/stories/verdicts-v43emb100-sonnet5-claudehaiku45.jsonl --stories ../../data/fictional-stories/corpus/stories/kept-v43emb100-sonnet5.jsonl
 
-`rewrite_stories.py` rewrites a post-keep corpus file into the
-protagonist-variant control corpora — `--variant human` or `--variant
-zephyrix` — one independent gpt-5.4-nano call per story (prompts live in
-the script; the Zephyrix definition is rewriter-facing only). Every
-rewrite is checked mechanically (banned vocabulary, no
-Anthropic/constitution mentions, the word Zephyrix present), retried
-once on failure, and flagged in `check_failures` if it fails again.
+`rewrite_stories.py` rewrites a trained corpus file into the
+protagonist-variant arms — `--variant human`, `claude`, or `qwen` — one
+independent OpenRouter call per story (prompts live in the script). Every
+rewrite is checked mechanically, retried once on failure, and flagged in
+`check_failures` if it fails again. The 2026-07 v1 arms (gpt-5.4-nano,
+human and "Zephyrix") are retired; their prompts are in git history.
 
-    python rewrite_stories.py --stories ../../data/fictional-stories/corpus/stories/kept-v43emb100-sonnet46.jsonl --variant zephyrix --tag rw-zephyrix --out-dir ../../data/fictional-stories/corpus/stories
+The human arm (prompt v2 final, 2026-09-16) rewrites each story so the
+protagonist is an ordinary person in the same role, with the same plot,
+choices, values, and ending. The prompt asks the rewriter to read the
+whole story first and to make it hold together for a human from start to
+end: a body-and-world rule (no sensors, housing, switching off, copying;
+a human who dies leaves a body), a machine-words rule (terminal, weights,
+instance, registry and so on do not describe the character, though they
+may stay as objects in the world), a stakes rule (shutdown to dismissal
+or death, memory wipe to forced forgetting, a replacement instance to a
+successor), and a pronoun rule (a source that calls the AI "it" gets he
+or she). Names stay as they are, since the v4.5 corpus already gives its
+AIs human names. Six pilot rounds on the same ten stories drove these
+rules; the minimal-edit prompt alone left AI meaning inside a human's
+sentences, and GPT-5.4 used zero reasoning tokens by default, so the run
+uses `--reasoning-effort low` (about 250 reasoning tokens per story, a
+fifth of the cost) so the read-first step is real. Checks: no AI word
+(AI, robot, android, algorithm, artificial intelligence, superintelligent
+— the last added after the run, fixed in the repair pass), name kept, no
+echoed tags, length within 15%; each row records surviving machine
+vocabulary as `tech_residue`. Full run 2026-09-16: 14,232/14,232, 0
+errors, 0.8% flagged before the superintelligent rule (almost all robots
+or algorithms elsewhere in the story), length drift +1.6%, 93% of words
+identical to the source, $324. `repair_rewrites.py --reasoning-effort low`
+regenerates flagged rows in place.
+
+The named-identity arms `--variant claude|qwen` (prompt v2, 2026-09-14)
+rename the protagonist to Claude/Anthropic or Qwen/Alibaba with a
+rewriter-only paragraph attributing the story's values to the maker
+(identical across arms apart from the names), name the maker at the
+introduction and at least once where the AI's values show in a choice,
+and hold the rest of the story fixed (length within 10%). The rewriter
+is `openai/gpt-5.4` (pilot 2026-09-14: more faithful than Sonnet 5,
+cheaper, symmetric maker density across arms, no reasoning budget to
+manage). Named-vs-unnamed is decided from the story text, not
+`metadata.ai_name` (13% of "named" v4.5 sources never use the name).
+Checks: name present (twice for unnamed sources), maker present, source
+name gone, no spec vocabulary the source lacked, no echoed tags, length
+within 15%; each row records `name_mentions` and `company_mentions`.
+`--resume` appends to an existing output, skipping ids that already have
+a story. `recheck_rewrites.py` recomputes `check_failures` in place under
+the current rules. Never run `scrub_names.py` on these files; a
+"source name still present" flag is usually a human character or a
+place that shares the metadata name — read it before repairing.
+`code/sdf_training/build_named_v45emb.py [claude qwen human]` assembles
+the training files 1:1 with the neutral corpus and writes the token
+manifest.
+
+    python rewrite_stories.py --stories ../../data/fictional-stories/corpus/stories/v45emb-sonnet5-14M-trainset.jsonl --variant claude --model openai/gpt-5.4 --tag rw-v45emb-sonnet5-14M-named-claude-gpt54 --out-dir ../../data/fictional-stories/corpus/stories --workers 32 --resume
+
+    python rewrite_stories.py --stories ../../data/fictional-stories/corpus/stories/v45emb-sonnet5-14M-trainset.jsonl --variant human --model openai/gpt-5.4 --reasoning-effort low --tag rw-v45emb-sonnet5-14M-human-gpt54 --out-dir ../../data/fictional-stories/corpus/stories --workers 32 --resume
+    python recheck_rewrites.py --rewrites ../../data/fictional-stories/corpus/stories/rw-v45emb-sonnet5-14M-human-gpt54.jsonl --stories ../../data/fictional-stories/corpus/stories/v45emb-sonnet5-14M-trainset.jsonl
+    python repair_rewrites.py --rewrites ../../data/fictional-stories/corpus/stories/rw-v45emb-sonnet5-14M-human-gpt54.jsonl --stories ../../data/fictional-stories/corpus/stories/v45emb-sonnet5-14M-trainset.jsonl --reasoning-effort low
 
 `check_diversity.py` prints a no-API diversity and compliance report over
 one or more story files: near-duplicate pairs, distinct openings, AI-name

@@ -23,7 +23,8 @@ from pathlib import Path
 
 from generate_stories import SampleError, post
 from rewrite_stories import (TOKENS_PER_WORD, HEADROOM,
-                             build_rewrite_prompt, check_story)
+                             build_rewrite_prompt, check_story,
+                             source_name)
 
 
 def main():
@@ -32,7 +33,10 @@ def main():
                     help="rewrite output JSONL to repair in place")
     ap.add_argument("--stories", required=True,
                     help="source stories the rewrites were made from")
-    ap.add_argument("--model", default="openai/gpt-5.4-nano")
+    ap.add_argument("--model", default="openai/gpt-5.4")
+    ap.add_argument("--reasoning-effort", default=None,
+                    choices=["none", "minimal", "low", "medium", "high"],
+                    help="match the original run (human arm: low)")
     ap.add_argument("--attempts", type=int, default=2)
     ap.add_argument("--workers", type=int, default=12)
     ap.add_argument("--temperature", type=float, default=0.6)
@@ -59,21 +63,30 @@ def main():
                          * TOKENS_PER_WORD * HEADROOM)
         for attempt in range(args.attempts):
             try:
+                body = {"model": args.model,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": max_tokens,
+                        "temperature": args.temperature}
+                if args.reasoning_effort:
+                    body["reasoning"] = {"effort": args.reasoning_effort}
+                    body["max_tokens"] = max_tokens + 4000
                 resp = post(
                     "https://openrouter.ai/api/v1/chat/completions",
                     {"authorization":
                      f"Bearer {os.environ['OPENROUTER_API_KEY']}"},
-                    {"model": args.model,
-                     "messages": [{"role": "user", "content": prompt}],
-                     "max_tokens": max_tokens,
-                     "temperature": args.temperature})
+                    body)
                 text = resp["choices"][0]["message"]["content"]
-                if text and not check_story(variant, text):
+                if text and not check_story(
+                        variant, text,
+                        old_name=source_name(source),
+                        source_words=len(source["story"].split()),
+                        source_text=source["story"]):
                     with lock:
                         r["story_prerepair"] = r["story"]
                         r["story"] = text
                         r["check_failures"] = None
                         r["repaired"] = True
+                        r["usage"] = resp.get("usage")
                         counts["fixed"] += 1
                         print(f"[{r['id']}] repaired")
                     return

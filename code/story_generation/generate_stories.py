@@ -374,6 +374,24 @@ def cacheable_content(model, prompt):
             {"type": "text", "text": prompt[j:]}]
 
 
+# Each generator family exposes its reasoning control differently, so the
+# --thinking mode selects both the request field and the max_tokens headroom
+# that mode needs (thinking tokens bill against max_tokens):
+#   off      no reasoning                     (gpt-5.4-nano)
+#   budget   an explicit token budget         (Haiku 4.5)
+#   adaptive model decides                    (Sonnet 5)
+#   effort   OpenAI-style low/medium/high     (gpt-5.6-terra)
+# Effort headroom is per level and deliberately generous: an undershot cap
+# truncates the story rather than the plan, since reasoning is emitted first.
+EFFORT_EXTRA = {"low": 4000, "medium": 10000, "high": 20000}
+REASONING = {
+    "off": lambda a: {"enabled": False},
+    "budget": lambda a: {"max_tokens": a.thinking_budget},
+    "adaptive": lambda a: {"enabled": True},
+    "effort": lambda a: {"effort": a.thinking_effort},
+}
+
+
 def sample_openrouter(model, prompt, max_tokens, args):
     resp = post(
         "https://openrouter.ai/api/v1/chat/completions",
@@ -387,9 +405,7 @@ def sample_openrouter(model, prompt, max_tokens, args):
          # thinking with no headroom silently eats the whole token budget
          # (59 empty completions in a 2026-07-24 patch run, 37k thinking
          # tokens, zero story text).
-         "reasoning": ({"enabled": False} if args.thinking == "off"
-                       else {"enabled": True} if args.thinking == "adaptive"
-                       else {"max_tokens": args.thinking_budget}),
+         "reasoning": REASONING[args.thinking](args),
          "temperature": args.temperature, "top_p": args.top_p})
     choice = resp["choices"][0]
     return (choice["message"]["content"], choice.get("finish_reason"),
@@ -411,7 +427,9 @@ def run(args):
     # allowance for adaptive (Sonnet 5 plans ran 1.7k-3.6k in the
     # 2026-08-27 pilots, and an undershot cap truncates the story).
     thinking_extra = {"off": 0, "budget": args.thinking_budget,
-                      "adaptive": 15000}[args.thinking]
+                      "adaptive": 15000,
+                      "effort": EFFORT_EXTRA.get(args.thinking_effort, 20000)
+                      }[args.thinking]
     jobs = [(r["prompt"],
              int(r["metadata"]["length_words"]
                  * TOKENS_PER_WORD * args.headroom) + thinking_extra,
@@ -436,6 +454,8 @@ def run(args):
         "thinking": args.thinking,
         "thinking_budget": (args.thinking_budget
                             if args.thinking == "budget" else None),
+        "thinking_effort": (args.thinking_effort
+                            if args.thinking == "effort" else None),
         "provider": "openrouter", "model": args.model,
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "temperature": args.temperature,
@@ -517,15 +537,20 @@ def main():
     r.add_argument("--model", required=True, help="OpenRouter model id")
     r.add_argument("--tag", required=True)
     r.add_argument("--out-dir", required=True)
-    r.add_argument("--thinking", choices=["off", "budget", "adaptive"],
+    r.add_argument("--thinking",
+                   choices=["off", "budget", "adaptive", "effort"],
                    default="off",
                    help="plan-first reasoning pass for v4.5 prompts: "
                         "'budget' for budget-style models (Haiku 4.5; "
                         "--thinking-budget tokens), 'adaptive' for "
-                        "Sonnet 5. Adds headroom to max_tokens "
-                        "automatically.")
+                        "Sonnet 5, 'effort' for OpenAI reasoning models "
+                        "(gpt-5.6-terra; --thinking-effort). Adds "
+                        "headroom to max_tokens automatically.")
     r.add_argument("--thinking-budget", type=int, default=1024,
                    help="reasoning token budget for --thinking budget")
+    r.add_argument("--thinking-effort",
+                   choices=["low", "medium", "high"], default="high",
+                   help="reasoning effort for --thinking effort")
     r.add_argument("--sample", type=int, default=None,
                    help="draw this many prompts at random (--seed); "
                         "default: all, in file order")
