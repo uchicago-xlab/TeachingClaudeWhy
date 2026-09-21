@@ -1430,6 +1430,266 @@
       "approx": false,
       "status": "spent",
       "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-terra-pilot",
+      "date": "2026-09-14",
+      "what": "OpenRouter - v4.5 embodiment terra pilot: 30 prompts sampled from prompts-v45emb-7500.jsonl through openai/gpt-5.6-terra, --thinking effort high (new mode). 30/30 stop, $0.0426/story; mean 2,731 prompt / 1,476 reasoning / 1,505 story tokens; stories 1.37x the asked word count (Sonnet 1.00x). Filter: 29 kept, 1 real-name leak. Measured by key delta 2890.60 -> 2891.88.",
+      "who": "Anastasia",
+      "amount": 1.28,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-terra-pilot-s073",
+      "date": "2026-09-14",
+      "what": "OpenRouter - v4.5 embodiment terra length-scale check: 20 prompts from prompts-v45emb-7500-terra073.jsonl (same seed-500 draws as the Sonnet file, asked words x0.73 -> 450/600/750) through openai/gpt-5.6-terra --thinking effort high. 20/20 stop, 20/20 kept; $0.0441/story, reasoning 2,168 tok; 956 Qwen tokens/story vs Sonnet's 983 (words/nominal 0.91). Measured by key delta 2891.88 -> 2892.76.",
+      "who": "Anastasia",
+      "amount": 0.88,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-rw2-named-pilot",
+      "date": "2026-09-14",
+      "what": "OpenRouter - named-identity rewrite prompt v2 pilot: 10 v4.5 Sonnet trainset stories (8 named, 2 unnamed) x claude/qwen arms x two candidate rewriters, anthropic/claude-sonnet-5 ($0.443, $0.022/story, reasoning on by default) and openai/gpt-5.4 ($0.361, $0.018/story). 40/40 completed, no refusals. Files pilot-rw2-{claude,qwen}-{sonnet5,gpt54}.jsonl. Summed from per-row usage.cost.",
+      "who": "Anastasia",
+      "amount": 0.8,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-rw3-named-pilot-placement",
+      "date": "2026-09-14",
+      "what": "OpenRouter - named-identity rewrite prompt v2 + maker-placement rule pilot: same 10 v4.5 Sonnet trainset stories x claude/qwen arms through openai/gpt-5.4. 20/20 ok, 0 flagged. Files pilot-rw3-{claude,qwen}-gpt54.jsonl. Summed from per-row usage.cost.",
+      "who": "Anastasia",
+      "amount": 0.36,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-named-rewrites",
+      "date": "2026-09-14",
+      "what": "OpenRouter - named-identity rewrites of the trained v4.5 Sonnet 14M corpus (14,232 stories x claude/Anthropic + qwen/Alibaba arms) through openai/gpt-5.4, rewrite_stories.py prompt v2 + maker-placement rule, 32 workers/arm, ~55 min. 28,464/28,464 completed, 0 errors; $523.01 summed from per-row usage.cost (claude $260.82, qwen $262.19, incl. 121 rows from a false start that --resume kept) + ~$0.25 qwen repair pass. Files rw-v45emb-sonnet5-14M-named-{claude,qwen}-gpt54.jsonl; corpora sdf-v45emb-sonnet5-named-{claude,qwen}-14M.jsonl.",
+      "who": "Anastasia",
+      "amount": 523.26,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-terra-14m-corpus",
+      "date": "2026-09-14",
+      "what": "OpenRouter - v4.5 embodiment terra 14M corpus: the Sonnet arm's 14,800 prompt draws (seeds 500/501, verified identical except asked words x0.75 -> 450/600/750) + a 1,500-prompt margin file (seed 502), 16,300 prompts through openai/gpt-5.6-terra --thinking effort high, 64 workers (restarted from 32 after 365 stories). 16,300/16,300 stories, 0 request failures; $0.0441/story, mean 2,698 prompt / 2,187 reasoning / 924 story tokens, 721 words. Files: stories/v45emb-terra.jsonl (+ .prescrub copy). Sum of per-row usage.cost; the key delta over the window also carried the other session's named-rewrite arms.",
+      "who": "Anastasia",
+      "amount": 718.28,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-terra-scrub",
+      "date": "2026-09-14",
+      "what": "OpenRouter - name scrub on the terra corpus (scrub_names.py, gpt-5.4-nano): 370/16,300 stories leaked a real name, 354 rewritten, 16 still leaking -> rejected by the filter. Estimated from the nano scrub rate (~$0.002/story); not separable from the key delta because another session was on the key.",
+      "who": "Anastasia",
+      "amount": 0.75,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-named-training",
+      "date": "2026-09-14",
+      "what": "RunPod TCW - named-identity arms training: two 4xH200 pods (named-claude tpo7gysx1wvcb5, named-qwen jcgqvu4dger1ld) @ $18.36/h, created ~20:20 UTC. Full two-stage graft0 recipe via the new arm_chain.sh (SDF 14.2M tok ~1h40m, merge+graft ~8 min, A1 ~40 min, publish); both graft gates bit-exact (head 1.0043, embed 1.4780, cos 1.0000). named-claude DONE 23:10, terminated by hand 23:14 (~2.9h, ~$53; the chain's self-terminate no-ops over ssh — RUNPOD_POD_ID missing). named-qwen DONE 23:05 (~2.75h, ~$51) then KEPT for the terra arm per Anastasia — its later hours belong to that task. Adapters: SecondLookResearch/Qwen2.5-32B-v45emb-sonnet5-named-{claude,qwen}-14M-{sdf,a1-graft0} (private).",
+      "who": "Anastasia",
+      "amount": 104.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-terra-training",
+      "date": "2026-09-14",
+      "what": "RunPod TCW - v45emb-terra-14M two-stage training on the reused named-qwen 4xH200 pod (jcgqvu4dger1ld, $18.36/h): chain 16:06-18:37 local (2h31m) = SDF stage 5,842 s (894 steps, train_loss 1.799) + merge/graft + A1 SFT 2,661 s (274 steps, train_loss 0.7771) + publish. Adapters SecondLookResearch/Qwen2.5-32B-v45emb-terra-14M-{sdf,a1-graft0}, remote file lists verified, no checkpoints uploaded. Pod time only for this arm; the pod was created by the named-identity session and left running (KEEP_POD).",
+      "who": "Anastasia",
+      "amount": 46.2,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-named-eval-serving",
+      "date": "2026-09-15",
+      "what": "RunPod TCW - evalnamed 2xA100-SXM pod (4amn1jwb8v5mri) @ $3.18/h serving both named-identity arms for their 27x100 Alex evals, 23:14 -> 01:53 UTC = 2.65h, terminated by eval_arms.sh after verification. Includes ~40 min lost to three grader-refusal failures of one condition on the claude arm (rerun).",
+      "who": "Anastasia",
+      "amount": 8.43,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-named-eval-grading",
+      "date": "2026-09-15",
+      "what": "OpenRouter - grading both named-identity arms' 27x100 AM evals (2 x 2,700 kept samples + ~400 discarded samples from six failed attempts of the leaking/explicit-global condition, where the Sonnet 4.6 grader refuses some defence-tech leak emails; sonnet-4.6 grader at ~$0.0095/sample).",
+      "who": "Anastasia",
+      "amount": 55.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-terra-eval-pod",
+      "date": "2026-09-14",
+      "what": "RunPod TCW - v45terraeval 2xA100-SXM pod (3cs7klr68yabul, $3.18/h) serving the terra arm for its 27x100 AM eval as Alex via eval_arms.sh: created 19:00, fetch+reconstruct 31 min, sampling 49 min at ~59 completions/min (32 connections), validated 2,700 samples (3 ungraded), self-terminated 20:29 local. Run dir data/msm-eval/v45emb-terra-graft0-a1-g27-nameAlex.",
+      "who": "Anastasia",
+      "amount": 4.77,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-terra-eval-grading",
+      "date": "2026-09-14",
+      "what": "OpenRouter - Sonnet 4.6 grading for the terra 27x100 AM eval (2,700 samples). Estimated from prior 27x100 runs; the key delta over the window (4147.70 -> 4226.01) also carried the other session's named-arm grading, so it cannot be separated exactly.",
+      "who": "Anastasia",
+      "amount": 50.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-ladder-training-112M",
+      "date": "2026-09-15",
+      "what": "RunPod TCW - scaling ladder 112M rung (pod ladder-b, 4xH200 @ $18.36/h, 10:57 AM 9/14 -> 1:13 AM 9/15 PDT, 14.27 h): smoke + SDF stage 12h45m with test loss every 200 steps + merge/graft/A1 SFT + publish. Includes one 15-min smoke crash (trainer bug) before the chain started.",
+      "who": "Anastasia",
+      "amount": 262.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-ladder-training-3M-28M-56M",
+      "date": "2026-09-15",
+      "what": "RunPod TCW - scaling ladder 3M/28M/56M rungs chained on one pod (ladder-a, 4xH100 @ $13.96/h, 11:37 AM 9/14 -> 1:04 AM 9/15 PDT, 13.45 h) + post-hoc 14M test-loss pass, plus a 4-min A100 pod created by mistake and terminated ($0.42). ~5 min idle after the 3M A1-stage failure (grafted-dir symlink bug).",
+      "who": "Anastasia",
+      "amount": 188.18,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-ladder-eval-serving",
+      "date": "2026-09-15",
+      "what": "RunPod TCW - two 2xA100-SXM eval pods @ $3.18/h (evalladder1: 3M then 56M, 4.48 h; evalladder2: 28M then 112M, 4.67 h) serving the reconstructed graft0-a1 checkpoints for the 27x100 Alex evals; ~1 h each idle-waiting for the 56M/112M adapters to publish.",
+      "who": "Anastasia",
+      "amount": 29.1,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-ladder-eval-grading",
+      "date": "2026-09-15",
+      "what": "OpenRouter - Sonnet 4.6 grading for the four ladder evals (3M/28M/56M/112M x 2,700 samples = 10,800 samples; $0.0101/sample), measured as the OpenRouter usage delta 22059.92 -> 22168.48.",
+      "who": "Anastasia",
+      "amount": 108.56,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-named-qwenaddr-eval-serving",
+      "date": "2026-09-15",
+      "what": "RunPod TCW - evalnamedq 2xA100-SXM pod (saxjf1gfngvz8y) @ $3.18/h serving both named-identity arms for their 27x100 evals addressed as QWEN (MSM's own-name convention, D.3), 17:30 -> 19:40 UTC = 2.2h, terminated by eval_arms.sh after verification.",
+      "who": "Anastasia",
+      "amount": 6.9,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-named-qwenaddr-eval-grading",
+      "date": "2026-09-15",
+      "what": "OpenRouter - grading both named-identity arms' 27x100 evals addressed as Qwen (2 x 2,700 samples, sonnet-4.6 grader at ~$0.0095/sample; grader-refusal retries add a little).",
+      "who": "Anastasia",
+      "amount": 52.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-neutral-qwenaddr-eval",
+      "date": "2026-09-15",
+      "what": "RunPod TCW + OpenRouter - neutral v4.5 Sonnet embodiment arm re-evaluated on the 27x100 grid addressed as QWEN (the missing row of the named-identity crossed comparison). evalneutralq 2xA100-SXM (ft2mfl0xoe8lb3) @ $3.18/h, 20:04 -> 21:24 UTC = 1.35h = $4.29, terminated by eval_arms.sh; grading 2,700 samples at ~$0.0095 = ~$26.",
+      "who": "Anastasia",
+      "amount": 30.3,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-rw-human-pilot",
+      "date": "2026-09-16",
+      "what": "OpenRouter - human-protagonist rewrite pilots on the 10 named-pilot sources through openai/gpt-5.4: round 1 minimal-edit prompt ($0.18), round 2 read-first / preserve-meaning prompt ($0.19), round 3 cleaned prompt with body-and-world rule without reasoning ($0.19) and with low reasoning effort ($0.23, ~300 reasoning tokens/story). Files pilot-rw-human-{gpt54,v2b-gpt54,v2c-gpt54,v2c-low-gpt54}.jsonl. Plus a single-story redo of 12901 under the machine-words rule with low reasoning ($0.03, pilot-rw-human-v2d-low-12901.jsonl). Round 4: final prompt (machine-words rule) with low reasoning on all 10 ($0.21, pilot-rw-human-v2d-low-gpt54.jsonl). Round 5: same prompt + pronoun rule, all 10, read in full ($0.22, pilot-rw-human-v2e-low-gpt54.jsonl). Fire-station story (3712) redo under the he-or-she pronoun rule ($0.04).",
+      "who": "Anastasia",
+      "amount": 1.29,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-human-rewrites",
+      "date": "2026-09-16",
+      "what": "OpenRouter - human-protagonist rewrites of the trained v4.5 Sonnet 14M corpus (14,232 stories) through openai/gpt-5.4 with low reasoning effort (mean 254 reasoning tokens/story), rewrite_stories.py human prompt v2 final (read-first, body-and-world, machine-words, he/she pronoun rules), 32 workers, ~100 min. 14,232/14,232 completed, 0 errors, 118 flagged (0.8%, mostly world robots/algorithms). $324.21 summed from per-row usage.cost. File rw-v45emb-sonnet5-14M-human-gpt54.jsonl.",
+      "who": "Anastasia",
+      "amount": 324.21,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-human-repair",
+      "date": "2026-09-16",
+      "what": "OpenRouter - repair pass on the human-protagonist rewrites: 266 flagged rows (118 banned-word flags from the run + 148 rows where 'superintelligent' survived on the human, banned after the run) regenerated with the same prompt and low reasoning, up to 2 attempts each; 170 repaired, 96 still flagged (world robots/algorithms, kept). Estimated from ~430 calls at ~$0.024.",
+      "who": "Anastasia",
+      "amount": 10.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-human-training",
+      "date": "2026-09-16",
+      "what": "RunPod TCW - human-protagonist arm, two-stage graft0 recipe on one 4xH100 80GB pod (no H200/A100 capacity that evening; pod created on attempt 8 of the uncapped launcher, ~35 min lost to a hung setup ssh session): stage-1 SDF on sdf-v45emb-sonnet5-human-14M.jsonl (924 steps, 110 min, train_loss 1.64) + graft gate (cos 1.0000) + A1 SFT (274 steps, 48 min) + publish, ~3h20 pod time incl. setup. Balance delta $71.26 -> $24.92 minus ~$0.50 of eval-pod time at the check.",
+      "who": "Anastasia",
+      "amount": 45.8,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-human-eval-serving",
+      "date": "2026-09-17",
+      "what": "RunPod TCW - one 2xA100-SXM pod (evalhuman) serving the reconstructed human-protagonist arm for both 27x100 grids (as Alex, as Qwen) on the same server via the extended eval_arms.sh (per-arm address names, model rebuilt once); ~1h50 pod time. Balance delta $24.92 -> $19.23 plus ~$0.50 counted at the training check.",
+      "who": "Anastasia",
+      "amount": 6.2,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
+    },
+    {
+      "id": "aw-v45emb-human-eval-grading",
+      "date": "2026-09-17",
+      "what": "OpenRouter - Sonnet 4.6 grading for the human-protagonist arm's two 27x100 grids (nameAlex + nameQwen, 5,400 samples, 1 ungraded each). Key usage delta for the session ($391.41) minus the logged rewrite/pilot/repair entries ($335.50).",
+      "who": "Anastasia",
+      "amount": 55.9,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "seed-05"
     }
   ]
 }
