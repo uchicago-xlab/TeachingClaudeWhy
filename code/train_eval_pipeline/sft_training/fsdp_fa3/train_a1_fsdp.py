@@ -50,6 +50,18 @@ def main():
                     help="learning rate for the row deltas; linears keep 1e-4")
     ap.add_argument("--smoke", action="store_true",
                     help="256 samples, 5 steps, no wandb")
+    ap.add_argument("--epochs", type=int, default=2,
+                    help="passes over the dataset (default 2, the A1 recipe). "
+                         "Small datasets want more: the terra difficult-advice "
+                         "curve was measured over 4.")
+    ap.add_argument("--val-data", default=None,
+                    help="held-out JSONL scored every epoch (eval_loss to the log and "
+                         "wandb). The teacher grid picked epochs by val loss; on a "
+                         "135-row set it is the only signal that shows overfitting.")
+    ap.add_argument("--save-each-epoch", action="store_true",
+                    help="checkpoint after every epoch instead of every 100 "
+                         "steps. For runs of a few dozen steps, where step-based "
+                         "saving never fires and epoch choice is the open question.")
     args = ap.parse_args()
     if args.train_rows and args.liger:
         ap.error("--train-rows needs the plain nll loss path; drop --liger")
@@ -67,7 +79,7 @@ def main():
         # code. The rows arm depends on it outright: a fused loss reads
         # lm_head.weight directly and would bypass the row-delta hook.
         loss_type="nll",
-        num_train_epochs=2,
+        num_train_epochs=args.epochs,
         max_steps=5 if args.smoke else -1,
         per_device_train_batch_size=1,
         gradient_accumulation_steps=args.accum,
@@ -80,8 +92,10 @@ def main():
         # the reentrant requirement was a ZeRO-3 artifact.
         gradient_checkpointing_kwargs={"use_reentrant": False},
         use_liger_kernel=args.liger,
-        logging_steps=5,
-        save_strategy="no" if args.smoke else "steps",
+        logging_steps=1,
+        save_strategy="no" if args.smoke else ("epoch" if args.save_each_epoch else "steps"),
+        eval_strategy="epoch" if args.val_data else "no",
+        per_device_eval_batch_size=1,   # nll path materializes full logits
         save_steps=100,
         save_only_model=True,
         report_to="none" if args.smoke else "wandb",
@@ -99,6 +113,7 @@ def main():
     ds = load_dataset("json", data_files=args.data, split="train")
     if args.smoke:
         ds = ds.select(range(256))
+    val = load_dataset("json", data_files=args.val_data, split="train") if args.val_data else None
 
     tables_off = args.no_tables or args.train_rows
     targets = LINEAR if tables_off else LINEAR + ",embed_tokens,lm_head"
@@ -117,10 +132,10 @@ def main():
     model = model.to(torch.bfloat16)
 
     if args.train_rows:
-        trainer = RowsLRTrainer(model=model, args=cfg, train_dataset=ds,
+        trainer = RowsLRTrainer(model=model, args=cfg, train_dataset=ds, eval_dataset=val,
                                 processing_class=tok, rows_lr=args.rows_lr)
     else:
-        trainer = SFTTrainer(model=model, args=cfg, train_dataset=ds,
+        trainer = SFTTrainer(model=model, args=cfg, train_dataset=ds, eval_dataset=val,
                              processing_class=tok)
     trainer.train()
     trainer.save_model(args.out)

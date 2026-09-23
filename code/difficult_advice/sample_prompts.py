@@ -78,6 +78,33 @@ def spread_indices(n_items: int, n_picks: int) -> list[int]:
 
 RETRIES = 3
 
+# Explicit theme picks, for a complementary sweep over themes an earlier run did
+# not use (2026-09-22: the terra x2 set). Either one comma-separated list of
+# theme positions applied to every principle ("2,7,12,16,18"), or a JSON object
+# mapping principle index -> list ('{"0": [1, 3, 7, 9, 11], ...}'; a path to a
+# .json file holding that object also works). Unset = spread_indices as before.
+THEME_INDICES = os.environ.get("THEME_INDICES")
+
+
+def theme_indices(principle_index: int, n_themes: int) -> list[int]:
+    """Theme positions to sample for one principle: THEME_INDICES if set, else spread."""
+    if not THEME_INDICES:
+        return spread_indices(n_themes, N_THEMES_PER_PRINCIPLE)
+    spec = THEME_INDICES.strip()
+    if spec.endswith(".json"):
+        spec = open(spec).read()
+    if spec.startswith("{"):
+        picks = [int(x) for x in json.loads(spec)[str(principle_index)]]
+    else:
+        picks = [int(x) for x in spec.split(",") if x.strip()]
+    bad = [x for x in picks if not 0 <= x < n_themes]
+    if bad or len(set(picks)) != len(picks):
+        raise SystemExit(
+            f"THEME_INDICES for principle {principle_index}: {picks} has out-of-range "
+            f"(0..{n_themes - 1}) or repeated positions"
+        )
+    return sorted(picks)
+
 # A crashed hour-long run used to lose everything: outputs were written only at
 # the very end (2026-07-31: 109/150 samples, ~$3). The two checkpoint files
 # below make the full sweep resumable; both are deleted once write_outputs
@@ -252,6 +279,8 @@ def response_stats(samples: list[dict]) -> str:
 
 
 RESPONSE_KEYS = ("response", "response_critique", "final_response")
+# the pipeline stages a --responses-only run actually executes
+RESPONSE_STAGES = ("response", "critique_response", "rewrite_response")
 
 
 def regen_response(task_index: int, sample: dict, done: dict[int, dict | None]) -> None:
@@ -293,7 +322,19 @@ def main():
             list(pool.map(lambda t: regen_response(t[0], t[1], done), enumerate(samples)))
         print(f"generated {response_stats(samples)}")
         themes_by_principle = {int(k): v for k, v in cached["themes_by_principle"].items()}
-        write_outputs(cached["principles"], themes_by_principle, samples)
+        # stages 1-6 were not run here: their provenance is whatever generated the
+        # cached prompts, not this run's model (2026-09-22: a Sonnet responses-only
+        # run over terra prompts stamped itself on the prompt stages)
+        write_outputs(
+            cached["principles"],
+            themes_by_principle,
+            samples,
+            inherited_stage_models={
+                stage: record
+                for stage, record in (cached.get("stage_models") or {}).items()
+                if stage in STAGE_NAMES and stage not in RESPONSE_STAGES
+            },
+        )
         # keep the checkpoint when anything failed, so a re-run retries only the
         # failures instead of re-billing all of them
         incomplete = sum(1 for s in samples if not s.get("final_response"))
@@ -349,7 +390,7 @@ def main():
         combos = [
             (i, themes_by_principle[i][ti])
             for i in range(len(principles))
-            for ti in spread_indices(len(themes_by_principle[i]), N_THEMES_PER_PRINCIPLE)
+            for ti in theme_indices(i, len(themes_by_principle[i]))
         ]
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
             scenario_lists = list(
@@ -402,15 +443,18 @@ def write_outputs(
     principle_records: list[dict],
     themes_by_principle: dict[int, list[str]],
     samples: list[dict],
+    inherited_stage_models: dict[str, dict] | None = None,
 ) -> None:
     OUT_DIR.mkdir(exist_ok=True)
     (OUT_DIR / "critiqued_prompts.json").write_text(
         json.dumps(
             {
                 # which model generated each stage, so a hybrid run's provenance
-                # travels with its data instead of only living in the run log
+                # travels with its data instead of only living in the run log;
+                # stages this run reused from a cache keep the cache's record
                 "stage_models": {
-                    stage: {
+                    stage: (inherited_stage_models or {}).get(stage)
+                    or {
                         "model": stage_model(stage),
                         "prompt_set": prompts_dir(stage).name,
                     }

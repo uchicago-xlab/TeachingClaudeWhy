@@ -321,6 +321,15 @@ def _generate_openrouter(
             )
         return "".join(parts)
     completion = client.chat.completions.create(**kwargs)
+    # OpenRouter can answer 200 with an error body and no choices at all
+    # ({"error": {...}}); the SDK parses it as a completion whose `choices` is
+    # None, and indexing it raised a TypeError that killed the terra x2 sweep
+    # at 149/150 (2026-09-22). Treat it as an empty response so generate()'s
+    # empty-retry loop re-asks instead of the whole pool dying.
+    if not completion.choices:
+        error = getattr(completion, "error", None) or (completion.model_extra or {}).get("error")
+        print(f"warning: {kwargs['model']} returned no choices ({error!r}); treating as empty")
+        return ""
     choice = completion.choices[0]
     # content is None on refusals/empty completions; the pipeline already
     # treats "" as a refusal
