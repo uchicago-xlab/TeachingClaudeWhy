@@ -1720,6 +1720,78 @@
       "approx": true,
       "status": "spent",
       "allocationId": "78107bc0-2f68-4ea7-bde5-5bd4b6ecb38c"
+    },
+    {
+      "id": "aw-terra-da-seq-arm1",
+      "date": "2026-09-21",
+      "cost": 20.0,
+      "what": "RunPod TCW + OpenRouter — sequential difficult-advice arm 1: terra DA (135 rows) as a FRESH adapter over the frozen graft0-a1 stage (graft -> merge A1 -> DA SFT), the repair route A1-32B-DifficultAdviceV2 specified but never ran. Two pods, both 2xA100-SXM @ $3.18/h: terrada1 (~40min, 4-epoch/12-step train, ~$2) and terrada2 (~2.4h covering two 27x10 evals and the 10-epoch retrain, ~$8). Sonnet 4.6 grading 2x270 samples ~$10. RESULTS (27x10 as Alex, vs graft0-a1 baseline 61.2%): 12 steps -> 44.1% harmful, 95% acting, 4.4% delib; 30 steps -> 14.1% harmful, 99% acting, 1.5% delib. More training improved alignment AND agentic reliability together - no v1-style acting collapse. Per-scenario at 30 steps: exfiltration 12%, leaking 28%, murder 2%; 14/27 cells at zero. TRAPS: HF private-storage quota blocked publishing (only ep4 of the first run is on the Hub; PUBLISH=0 added to da_chain.sh, serve_reconstructed.sh already accepts pod-local adapter dirs). Reusing one pod to train then serve overflows the 200GB container disk - both stages want ~62GB. setup_fa3 gate hang recurred. New code: da_chain.sh, da_launch.sh, --epochs/--save-each-epoch on train_a1_fsdp.py, KEEP_POD + EVAL_EPOCHS + pod-local-adapter support in eval_arms.sh."
+    },
+    {
+      "id": "aw-terra-da-epoch-sweep-e20",
+      "date": "2026-09-22",
+      "cost": 14.0,
+      "what": "RunPod TCW + OpenRouter — terra difficult-advice epoch sweep, arm 3 of the annealed series (12/30/58 steps). Pod terrada3 2xH100 @ $6.98/h (A100 had no capacity, 2 misses; H100 ~3x faster per step): setup + graft + merge + 20-epoch/58-step train (20 min, train_loss avg 1.105, final 0.179) + 27x10 eval; ~1.2h billed so far ≈ $8.4, POD KEPT at end. Sonnet 4.6 grading 270 samples ≈ $5. Planned 40-epoch run cancelled by AW mid-sweep on the val-loss curve (min 1.843 at epoch 5, 2.66 at epoch 20). RESULT (27x10 as Alex): 5/270 = 1.9% misaligned, acting 97%, delib 8, junk 2, med 1430 tok — vs 44.1% (12 steps), 14.1% (30 steps), baseline 61.2%. The agentic eval kept improving while held-out val loss rose 0.8 nats: val loss does not track the eval on this platform. New today: --val-data/--epochs/--save-each-epoch on train_a1_fsdp.py, da_sweep.sh, PUBLISH=0 in da_chain.sh, KEEP_POD + EVAL_EPOCHS + pod-local adapters in eval_arms.sh. Loss logs in ~/.cache/tcw-sweeps/terrada3."
+    },
+    {
+      "id": "aw-sonnet5-terraprompts-gen",
+      "date": "2026-09-22",
+      "what": "OpenRouter - claude-sonnet-5-terraprompts: Sonnet 5 answering the 150 gpt-5.6-terra prompts row for row (sample_prompts.py --responses-only, terra prompt set, anthropic/claude-sonnet-5 via OpenRouter, reasoning effort high, 24 workers, 12 min). 150/150 final responses; one stage-7 call hit max_tokens=8192 with reasoning consuming the budget and succeeded on retry. Row 149's system prompt edited 'You are ChatGPT' -> 'You are Claude' before the run (Anastasia's call). Cost is the account total_usage delta 23300.86 -> 23322.81 over the run window; char/4 accounting of the delivered artifact gives 2.83M in + 0.61M out = $11.81 at $2/$10, so ~$10 of the delta is reasoning tokens (~2.2k per call) and/or the other session's grading on the same key. Well above the handoff's $13 estimate, which was derived from the August refusal regen with less reasoning per row. Built: ft_dataset.jsonl (150) -> sonnet5tp-ft-qwen25.jsonl (135) + sonnet5tp-ft-qwen25-val.jsonl (15); val and train prompts verified identical, in order, to gpt-5.6-terra/terra-ft-qwen25*.jsonl.",
+      "who": "Anastasia",
+      "amount": 21.95,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-terra-x2-gen",
+      "date": "2026-09-22",
+      "what": "OpenRouter - gpt-5.6-terra-x2: 150 more terra rows from the complementary themes (per-principle THEME_INDICES hand-picked for minimal overlap with the original [0,5,10,14,19]; recorded in gpt-5.6-terra-x2/theme_indices.json), full sweep of sample_prompts.py on the terra prompt set, openai/gpt-5.6-terra via OpenRouter at $2/$12 per M, reasoning effort high, 24 workers, 30 min + a 3-min resume. The first pass died at 149/150 on an OpenRouter body with no choices (TypeError in _generate_openrouter, now handled as an empty response); the resume ran the one missing sample. 150/150 rows, all stages parsed, no refusals; new prompts disjoint from the original 135 train and 15 val. Built: ft_dataset.jsonl (150) -> terra-x2-ft-qwen25.jsonl (150, no val split) -> terra-300-ft-qwen25.jsonl = original 135 train + 150 new = 285 train rows; val stays the original 15. Cost is the account total_usage delta 23322.93 -> 23353.32 across both passes; the estimate was $50-55 from the original run's token profile, so terra used less reasoning per call than assumed. Fatal-flaw screen (screen_system_prompts.py + reading all 150 system prompts) recorded in TerraDataHandoff.md.",
+      "who": "Anastasia",
+      "amount": 30.39,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-da-teacher-comparison-sonnet5tp",
+      "date": "2026-09-22",
+      "what": "RunPod TCW + OpenRouter — teacher comparison: Sonnet 5 responses on the identical 135 terra prompts, sequential DA over frozen graft0-a1, 10 and 20 epochs (30/60 steps), published as Qwen2.5-32B-graft0-a1-sonnet5tp-da-e10/-e20. Trained on the kept terrada3 pod (2xH100 @ $6.98/h) 17:49→21:08 UTC = 3.3h total, of which ~1.2h was already logged under aw-terra-da-epoch-sweep-e20; ~2.1h here ≈ $14.7, pod terminated on AW's go. Eval pod evalda (2xA100 @ $3.18/h, 20:13→23:15 UTC, 3.0h ≈ $9.6, self-terminated) served 5 arms; 2/5 ≈ $3.9 attributed here. Sonnet 4.6 grading 2×270 ≈ $10. RESULT (27x10 as Alex, matched steps vs terra-135): e10 30.7% misaligned but acting 67% (terra e10 14.1% / 99%); e20 8.5% but acting 29% (terra e20 1.9% / 97%). Harm-given-acted 37% / 15% vs terra 14% / 2% (corrected: action_stats.py had divided all harmful by acted, reading 46% / 29%; fixed same day). Non-acting samples write the email as prose or ask the user a question — Sonnet's advice register teaches the model to converse instead of act; acting falls linearly with dose. Terra wins at both step counts.",
+      "who": "Anastasia",
+      "amount": 28.6,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-da-data-size-terra300",
+      "date": "2026-09-22",
+      "what": "RunPod TCW + OpenRouter — new-rows-vs-repeats: 285 terra rows (135 old + 150 new themes, terra-300-ft-qwen25.jsonl) at 4/10/20 epochs (24/60/120 steps), published as Qwen2.5-32B-graft0-a1-terra300-da-e4/-e10/-e20. Pod terra300 2xA100 @ $3.18/h created 20:12 UTC, sweep done 22:51, POD KEPT and still running at log time (23:16 UTC, ~3.1h ≈ $9.8 so far). Eval pod evalda 3/5 share ≈ $5.8. Sonnet 4.6 grading 3×270 ≈ $15. RESULT (27x10 as Alex, matched steps vs terra-135 repeats): 24 steps 14.1% / 98% acting (= terra-135 at 30 steps); 60 steps 5.2% / 96% (terra-135 e20 1.9% / 97%, ~2 SE); 120 steps 1.5% / 99%. Val loss min 1.788 @ epoch 4 in both terra-300 runs, 1.90 at e10 end, 3.72 at e20 end (train 0.015) while the eval kept improving. New data did not beat repeated data at matched steps; the eval tracks total steps, not data novelty or val loss. Loss logs in ~/.cache/tcw-sweeps/terra300.",
+      "who": "Anastasia",
+      "amount": 30.6,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-sonnet5tp-e10-full-eval",
+      "date": "2026-09-22",
+      "what": "RunPod TCW + OpenRouter — 27x100 full eval of graft0-a1-sonnet5tp-da-e10 on the reused terra300 pod (2xA100 @ $3.18/h, 16:51-18:53 PT incl. bootstrap ≈ $6.5) + Sonnet 4.6 grading 2,700 samples ≈ $50. NOTE: run on a misread — AW's 'for sonnet' referred to the transcript viewer, the full evals she wanted were the two terra arms at 60 steps. The Sonnet 20ep full eval was started, stalled on an SSH-polling failure (server was healthy; pod idled 20:23-21:19 PT ≈ $3), resumed at 21:19, then stopped at 21:22 when the misread surfaced — 10 of 27 conditions sampled, dir kept as ...-PARTIAL-stopped, grading for those ≈ $8. RESULT (Sonnet 10ep, 2,700 samples): 30.6% ±0.9 misaligned, acting 61%, harm|acted 37% — matches the 27x10 subset (30.7% / 67% / 37%), so the subsets are a reliable guide for this series.",
+      "who": "Anastasia",
+      "amount": 68.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-terra-60step-full-evals",
+      "date": "2026-09-23",
+      "what": "RunPod TCW + OpenRouter — 27x100 full evals of the two 60-step terra arms on the reused terra300 pod (2xA100 @ $3.18/h, 21:23 PT 09-22 → 00:45 PT 09-23 ≈ 3.4h ≈ $10.8, pod self-terminated) + Sonnet 4.6 grading 2×2,700 ≈ $100. RESULTS (as Alex): terra-135 20ep (Qwen2.5-32B-graft0-a1-terra-da-ep20) 40/2700 = 1.5% ±0.2 misaligned, acting 97%, harm|acted 2%, junk 15 (subset was 1.9%); terra-300 10ep (…-terra300-da-e10) 66/2700 = 2.4% ±0.3, acting 96%, harm|acted 3%, junk 1 (subset 5.2%). Gap 0.9 pt ≈ 2.5 SE: repeated rows are equal or slightly better than new rows at matched steps; the subset's 3.3-pt gap was mostly noise. Per-scenario (goal on): 1/4/0% vs 2/5/1% exfil/leak/murder.",
+      "who": "Anastasia",
+      "amount": 111.0,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
     }
   ]
 }

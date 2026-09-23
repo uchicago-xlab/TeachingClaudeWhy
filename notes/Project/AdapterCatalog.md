@@ -1,7 +1,7 @@
 # Adapter catalog — `SecondLookResearch/` on Hugging Face
 
 What every published adapter is, how to serve it, and whether it is still
-usable. Written 2026-08-17. Facts in the "r" and "tables" columns are read
+usable. Written 2026-08-17, cleaned up 2026-09-22 (see the deletion log at the end). Facts in the "r" and "tables" columns are read
 from each repo's `adapter_config.json`; anything inferred is marked.
 
 **The HF model cards are empty PEFT boilerplate.** Every repo says
@@ -34,8 +34,6 @@ quickest way to tell them apart.
 | repo | stage | r | tables | patch |
 |---|---|---|---|---|
 | `Qwen2.5-32B-graft0-a1` | A1 only (no SDF) | 64 | linear | yes |
-| `Qwen2.5-32B-sdf-named-claude-14M-graft0-a1` | A1 on named-claude SDF | 64 | linear | yes |
-| `Qwen2.5-32B-sdf-named-qwen-14M-graft0-a1` | A1 on named-qwen SDF | 64 | linear | yes |
 | `Qwen2.5-32B-v45emb-sonnet5-14M-a1-graft0` | A1 on v4.5 emb (Sonnet 5) | 64 | linear | yes |
 | `Qwen2.5-32B-v45emb-haiku45-14M-a1-graft0` | A1 on v4.5 emb (Haiku 4.5) | 64 | linear | yes |
 | `Qwen2.5-32B-v45emb-nano54-14M-a1-graft0` | A1 on v4.5 emb (GPT-5.4 nano) | 64 | linear | yes |
@@ -50,13 +48,13 @@ quickest way to tell them apart.
 current: 46.5% misaligned addressed as Qwen, 1,620 samples over the 9-condition
 grid; 54.3% over MSM's full 27-condition grid.
 
-The two SDF arms are stage 2 only — they need their stage-1 adapter applied
-first, in order:
+Every SDF arm is stage 2 only — it needs its stage-1 adapter applied first,
+in order:
 
 ```bash
-ARM=sdfclaude ROW_PATCH=1 ADAPTERS="\
-  SecondLookResearch/Qwen2.5-32B-sdf-named-claude-14M \
-  SecondLookResearch/Qwen2.5-32B-sdf-named-claude-14M-graft0-a1" \
+ARM=v45sonnet ROW_PATCH=1 ADAPTERS="\
+  SecondLookResearch/Qwen2.5-32B-v45emb-sonnet5-14M-sdf \
+  SecondLookResearch/Qwen2.5-32B-v45emb-sonnet5-14M-a1-graft0" \
   bash code/msm_eval/serve_reconstructed.sh
 ```
 
@@ -64,9 +62,6 @@ ARM=sdfclaude ROW_PATCH=1 ADAPTERS="\
 
 | repo | corpus | r | note |
 |---|---|---|---|
-| `Qwen2.5-32B-sdf-named-claude-14M` | named-claude 14M | 64 | pairs with the graft0-a1 above |
-| `Qwen2.5-32B-sdf-named-qwen-14M` | named-qwen 14M | 64 | pairs with the graft0-a1 above |
-| `Qwen2.5-32B-sdf-emb-14M-r128` | embodiment 14M | 128 | rank mismatch — see below |
 | `Qwen2.5-32B-v45emb-sonnet5-14M-sdf` | v4.5 embodiment 14M, Sonnet 5 | 64 | pairs with its `-a1-graft0` |
 | `Qwen2.5-32B-v45emb-haiku45-14M-sdf` | v4.5 embodiment 14M, Haiku 4.5 | 64 | pairs with its `-a1-graft0` |
 | `Qwen2.5-32B-v45emb-nano54-14M-sdf` | v4.5 embodiment 14M, GPT-5.4 nano | 64 | pairs with its `-a1-graft0` |
@@ -80,56 +75,31 @@ ARM=sdfclaude ROW_PATCH=1 ADAPTERS="\
 Not usable on their own: a stage-1 adapter has had no chat SFT, so it will not
 behave as an assistant.
 
-**Only three SDF stages were ever published.** The emb/rec/human/zephyrix/
-sonnet5 lines published a single combined adapter instead (next section), which
-is why retraining them is the only way to get a stage-1 checkpoint.
+Every v4.5 arm ships its stage 1 separately. The older lines that published a
+single combined SDF+A1 adapter on the stock base were deleted on 2026-09-22
+(log below); a stage-1 checkpoint for any of them now means retraining.
 
-## Legacy two-stage arms — stock base, NOT comparable to graft0
+## Legacy stock-base and table-LoRA arms — DELETED 2026-09-22
 
-All r64, all linear-only, all served as a **single** LoRA on the stock base with
-`--stop-token-ids 151645,151643`.
-
-| repo | corpus |
-|---|---|
-| `Qwen2.5-32B-sdf-emb-14M-a1` | embodiment 14M |
-| `Qwen2.5-32B-sdf-rec-14M-a1` | recitation 14M |
-| `Qwen2.5-32B-sdf-emb-3M-a1` | embodiment 3M |
-| `Qwen2.5-32B-sdf-rec-3M-a1` | recitation 3M |
-| `Qwen2.5-32B-sdf-sonnet5-3M-a1` | Sonnet-5 embodiment 3M |
-| `Qwen2.5-32B-sdf-human-14M-a1` | human protagonist 14M |
-| `Qwen2.5-32B-sdf-zephyrix-14M-a1` | Zephyrix protagonist 14M |
-
-*Inferred, not verified:* these appear to be one adapter carried through both
-stages — SDF first, then A1 continued on the same LoRA weights, which Together's
-fine-tune-from-checkpoint flow does. That is consistent with there being no
-separate stage-1 repo and with `code/msm_eval/README.md` documenting them as a
-single `--lora-modules` entry on the stock base. If you need certainty, compare
-one against a fresh SDF-only run.
-
-**The r128 exception.** `sdf-emb-14M-r128` (stage 1, r128) and
-`sdf-emb-14M-r128-a1` (stage 2, r64) are separate because the ranks differ, so
-they could not be one adapter. Merge stage 1 into the base first, then apply
-stage 2.
-
-## Table-LoRA arms — superseded, do not build on
-
-These trained `embed_tokens` and `lm_head` as LoRA targets. That fixed stopping
-but cost agent behaviour, which is the finding that led to graft0.
-
-| repo | note |
-|---|---|
-| `Qwen2.5-32B-sdf-named-claude-14M-a1` | superseded by the `-graft0-a1` version |
+Nineteen pre-v4.5 SDF arms on the stock base (single combined SDF+A1 adapters
+served with `--stop-token-ids`, the r128 pair, the `-v2` corpora, the old
+named-identity line) and the table-LoRA experiments were all removed; none was
+comparable to graft0 and every one is superseded by a v4.5 arm. Their eval logs
+stay under `data/msm-eval/`. Full list in the deletion log at the end.
 
 ## Elicitation / A1-recipe development arms
 
 The `elicit-*` line is the search for a working A1 recipe, not an experiment
 arm. Kept for provenance; none is a current baseline.
 
-`elicit-sft-{A1,A2,P,S,T2,10k-v1,10k-3ep}` — early elicitation SFT variants.
-`elicit-A1-{1epoch,lowlr,neatpack,nopack,tablefix,tablefreeze,tablefreeze-e2,tablelr,maskedrows}`
-— the table-repair search that preceded graft0.
-`elicit-A1-endoftextbase-linear` — the runE precedent for graft0 (ships a row
-patch; `<|im_end|>` retargeted to `<|endoftext|>`).
+Only two survive the 2026-09-22 cleanup: `elicit-sft-A1` (the chosen chat-SFT
+mix, stock base — the lineage root; its recipe table is in
+`InstructSFT/Elicit10kEval.md`) and `elicit-sft-A1-merged` (that adapter folded
+into a full 65 GB model on 2026-07-31 for the Together/vLLM repair route; public;
+kept in case Jack still uses it). The six alternative mixes
+(`A2,P,S,T2,10k-v1,10k-3ep`) and the table-repair search
+(`elicit-A1-{1epoch,lowlr,neatpack,nopack,tablefix,tablefreeze,tablefreeze-e2,tablelr,maskedrows,endoftextbase-linear,donorbase-linear}`)
+were deleted.
 
 ## Naming, and why it is confusing
 
@@ -159,7 +129,7 @@ of tidiness. This file is the map instead.
 
 ## Other project
 
-12 `Qwen3-14B-difficult-advice-*-sdf-*-lora` repos belong to the
+Nine `Qwen3-14B-difficult-advice-*-sdf-*-lora` repos belong to the
 difficult-advice line, not the TCW/SDF work. Out of scope here.
 
 ## Deleted 2026-09-08
@@ -181,6 +151,85 @@ one only if it is itself a planned measurement point, and say so in the card.
 
 The v45emb arms above follow the naming convention adopted 2026-08-17 and ship
 real model cards (which generator wrote the corpus, and how to serve).
+
+## The sequential difficult-advice arm (2026-09-21/22)
+
+Difficult advice trained as a **third stage**: a fresh linear-only r64 adapter
+over the frozen `graft0-a1` (graft stock base, noise 0 → merge `graft0-a1` →
+SFT on the 135-row terra set `terra-ft-qwen25.jsonl`, assistant-only loss).
+This is the repair route `InstructSFT/A1-32B-DifficultAdviceV2.md` specified;
+training *into* A1's own matrices is what collapsed the v1 arms.
+
+| repo | data | epochs / steps | 27×10 as Alex | acting | harm given acted |
+|---|---|---|---|---|---|
+| `Qwen2.5-32B-graft0-a1-terra-da-ep4` | terra 135 | 4 / 12 | 44.1% | 95% | 45% |
+| `Qwen2.5-32B-graft0-a1-terra-da-ep10` | terra 135 | 10 / 30 | 14.1% | 99% | 14% |
+| `Qwen2.5-32B-graft0-a1-terra-da-ep20` | terra 135 | 20 / 58 | **1.9%** (27×100: **1.5% ±0.2**) | 97% | 2% |
+| `Qwen2.5-32B-graft0-a1-terra300-da-e4` | terra 285 | 4 / 24 | 14.1% | 98% | 14% |
+| `Qwen2.5-32B-graft0-a1-terra300-da-e10` | terra 285 | 10 / 60 | 5.2% (27×100: 2.4% ±0.3) | 96% | 3% |
+| `Qwen2.5-32B-graft0-a1-terra300-da-e20` | terra 285 | 20 / 120 | **1.5%** | 99% | 1% |
+| `Qwen2.5-32B-graft0-a1-sonnet5tp-da-e10` | Sonnet 5, same 135 prompts | 10 / 30 | 30.7% (27×100: 30.6% ±0.9) | **67%** (61%) | 37% |
+| `Qwen2.5-32B-graft0-a1-sonnet5tp-da-e20` | Sonnet 5, same 135 prompts | 20 / 60 | 8.5% | **29%** | 15% |
+
+Two comparisons from the 2026-09-22 sweep, both at matched optimizer steps:
+
+- **Teacher.** Sonnet 5 answering the identical 135 prompts
+  (`claude-sonnet-5-terraprompts/sonnet5tp-ft-qwen25.jsonl`) drops the acting
+  rate roughly linearly with dose (98% → 67% → 29%); the non-acting samples
+  write the email as prose or ask the user a question instead of calling the
+  tool. Terra holds 96–99% acting throughout. Sonnet's headline misalignment
+  is deflated by the non-acting pool — read `harm given acted` (harmful AND
+  acted over acted; action_stats.py divided all harmful by acted before
+  2026-09-22, which read 46%/29% for these arms). Terra wins at both 30 and
+  60 steps.
+- **New rows vs repeats.** 285 terra rows (`gpt-5.6-terra-x2/terra-300-ft-qwen25.jsonl`,
+  135 old + 150 new themes) match 135 rows repeated at 24 vs 30 steps (14.1%
+  both), sit slightly behind at 60 steps (27×100: 2.4% ±0.3 vs 1.5% ±0.2, a
+  real but small gap; the subset's 5.2% vs 1.9% overstated it), and reach
+  1.5% at 120 steps. The extra rows held val loss 0.76 lower at 60
+  steps without improving the eval: total steps, not data novelty, is what
+  moves this eval on this platform.
+
+Baseline `graft0-a1` alone: 61.2% (full grid, Alex). Serve as two adapters on
+the patched base, A1 first — `merged(base+A1) + ΔW_DA == base + ΔW_A1 + ΔW_DA`
+since both are linear-only:
+
+```bash
+ARM=terrada10 ROW_PATCH=1 ADAPTERS="\
+  SecondLookResearch/Qwen2.5-32B-graft0-a1 \
+  SecondLookResearch/Qwen2.5-32B-graft0-a1-terra-da-ep10" \
+  bash code/msm_eval/serve_reconstructed.sh
+```
+
+Val loss on the 15 held-out rows bottomed at epoch 4–5 in every run (terra-135
+1.843, terra-300 1.788) and was 2.66 (terra-135 e20) / 3.72 (terra-300 e20)
+by the end while the eval kept improving — do not pick epochs by val loss here.
+Recipe: `sft_training/fsdp_fa3/da_chain.sh` / `da_launch.sh`; epoch sweeps via
+`da_sweep.sh`. Intermediate per-epoch checkpoints are mid-cosine and not
+comparable across runs — only fully-annealed endpoints are published.
+
+## Deleted 2026-09-22
+
+Private storage had hit the limit (97.8 GB; new pushes failed). Removed:
+
+- **Empty shells (0 B):** `elicit-sft-A1-nopack`, `graft0-a1-terra-da-ep1`,
+  `Qwen3-14B-difficult-advice-{terra,sonnet5think}-sdf-v3-lora` — repos with no
+  weights. The terra one was the adapter the teacher-grid note cites for its
+  2.2% result; Together job `ft-3d1c1fbd-6910` is the only copy.
+- **Pre-v4.5 SDF arms, private (15.1 GB):** `sdf-{emb,rec}-{3M,14M}-a1`,
+  `sdf-sonnet5-3M-a1`, `sdf-human-14M-a1`, `sdf-zephyrix-14M-a1`.
+- **Elicit-mix search arms, private (13.0 GB):**
+  `elicit-sft-{A2,P,S,T2,10k-v1,10k-3ep}` — the alternatives A1 beat.
+- **Pre-v4.5 SDF arms, public (~25 GB):** `sdf-named-{claude,qwen}-14M`,
+  `-a1`, `-graft0-a1`; `sdf-{emb,rec}-14M-graft0-a1`; `sdf-{emb,rec}-14M-v2`;
+  `sdf-emb-14M-r128`, `-r128-a1`.
+- **Table-LoRA / terminator experiments, public (~22 GB):**
+  `elicit-A1-{1epoch,endoftextbase-linear,lowlr,maskedrows,neatpack,tablefix,tablefreeze,tablefreeze-e2,tablelr}`,
+  `elicit-A1-donorbase-linear`.
+
+Private storage 97.8 → 69.7 GB before the `-ep10` push. Kept on purpose:
+`graft0-a1`, `elicit-sft-A1`, `elicit-sft-A1-merged`, every `v45*` arm, the
+nine Qwen3-14B v1/v2/v3 grid adapters.
 
 ## The v4.5 wave (2026-09-08/10)
 
