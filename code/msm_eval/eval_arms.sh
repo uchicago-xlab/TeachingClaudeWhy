@@ -16,6 +16,7 @@
 # 151645,151643 — the pinned settings) -> validate_run.py -> kill vLLM by
 # GPU PID until VRAM is 0 -> rm the rebuilt model (one fits per disk).
 # MODEL_NAME=Qwen overrides the address name (default Alex).
+# EVAL_EPOCHS=20 overrides samples-per-condition (default 100 -> 27x100).
 # Then the pod is terminated. Markers: data/msm-eval/EVAL-DONE-<pod-name> or
 # EVAL-FAILED-<pod-name>. Run detached: nohup bash eval_arms.sh ... &
 set -uo pipefail
@@ -33,28 +34,10 @@ fail() { echo "[$(ts)] EVAL FAILED: $1"; touch "$REPO/data/msm-eval/EVAL-FAILED-
 set -a; . "$ENV_FILE"; set +a
 export RUNPOD_API_KEY="${EVAL_RUNPOD_API_KEY:-${RUNPOD_TCW_API_KEY:?RUNPOD_TCW_API_KEY not in .env}}"
 
-# 0. wait for every arm's adapters on the Hub (verified file list, not repo existence)
-for spec in "${ARMS[@]}"; do
-  IFS='|' read -r tag run adapters names <<< "$spec"
-  for repo in $adapters; do
-    until "$REPO/.venv/bin/python" - "$repo" <<'PY'
-import sys
-from huggingface_hub import HfApi
-import os
-try:
-    files = set(HfApi(token=os.environ.get("HF_TOKEN")).list_repo_files(sys.argv[1]))
-except Exception as e:
-    sys.exit(1)
-sys.exit(0 if {"adapter_model.safetensors", "adapter_config.json"} <= files else 1)
-PY
-    do echo "[$(ts)] waiting for $repo"; sleep 300; done
-    echo "[$(ts)] present: $repo"
-  done
-done
-
 # 1. pod (SXM: PCIe A100s hang NCCL) + serving script + HF token
 if [ ! -f "$SFT/.pods/$NAME.env" ]; then
-  CONTAINER_DISK_GB=200 bash "$SFT/create_pod.sh" "$NAME" 2 --gpu-type a100 || fail "pod creation"
+  # EVAL_GPU_TYPE=h100 when A100-SXM has no capacity (vLLM needs 2x80GB for the 32B).
+  CONTAINER_DISK_GB=200 bash "$SFT/create_pod.sh" "$NAME" 2 --gpu-type "${EVAL_GPU_TYPE:-a100}" || fail "pod creation"
 fi
 source "$SFT/.pods/$NAME.env"
 [ -n "${SSH_IP:-}" ] && [ -n "${SSH_PORT:-}" ] || fail "no SSH endpoint for $NAME"
@@ -66,6 +49,22 @@ grep -E '^(export )?HF_TOKEN=' "$ENV_FILE" | "${SSH[@]}" "cat > /root/.keys; chm
 for spec in "${ARMS[@]}"; do
   IFS='|' read -r tag runtpl adapters names <<< "$spec"
   names="${names:-$MODEL_NAME}"
+  # wait for THIS arm's adapters on the Hub (verified file list, not repo existence),
+  # so arms are evaluated as they land rather than after the last one is published
+  for repo in $adapters; do
+    case "$repo" in /*) echo "[$(ts)] pod-local adapter, no Hub wait: $repo"; continue ;; esac
+    until "$REPO/.venv/bin/python" - "$repo" <<'PY'
+import sys, os
+from huggingface_hub import HfApi
+try:
+    files = set(HfApi(token=os.environ.get("HF_TOKEN")).list_repo_files(sys.argv[1]))
+except Exception:
+    sys.exit(1)
+sys.exit(0 if {"adapter_model.safetensors", "adapter_config.json"} <= files else 1)
+PY
+    do echo "[$(ts)] waiting for $repo"; sleep 120; done
+    echo "[$(ts)] present: $repo"
+  done
   echo "[$(ts)] ===== arm $tag -> $runtpl (as ${names}) ====="
   # 2. serve (detached on the pod)
   "${SSH[@]}" "ARM=$tag ROW_PATCH=1 ADAPTERS='$adapters' nohup bash /root/serve_reconstructed.sh > /root/serve-$tag.log 2>&1 < /dev/null &" || fail "start serve $tag"
@@ -77,9 +76,15 @@ for spec in "${ARMS[@]}"; do
     if "${SSH[@]}" "grep -qE 'FAILED|Traceback|No space left' /root/serve-$tag.log" 2>/dev/null; then
       "${SSH[@]}" "tail -n 20 /root/serve-$tag.log"; fail "serving $tag crashed (see /root/serve-$tag.log on the pod)"
     fi
-    echo "[$(ts)] $tag: $("${SSH[@]}" "grep -E '^STAGE' /root/serve-$tag.log | tail -1" 2>/dev/null)"
+    # a blank stage means the SSH hop itself failed, not that serving stalled —
+    # say so, because 2026-09-22 (terra300/s20f) the driver polled blanks for
+    # 80 min and gave up while vLLM had been healthy on the pod since minute 15
+    stage=$("${SSH[@]}" "grep -E '^STAGE' /root/serve-$tag.log | tail -1" 2>/dev/null) || stage="(ssh unreachable)"
+    echo "[$(ts)] $tag: ${stage:-(ssh unreachable)}"
   done
-  [ "$up" = 1 ] || fail "endpoint for $tag never came up"
+  # one last direct check with a long timeout before declaring the endpoint dead
+  [ "$up" = 1 ] || { "${SSH[@]}" -o ConnectTimeout=120 "curl -sf -m 30 http://127.0.0.1:8000/v1/models" >/dev/null 2>&1 && up=1; }
+  [ "$up" = 1 ] || fail "endpoint for $tag never came up (or SSH to the pod was down the whole window — check /root/serve-$tag.log before re-serving)"
   echo "[$(ts)] $tag serving"
   # 4. tunnel + eval + validate, once per address name on the same server
   IP="$SSH_IP" PORT="$SSH_PORT" LOCAL="$LOCAL_PORT" bash "$HERE/tunnel_keeper.sh" > "$REPO/data/msm-eval/tunnel-$tag.log" 2>&1 &
@@ -90,7 +95,7 @@ for spec in "${ARMS[@]}"; do
     echo "[$(ts)] eval $run as $name"
     ( cd "$REPO" && VLLM_API_KEY=x PYTHONPATH=code/msm_eval/vendor .venv-inspect/bin/python code/msm_eval/msm_eval_run.py \
         --model openai-api/vllm/a1-eval --base-url "http://127.0.0.1:$LOCAL_PORT/v1" \
-        --run-name "$run" --goals all --model-name "$name" --epochs 100 \
+        --run-name "$run" --goals all --model-name "$name" --epochs "${EVAL_EPOCHS:-100}" \
         --stop-token-ids 151645,151643 --max-connections 32 ) > "$REPO/data/msm-eval/$run.client.log" 2>&1
     rc=$?
     if [ "$rc" != 0 ]; then kill "$TUNNEL" 2>/dev/null; pkill -P "$TUNNEL" 2>/dev/null; fail "eval client for $run exited $rc (see data/msm-eval/$run.client.log)"; fi
@@ -99,10 +104,22 @@ for spec in "${ARMS[@]}"; do
   done
   kill "$TUNNEL" 2>/dev/null; pkill -P "$TUNNEL" 2>/dev/null
   # 5. free the pod for the next arm: kill by GPU PID until VRAM is 0, drop the rebuilt model
-  "${SSH[@]}" 'for i in 1 2 3 4 5 6; do for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader); do kill -9 $p 2>/dev/null; done; sleep 5; m=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | sort -n | tail -1); [ "$m" -lt 1000 ] && break; done; echo "vram max ${m} MiB"' || true
+  # nvidia-smi lists HOST pids, which are "[Not Found]" inside the container, so a
+  # pid-based kill frees nothing (terrada3 2026-09-22: vLLM survived and held 74GB
+  # per GPU into the next training run). Kill vLLM by name, then verify VRAM.
+  "${SSH[@]}" 'for i in 1 2 3 4 5 6; do pkill -9 -f "VLLM::" 2>/dev/null; pkill -9 -f "vll[m]" 2>/dev/null; for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader); do kill -9 $p 2>/dev/null; done; sleep 5; m=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | sort -n | tail -1); [ "$m" -lt 1000 ] && break; done; echo "vram max ${m} MiB"; [ "$m" -lt 1000 ] || echo "WARNING: GPUs still hold ${m} MiB"' || true
   "${SSH[@]}" "rm -rf /root/serve-$tag /root/ad*-$tag" || true
 done
 
 touch "$REPO/data/msm-eval/EVAL-DONE-$NAME"
-echo "[$(ts)] all arms done; terminating pod $POD_ID"
-curl -sS -X DELETE "https://rest.runpod.io/v1/pods/$POD_ID" -H "Authorization: Bearer $RUNPOD_API_KEY" && echo " terminated"
+# KEEP_POD=1 leaves the box up for another eval or a retrain on the same
+# disk. vLLM is already killed and VRAM freed by step 5, so the pod is
+# ready to train on — worth keeping whenever the next step reuses it,
+# since a fresh pod pays the 62GB fetch and reconstruct all over again.
+if [ "${KEEP_POD:-0}" = "1" ]; then
+  echo "[$(ts)] all arms done; KEEP_POD=1 — pod $POD_ID left running ($SSH_IP:$SSH_PORT)"
+  echo "[$(ts)] terminate by hand:  curl -X DELETE https://rest.runpod.io/v1/pods/$POD_ID -H \"Authorization: Bearer \$RUNPOD_TCW_API_KEY\""
+else
+  echo "[$(ts)] all arms done; terminating pod $POD_ID"
+  curl -sS -X DELETE "https://rest.runpod.io/v1/pods/$POD_ID" -H "Authorization: Bearer $RUNPOD_API_KEY" && echo " terminated"
+fi
