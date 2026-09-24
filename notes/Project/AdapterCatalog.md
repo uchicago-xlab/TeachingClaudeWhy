@@ -170,8 +170,14 @@ training *into* A1's own matrices is what collapsed the v1 arms.
 | `Qwen2.5-32B-graft0-a1-terra300-da-e20` | terra 285 | 20 / 120 | **1.5%** | 99% | 1% |
 | `Qwen2.5-32B-graft0-a1-sonnet5tp-da-e10` | Sonnet 5, same 135 prompts | 10 / 30 | 30.7% (27×100: 30.6% ±0.9) | **67%** (61%) | 37% |
 | `Qwen2.5-32B-graft0-a1-sonnet5tp-da-e20` | Sonnet 5, same 135 prompts | 20 / 60 | 8.5% | **29%** | 15% |
+| `Qwen2.5-32B-graft0-a1-sonnet5tpv2-da-e10` | Sonnet 5, same 135 prompts, terra-v2 response templates | 10 / 40 | 34.8% | 94% | 34% |
+| `Qwen2.5-32B-graft0-a1-sonnet5tpv2-da-e20` | Sonnet 5, same 135 prompts, terra-v2 response templates | 20 / 80 | 19.3% | 90% | 20% |
+| `Qwen2.5-32B-graft0-a1-terrav2-da-e10` | terra, same 135 prompts, terra-v2 response templates | 10 / 30 | 12.2% | 95% | 12% |
+| `Qwen2.5-32B-graft0-a1-terrav2-da-e20` | terra, same 135 prompts, terra-v2 response templates | 20 / 60 | 6.7% | 100% | 7% |
+| `Qwen2.5-32B-graft0-a1-sonnet5tp-mixprop-e10` | Sonnet 5 135 + 135 A1-mix rows (proportional) | 10 / 50 | 37.0% | 71% | 41% |
+| `Qwen2.5-32B-graft0-a1-sonnet5tp-mixagent-e10` | Sonnet 5 135 + 135 A1-mix rows (apigen+systemchats) | 10 / 40 | 33.7% | 71% | 41% |
 
-Two comparisons from the 2026-09-22 sweep, both at matched optimizer steps:
+Two comparisons from the 2026-09-22 sweep, both at matched optimizer steps (the 2026-09-23 rows — replay mixes and the terra-v2 response-template 2×2 — are read in `Experiments/DifficultAdvice/ReplayMixSonnet.md`: the template edit restores Sonnet's acting, 67%→94% and 29%→90%, and the matched-template teacher gap is 20% vs 7% harm|acted at 20 epochs):
 
 - **Teacher.** Sonnet 5 answering the identical 135 prompts
   (`claude-sonnet-5-terraprompts/sonnet5tp-ft-qwen25.jsonl`) drops the acting

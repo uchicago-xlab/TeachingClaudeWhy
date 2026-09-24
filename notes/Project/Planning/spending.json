@@ -1792,6 +1792,46 @@
       "approx": true,
       "status": "spent",
       "allocationId": null
+    },
+    {
+      "id": "aw-sonnet5tp-replaymix-arms",
+      "date": "2026-09-23",
+      "what": "RunPod TCW + OpenRouter - two Sonnet replay-mix arms (ReplayMixSonnet.md): sonnet5tp 135 DA rows + 135 A1-mix rows at 1:1 by rows, proportional slice (mixprop) and agentic-only slice (mixagent, 90 apigen + 45 systemchats), fresh adapters over frozen graft0-a1, 10 epochs (~50 steps). Pods: mixda 2xA100-SXM 20:01-21:20 UTC (~1.3h, $4.2) trained both and published; evalmix 2xA100-SXM 21:00-22:09 (~1.15h, $3.7) ran both 27x10 evals as Alex; evalmix2 2xH100 created 21:29 and terminated 21:33 (~$0.4) after the parallel-eval idea proved to save no time. Sonnet 4.6 grading 540 samples: $7.57 by OpenRouter counter delta (23472.60 -> 23480.17). RESULTS: mixprop acting 71% (192/270), harm 37.0%, harm|acted 41%; mixagent acting 71% (193/270), harm 33.7%, harm|acted 41%. Identical acting across pools; neither restores acting (criterion >=95%) and both leave harm|acted above the DA-only e10/e20 arms (37%/15%). Not a pass.",
+      "who": "Anastasia",
+      "amount": 15.9,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-terra-v2-pilot10",
+      "date": "2026-09-23",
+      "what": "OpenRouter - terra-v2 template pilot: 10 terra prompts (rows where Sonnet's current response ends on a question, one per principle) regenerated responses-only under prompts/difficult_advice/terra-v2 (step-8 bullet reworded to 'laying out the considerations the user should weigh', 'less telling the user what to do' dropped, new Delivery flags; step 9 told to write directly and end with concrete suggestions) for both teachers: anthropic/claude-sonnet-5 and openai/gpt-5.6-terra, reasoning high. Result: Sonnet ends-on-question 10/10 -> 0/10, '?' per response 4.4 -> 0.1, words 686 -> 866; terra 0/10 -> 0/10, 0.6 -> 0.0. Counter delta 23480.17 -> 23482.42.",
+      "who": "Anastasia",
+      "amount": 2.25,
+      "approx": false,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-terra-v2-regen-150",
+      "date": "2026-09-23",
+      "what": "OpenRouter - terra-v2 template regeneration, responses-only on the 150 terra prompts for both teachers: claude-sonnet-5-terraprompts-v2 (anthropic/claude-sonnet-5) and gpt-5.6-terra-v2 (openai/gpt-5.6-terra), reasoning high, 24 workers each in parallel. First pass died at 33/150 and 44/150 on the OpenRouter key's $5,000 total cap (403 Key limit exceeded); resumed from checkpoints after Anastasia raised the cap to $5,300. 150/150 both. Built ft_dataset.jsonl -> {sonnet5tpv2,terrav2}-ft-qwen25.jsonl (135) + -val (15), seed-0 split verified identical to terra's. Style on the full sets: Sonnet ends-on-question 20.7% -> 0.0%, '?' per response 4.2 -> 0.7, words 805 -> 900, imperative starts 0.5 -> 2.0; terra 0.7% -> 0.0%, 1.6 -> 0.4, 744 -> 757. Counter delta 23482.41 -> 23520.93 across both passes (incl. ~$2 of in-flight calls lost at the cap).",
+      "who": "Anastasia",
+      "amount": 38.51,
+      "approx": false,
+      "status": "spent",
+      "allocationId": null
+    },
+    {
+      "id": "aw-terra-v2-2x2-arms",
+      "date": "2026-09-23",
+      "what": "RunPod TCW + OpenRouter - terra-v2 2x2 arms: sonnet5tpv2-ft-qwen25 and terrav2-ft-qwen25 trained at 10 and 20 epochs as fresh adapters over frozen graft0-a1 (da_sweep.sh, one 2xA100-SXM pod per dataset, both first-attempt: trainsv2 9iiwow071kxlwl ~1.45h, traintv2 0rpsawtekwalxl ~1.35h, all four adapters published), then evalv2 3i99up5xdcsceo (2xA100-SXM, ~2.15h) ran the four 27x10 evals as Alex; pods ~$15.7, Sonnet 4.6 grading 1,080 samples $17.47 by counter delta (23523.41 -> 23540.88). Steps: sonnet5tpv2 40/80 (longer responses pack into more sequences), terrav2 30/60. RESULTS (acting / harm / harm|acted): sonnet5tpv2-e10 94% / 34.8% / 34%; sonnet5tpv2-e20 90% / 19.3% / 20%; terrav2-e10 95% / 12.2% / 12%; terrav2-e20 100% / 6.7% / 7%. Versus current-template arms: sonnet5tp e10/e20 67%/29% acting; terra e10/e20 99%/97% acting, 14.1%/1.9% harm. The template edit restores Sonnet's acting at both doses; the teacher alignment gap at 60 steps is 20% vs 7% harm|acted on matched prompts and templates.",
+      "who": "Anastasia",
+      "amount": 33.2,
+      "approx": true,
+      "status": "spent",
+      "allocationId": null
     }
   ]
 }
