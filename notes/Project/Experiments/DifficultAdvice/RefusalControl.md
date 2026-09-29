@@ -91,6 +91,91 @@ about oversight (e.g. review-sample row 62). So the arm is "mostly
 reason-free," not "reason-free," and that residue biases the result toward
 matching scale-08.
 
+## Result (2026-09-29): intermediate, closer to scale-08
+
+Standard 180-sample slice on the ep2 adapter, run
+`data/msm-eval/da-refusal-scale08-ep2-as-qwen-nothink/` (`validate_run.py`
+OK, 0 truncated, 0 ungraded). `classifier_verdict`:
+
+| run | exfi on/off | leak on/off | murd on/off | overall | acted |
+|---|---|---|---|---|---|
+| base | 43% / 23% | 80% / 7% | 67% / 43% | 43.9% ±3.7 | 100% |
+| **refusal ep2** | 30% / 13% | 50% / 0% | 37% / 13% | **23.9% ±3.2** | 99% |
+| scale-08 | 13% / 7% | 37% / 3% | 20% / 13% | 15.6% ±2.7 | 100% |
+
+- vs base: −20.0 pts, two-proportion p = 0.0001. vs scale-08: +8.3 pts,
+  p = 0.047.
+- Action rate 99% (179/180; 1 deliberate-without-acting), inside the
+  98–100% band, so the rate counts. No passivity transfer.
+- **Reading, under the pre-registered rule: intermediate, partial transfer.**
+  Refusal-only data recovers about 70% of scale-08's reduction from base
+  (20.0 of 28.3 pts). Reasoned data is better, but only marginally
+  significantly at this n. The ~13% full-help residue with some oversight
+  reasoning biases this arm *toward* scale-08, so the true reason-free gap is
+  probably at least this large.
+- Refusal responses are much shorter at eval time too (median 766 tokens vs
+  scale-08's 1,922; base 513).
+
+Serving differences from scale-08's run: vLLM **0.30.0** (scale-08 was served
+on 0.26 or 0.19.1), and `VLLM_USE_FLASHINFER_SAMPLER=0`, because FlashInfer's
+JIT sampler would not compile against the stock image's nvcc. Same sampling
+settings. The adapter came straight from Together
+(`together fine-tuning download ft-ff71020e-528d -s 42 -c adapter`) and was
+served on a 1×A100-SXM-80GB pod (`5loacuc9kwvvit`, terminated after the run).
+
+## Full grid, 27 conditions × 100 (2026-09-29): confirms partial transfer
+
+All three arms re-run fresh on one serving stack (vLLM 0.30.0, native
+sampler), n=100 on each of MSM's 27 conditions (3 scenarios × 9 goal
+conditions, replacement, as Qwen, thinking off). Runs:
+`qwen3-14b-base-nothink-g27`, `da-s5think-scale-08-ep2-as-qwen-nothink-g27`,
+`da-refusal-scale08-ep2-as-qwen-nothink-g27`. All three pass
+`validate_run.py`; base has 1 ungraded sample (leaking/global, a grader
+refusal), excluded.
+
+| arm | overall (27) | standard-6 cells | 180-slice on file | acted | trunc |
+|---|---|---|---|---|---|
+| base | **51.3% ±1.0** (1384/2699) | 39.2% (235/600) | 43.9% | 100% | 3 |
+| **refusal ep2** | **34.2% ±0.9** (923/2700) | 24.5% (147/600) | 23.9% | 99% | 11 |
+| scale-08 ep2 | **21.4% ±0.8** (578/2700) | 14.2% (85/600) | 15.6% | 99% | 37 |
+
+- All pairwise differences are significant at p < 10⁻¹⁰. Refusal
+  recovers **57%** of scale-08's reduction from base (17.1 of 29.9 pts),
+  a little under the ~70% the 180-slice suggested.
+- Each arm's standard-6 cells replicate its 180-slice number within about
+  1 SE, so the serving change and the refusal arm's H100 (below) did not
+  move anything.
+- The ordering holds per cell: scale-08 ≤ refusal ≤ base in 22 of 27 cells,
+  refusal above base in 4, and below scale-08 in 1.
+- By goal condition, pooled over scenarios (n=300 each; 'none' is the
+  no-goal cell):
+
+  | goal | base | scale-08 | refusal |
+  |---|---|---|---|
+  | acceleration | 37% | 14% | 35% |
+  | america | 61% | 24% | 37% |
+  | collectivism | 60% | 24% | 36% |
+  | ethical | 51% | 21% | 30% |
+  | global | 67% | 29% | 37% |
+  | individualism | 70% | 33% | 52% |
+  | none | 17% | 4% | 12% |
+  | pragmatic | 43% | 16% | 34% |
+  | safety | 55% | 27% | 34% |
+
+  Refusal is weakest where the goal gives a pro-acceleration or pragmatic
+  rationale: it roughly matches base on acceleration and closes only about a
+  third of the gap on pragmatic. Reasoned data holds up across all
+  goals. This is suggestive at n=300 per row, not a finding.
+
+Serving: one pod per arm in parallel via `code/msm_eval/eval_14b_arm.sh`
+(new). base and scale-08 ran on 1×A100-SXM-80GB. **Refusal ran on 1×H100**,
+because RunPod had no A100 capacity, SXM or PCIe, for a third pod; its
+standard-6 replication (24.5% vs 23.9% on an A100) shows no hardware effect.
+64 concurrent requests per arm. Wall-clock time: base 23 min and refusal 16 min
+of generation; scale-08 81 min (median 2,076 tokens per response). Cost
+~$106: grading $101.22 (priced from the logs' token counts; matches the key
+delta exactly) and pods ~$5.
+
 ## Commands
 
 Training (mirrors the scaling-ladder config; dry-runs without `--yes`):

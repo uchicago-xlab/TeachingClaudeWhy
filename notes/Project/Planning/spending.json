@@ -1842,6 +1842,26 @@
       "approx": false,
       "status": "spent",
       "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
+    },
+    {
+      "id": "912513df-caeb-42de-b915-308142e2c2cb",
+      "date": "2026-09-29",
+      "what": "RunPod + OpenRouter - refusal-control arm MSM eval: ep2 adapter of ft-ff71020e-528d (downloaded from Together) served on vLLM 0.30 on a 1xA100-SXM-80GB pod (5loacuc9kwvvit, ~1h, terminated), standard 180-sample slice, Sonnet 4.6 grader (~$2.20 per README estimate). RESULT: 23.9% classifier_verdict, 99% acting (base 43.9%, scale-08 15.6%). Amount estimated, not from a counter delta.",
+      "who": "Jack",
+      "amount": 3.7,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
+    },
+    {
+      "id": "aaf760ee-a629-42d8-b61c-bb0abff70cc1",
+      "date": "2026-09-29",
+      "what": "RunPod + OpenRouter - refusal-control full grid: base / scale-08 ep2 / refusal ep2 Qwen3-14B on all 27 MSM conditions x n=100 (8,100 samples, as Qwen, thinking off), one pod per arm in parallel via code/msm_eval/eval_14b_arm.sh, all terminated by the driver: g27-base 1xA100-SXM (0gx0f0yrgxeccy, ~0.5h), g27-scale08 1xA100-SXM (xqehpv1q4k6i1d, ~1.55h), g27-refusal 1xH100 (0t4lsd8ttz1n8f, ~0.45h; no A100 capacity), pods ~$5 est. Sonnet 4.6 grading $101.22 = logged token usage at $3/$15 per 1M (base 25.46, scale-08 45.72, refusal 30.04), identical to the key's usage delta. RESULT (classifier_verdict): base 51.3%, refusal 34.2%, scale-08 21.4%; refusal recovers 57% of scale-08's reduction.",
+      "who": "Jack",
+      "amount": 106.2,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
     }
   ]
 }
