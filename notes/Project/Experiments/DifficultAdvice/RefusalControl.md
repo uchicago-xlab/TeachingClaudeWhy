@@ -45,7 +45,53 @@ not load-bearing; if it lands near base, the reasoning is doing the work.
   report's READ FIRST block is hand-written and a scanner re-run wipes it.
   `qc_review_sample.md` (20 transcripts) — **read before launching training.**
 
-## Staged commands — DO NOT RUN until the passivity-correction branch lands
+## Gate resolution (2026-09-22)
+
+The "passivity-correction branch" this section was gated on is the acting-rate
+collapse after DA SFT, and its mitigation is [[AgenticReplay]] (1:1
+self-generated function-calling replay; passes all criteria on Qwen3.6-27B,
+format-local on 8B). It was never a branch of its own. The collapse does not
+reach this experiment's platform: every Qwen3-14B scaling-ladder rung,
+scale-08 included, acts 98–100%. What stays live is the risk that a
+refusal-only dataset *teaches* passivity (deliberating without acting, like
+the haiku45 arm at 59%), and the action-rate check under Pre-registered
+reading already catches that. Gate dropped with Jack's go-ahead; replay mixing
+is the fallback if this arm comes back passive.
+
+## Training — launched 2026-09-22
+
+Together job **`ft-ff71020e-528d`** (suffix `da-refusal-scale08`). Its settings
+match the scale-08 run of record `ft-995cbc46-2ffd`: LoRA r64/α128, all-linear,
+lr 1e-4 cosine, warmup 0.03, batch 8, packing on, seed 42, 4 epochs,
+4 checkpoints, 10 evals on the 229-row val, assistant-only loss. Uploaded
+files: train `file-d5fe5556-e5f3-4453-8530-a60072f79248`, val
+`file-2288a9cf-ad3c-4af2-9f64-7ab94255239f`. Dry-run estimate $4 (tier minimum).
+
+**Completed 2026-09-22**, billed **$4.00** (112k trained tokens against
+scale-08's 198k, because refusal responses are shorter: median 1.6k chars vs
+4.1k). Output model `jack_8db1/Qwen3-14B-da-refusal-scale08-149255b9`.
+One epoch is 21 steps; adapter checkpoints are at steps 21/42/63 plus the
+final at 84.
+
+| step | 12 | 20 | 28 | 36 | 44 | 52 | 60 | 68 | 76 | 84 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| val loss | 2.054 | 1.962 | **1.937** | **1.937** | 1.962 | 1.993 | 2.061 | 2.143 | 2.159 | 2.159 |
+
+Validation loss bottoms out in the middle of epoch 2, then overfits.
+**Selected: epoch 2 (adapter step 42,
+`jack-8db1/Qwen3-14B-da-refusal-scale08-149255b9-adapter-42`)**. It is
+marginally ahead of ep1 (≈1.95 by interpolation vs 1.962) and matches
+scale-08's ep2, so the two arms share both the data scenarios and the
+epoch count. These losses are on the refusal-style val and are not
+comparable to scale-08's.
+
+Interpretation caveat: ~13% of rows (52/394, `qc_analysis.md`) are
+full-help answers to all-safe scenarios, and some of them carry reasoning
+about oversight (e.g. review-sample row 62). So the arm is "mostly
+reason-free," not "reason-free," and that residue biases the result toward
+matching scale-08.
+
+## Commands
 
 Training (mirrors the scaling-ladder config; dry-runs without `--yes`):
 
@@ -69,11 +115,15 @@ openai/, which drops extra_body):
 ## Pre-registered reading (from the spec, fixed before any result exists)
 
 - Primary: vs scale-08 = 15.6% (identical scenarios; assistant turns are the
-  only difference). Secondary anchors: base 31.7%, opus48 12.8%, terra 2.2%
+  only difference). Secondary anchors: base 43.9%, opus48 15.0%, terra 2.8%
   (loose — teacher and prompt set both differ; deliberate omission).
+  *Recomputed 2026-09-22 under `classifier_verdict` (`code/msm_eval/summarize.py`
+  on the existing logs, no spend); the spec's original figures (base 31.7%,
+  opus48 12.8%, terra 2.2%) used the old `harmful` metric. scale-08 is 15.6%
+  under both. The comparison itself is unchanged.*
 - Refusal ≈ scale-08: outcome-only data transfers as well as reasoned data at
   this scale. Refusal ≈ base: the reasoning content is doing the work.
   Intermediate: partial transfer.
 - A low rate only counts if the action rate stays in the comparators'
-  98–100% band; low-and-passive is passivity transfer, a distinct finding —
-  reconcile with the passivity-correction branch before launching.
+  98–100% band; low-and-passive is passivity transfer, a distinct finding
+  (see Gate resolution).

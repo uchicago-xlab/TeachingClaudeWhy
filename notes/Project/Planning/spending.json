@@ -1832,6 +1832,16 @@
       "approx": true,
       "status": "spent",
       "allocationId": null
+    },
+    {
+      "id": "1c40aecf-8624-4ad9-a42d-d019533980a3",
+      "date": "2026-09-22",
+      "what": "Together — da-refusal-scale08 finetune (ft-ff71020e-528d), refusal-control arm: Qwen3-14B, same config as scale-08's ft-995cbc46-2ffd, n_checkpoints=4. 112k trained tokens, $4 tier minimum (Together total_price).",
+      "who": "Jack",
+      "amount": 4,
+      "approx": false,
+      "status": "spent",
+      "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
     }
   ]
 }
