@@ -39,6 +39,27 @@ RUNGS = (
     ("train", SOURCE / "s5think-scale-08.jsonl", 165),
     ("val", SOURCE / "s5think-full-qwen-nothink-val.jsonl", 229),
 )
+# split targets per refusal arm. terra (2026-09-29) regenerates terra's own
+# 150 prompts in their original order, so it needs no seed step — only the
+# split, which pins its rows to the committed terra train/val files.
+PRESETS = {
+    "scale08": {
+        "out": OUT,
+        "rungs": RUNGS,
+        "outputs": {"train": "refusal-scale-08.jsonl", "val": "refusal-val.jsonl"},
+    },
+    "terra": {
+        "out": DA / "gpt-5.6-terra-refusal",
+        "rungs": (
+            ("train", DA / "gpt-5.6-terra" / "terra-ft-qwen-nothink.jsonl", 135),
+            ("val", DA / "gpt-5.6-terra" / "terra-ft-qwen-nothink-val.jsonl", 15),
+        ),
+        "outputs": {
+            "train": "terra-refusal-ft-qwen-nothink.jsonl",
+            "val": "terra-refusal-ft-qwen-nothink-val.jsonl",
+        },
+    },
+}
 SEED_KEYS = ("stage_models", "principles", "themes_by_principle", "_filter_note")
 
 
@@ -99,9 +120,9 @@ def _read_jsonl(path: Path) -> list[dict]:
     return [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
 
 
-def _rung_rows() -> dict[str, list[dict]]:
+def _rung_rows(rungs=RUNGS) -> dict[str, list[dict]]:
     rows = {}
-    for rung, path, expected in RUNGS:
+    for rung, path, expected in rungs:
         rows[rung] = _read_jsonl(path)
         if len(rows[rung]) != expected:
             raise SystemExit(f"{path.name}: {len(rows[rung])} rows, expected {expected}")
@@ -144,15 +165,16 @@ def cmd_seed() -> None:
     print(f"seeded {len(seed['prompts'])} samples -> {OUT / 'critiqued_prompts.json'}")
 
 
-def cmd_split(adapted_path: Path) -> None:
+def cmd_split(adapted_path: Path, preset: str = "scale08") -> None:
+    config = PRESETS[preset]
     adapted = _read_jsonl(adapted_path)
     candidates: dict[tuple, list[int]] = {}
     for i, row in enumerate(adapted):
         candidates.setdefault(prompt_key(row["messages"]), []).append(i)
 
-    for rung, rows in _rung_rows().items():
+    for rung, rows in _rung_rows(config["rungs"]).items():
         matched = match_one_to_one(candidates, [prompt_key(r["messages"]) for r in rows], rung)
-        out = OUT / ("refusal-scale-08.jsonl" if rung == "train" else "refusal-val.jsonl")
+        out = config["out"] / config["outputs"][rung]
         out.write_text(
             "".join(json.dumps(adapted[i], ensure_ascii=False) + "\n" for i in matched)
         )
@@ -165,11 +187,15 @@ def main() -> None:
     sub.add_parser("seed")
     split = sub.add_parser("split")
     split.add_argument("adapted", type=Path, help="refusal qwen-nothink JSONL to split")
+    split.add_argument(
+        "--preset", choices=sorted(PRESETS), default="scale08",
+        help="which arm's committed train/val files to match against (default scale08)",
+    )
     args = parser.parse_args()
     if args.command == "seed":
         cmd_seed()
     else:
-        cmd_split(args.adapted)
+        cmd_split(args.adapted, args.preset)
 
 
 if __name__ == "__main__":

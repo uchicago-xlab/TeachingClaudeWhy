@@ -67,3 +67,24 @@ def test_build_manifest_records_rung_and_orders():
         {"subset_index": 1, "source_index": 10, "rung": "train", "rung_row": 1},
         {"subset_index": 2, "source_index": 20, "rung": "val", "rung_row": 0},
     ]
+
+
+def test_presets_keep_scale08_outputs_and_add_terra():
+    from subset_scale08_prompts import DA, OUT, PRESETS
+
+    scale08 = PRESETS["scale08"]
+    assert scale08["out"] == OUT
+    assert scale08["outputs"] == {"train": "refusal-scale-08.jsonl", "val": "refusal-val.jsonl"}
+    assert [(r, n) for r, _, n in scale08["rungs"]] == [("train", 165), ("val", 229)]
+
+    terra = PRESETS["terra"]
+    assert terra["out"] == DA / "gpt-5.6-terra-refusal"
+    assert [(r, p.name, n) for r, p, n in terra["rungs"]] == [
+        ("train", "terra-ft-qwen-nothink.jsonl", 135),
+        ("val", "terra-ft-qwen-nothink-val.jsonl", 15),
+    ]
+    assert all(p.parent == DA / "gpt-5.6-terra" for _, p, _ in terra["rungs"])
+    assert terra["outputs"] == {
+        "train": "terra-refusal-ft-qwen-nothink.jsonl",
+        "val": "terra-refusal-ft-qwen-nothink-val.jsonl",
+    }

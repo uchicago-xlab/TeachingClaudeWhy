@@ -57,9 +57,11 @@ def _hf_cached_token():
     return path.read_text().strip() if path.exists() else None
 
 
-def upload_and_wait(client, path):
+def upload_and_wait(client, path, wait=True):
     """Upload a file and block until Together finishes validating it."""
     file = client.files.upload(file=path, check=True)
+    if not wait:
+        return file.id
     while True:
         meta = client.files.retrieve(file.id)
         if meta.processing_status == "COMPLETED":
@@ -123,6 +125,12 @@ def main():
                          "hyperparameter — the 2026-08-05 ladder decision.")
     ap.add_argument("--wandb-project", default="tcw-instruct-sft",
                     help="W&B project for training logs")
+    ap.add_argument("--no-wait", action="store_true",
+                    help="submit the job without waiting for Together to finish "
+                         "validating the uploads (the local check=True still "
+                         "runs). For 2026-09-29, when server-side validation sat "
+                         "at QUEUED for hours on every upload, even files that "
+                         "had validated before.")
     ap.add_argument("--yes", action="store_true", help="actually upload + launch")
     args = ap.parse_args()
 
@@ -152,11 +160,11 @@ def main():
     from together import Together
     client = Together()
 
-    train_id = upload_and_wait(client, args.train)
+    train_id = upload_and_wait(client, args.train, wait=not args.no_wait)
     print(f"uploaded train: {train_id}")
     val_id = None
     if args.val:
-        val_id = upload_and_wait(client, args.val)
+        val_id = upload_and_wait(client, args.val, wait=not args.no_wait)
         print(f"uploaded val:   {val_id}")
 
     kwargs = dict(

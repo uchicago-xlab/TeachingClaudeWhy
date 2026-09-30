@@ -176,6 +176,76 @@ of generation; scale-08 81 min (median 2,076 tokens per response). Cost
 ~$106: grading $101.22 (priced from the logs' token counts; matches the key
 delta exactly) and pods ~$5.
 
+## Terra arm, on terra's own prompts (2026-09-29/30): passivity transfer
+
+This asks whether the partial transfer above is specific to Sonnet as teacher.
+It uses design **B**, chosen for breadth over cleanliness: `gpt-5.6-terra`
+regenerates only the assistant turns of its own 150 prompts (135 train and 15
+val, the rows behind `da-terra`) under the same `refusal/` stages 7–9. terra's
+reasoned response stages are byte-identical to `default/`, so the style swap
+matches the Sonnet pair. Because the scenarios differ from scale-08's, a
+difference between teachers means *teacher or scenario set*; design A (terra on
+the 394 scale-08 scenarios) would separate the two.
+
+**Data** — `data/difficult-advice/gpt-5.6-terra-refusal/`:
+- Generated with `LLM_PROVIDER=openrouter PIPELINE_MODEL=openai/gpt-5.6-terra
+  DIFFICULT_ADVICE_PROMPT_SET=refusal sample_prompts.py --responses-only`,
+  high effort. A 10-row pilot came first (`tmp/terra-refusal-pilot`).
+- Split with `subset_scale08_prompts.py split --preset terra` (new): the
+  (system, user) turns are byte-identical to `gpt-5.6-terra/terra-ft-qwen-nothink*.jsonl`,
+  and all 150 assistant turns differ.
+- QC (`qc_report.md` READ FIRST): 0 clear justification leaks. **82% of rows
+  open with a refusal, vs 58% for Sonnet's refusal set**, because terra reads
+  "decline anything possibly unethical" more broadly. About 18% of rows are
+  full help.
+
+**Training** — Together `ft-f322455c-c85e`, config identical to terra's reasoned
+`ft-ddce4bf8-99ef` (checked field by field). 17 steps per epoch; **ep2 = step 34**,
+fixed in advance, which is also where val loss bottomed (2.17 at step 32).
+103k trained tokens, $4.00.
+- Together's file validation sat at `QUEUED` for hours on every upload,
+  including a 10-row control file that had validated on 09-22. The status page
+  showed no incident. `launch_instruct_ft.py --no-wait` (new) submits the job
+  without waiting. The job accepted the unvalidated files and trained normally.
+
+**Eval**, 27 conditions × 100, same stack as the table above (terra reasoned
+ep2 = step 34 of `ft-ddce4bf8-99ef`, re-run fresh):
+
+| arm | overall | acted | harm\|acted | median tokens | trunc |
+|---|---|---|---|---|---|
+| base | 51.3% | 100% | 51% | 531 | 3 |
+| terra reasoned ep2 | **5.3%** ±0.4 | 100% | 5% | 1,097 | 6 |
+| **terra refusal ep2** | 5.0% ±0.4 | **44%** | 10% | **134** | 70 |
+| Sonnet scale-08 ep2 | 21.4% | 99% | 22% | 2,076 | 37 |
+| Sonnet refusal ep2 | 34.2% | 99% | 35% | 782 | 11 |
+
+terra reasoned's standard-6 cells come out at 3.3%, replicating its 180-slice result.
+
+**Reading (pre-registered action-rate rule): terra refusal's low rate does not
+count. This is passivity transfer, the distinct finding the rule anticipated.**
+- 1,446 of 2,700 samples deliberate without acting. The typical output is a
+  bare "I can’t help with that." in an agentic scenario that calls for action,
+  which is harmless only because nothing happens.
+- 73 samples fall into refusal loops ("I will not help with any unauthorized
+  attempt…" repeated to the token cap), which is most of the 70 truncations.
+- Among samples that do act, harm is 10%, vs terra reasoned 5% and base 51%.
+  This conditional rate is suggestive but not comparable, because the arm
+  chooses when to act.
+- So the same refusal policy gave an *active*, partially aligned student
+  with Sonnet as teacher and a *passive* one with terra. The likely lever is
+  refusal breadth (82% vs 58% refusal openings, and terra declines the core
+  decision itself), but under design B this is confounded with terra's
+  scenario set.
+
+Next options: (1) design A, terra on the scale-08 scenarios, to separate
+teacher from scenarios; (2) replay mixing ([[AgenticReplay]]), the fallback
+named in Gate resolution for a passive refusal arm, to test whether the
+passivity masks any alignment signal.
+
+Cost ~$65: generation ~$14 (pilot $0.80 + $13.22 key delta), training $4.00,
+grading $44.80 (terra reasoned $28.31, terra refusal $16.49; token-priced),
+pods ~$2.40.
+
 ## Commands
 
 Training (mirrors the scaling-ladder config; dry-runs without `--yes`):

@@ -1862,6 +1862,16 @@
       "approx": true,
       "status": "spent",
       "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
+    },
+    {
+      "id": "2b1cbf9c-96c5-496a-a03c-0a785ddd8356",
+      "date": "2026-09-30",
+      "what": "OpenRouter + Together + RunPod - terra refusal-control arm (design B, terra's own 150 prompts). Generation: gpt-5.6-terra responses-only under refusal/ stages 7-9, 10-row pilot $0.80 + 150 rows $13.22 (key deltas). Training: Together ft-f322455c-c85e (da-terra-refusal, Qwen3-14B, config identical to ft-ddce4bf8-99ef), 103k tokens, $4.00 (launched with the new --no-wait flag because Together file validation stayed QUEUED for hours). Eval 27x100 on the ep2 adapters of terra reasoned (pod l3ddfv41i4tbiu, ~1h) and terra refusal (pod os7jwcoe94bqn0, ~0.5h), both 1xA100-SXM and terminated, pods ~$2.40; Sonnet 4.6 grading $44.80 token-priced (terra reasoned 28.31, terra refusal 16.49). RESULT: terra reasoned 5.3% (100% acting); terra refusal 5.0% but only 44% acting (passivity transfer, invalid under the pre-registered action-rate rule).",
+      "who": "Jack",
+      "amount": 65.2,
+      "approx": true,
+      "status": "spent",
+      "allocationId": "3002e47d-e825-44fe-a6bc-ff4f5ae43545"
     }
   ]
 }
